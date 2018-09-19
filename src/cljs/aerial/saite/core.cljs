@@ -38,16 +38,6 @@
 
 
 
-
-;;; Messaging ============================================================ ;;;
-
-
-(defmethod user-msg :data [msg]
-  (printchan :DATA msg))
-
-
-
-
 ;;; Components ============================================================ ;;;
 
 
@@ -157,6 +147,21 @@
 
 
 
+;;; Messaging ============================================================ ;;;
+
+
+(defmethod user-msg :data [msg]
+  (printchan :DATA msg))
+
+
+(defmethod user-msg :app-register [msg]
+  (add-tab {:id :xvgl
+            :label "<->"
+            :opts {:extfn (tab<-> :NA)}}))
+
+
+
+;;; Startup ============================================================== ;;;
 
 #_(when-let [elem (js/document.querySelector "#app")]
     (start :elem elem
@@ -170,10 +175,7 @@
   (when-let [elem (js/document.querySelector "#app")]
     (start :elem elem
            :port 3000
-           :instrumentor-fn test-instrumentor)
-    (add-tab {:id :xvgl
-            :label "<->"
-            :opts {:extfn (tab<-> :NA)}}))
+           :instrumentor-fn test-instrumentor))
 
   (add-tab {:id :px
            :label "MultiChartSVG"
