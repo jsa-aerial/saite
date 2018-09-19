@@ -154,7 +154,7 @@
   (printchan :DATA msg))
 
 
-(defmethod user-msg :app-register [msg]
+(defmethod user-msg :app-init [msg]
   (add-tab {:id :xvgl
             :label "<->"
             :opts {:extfn (tab<-> :NA)}}))
