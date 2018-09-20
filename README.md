@@ -7,7 +7,7 @@ Exploratory graphics and visualization system. 咲いて (in bloom). Built on to
 
 Typical work flow starts by requiring `aerial.saite.core` and running the `start` function which takes a port. This port is for the websocket messaging. Browsing to this port on localhost will open the viewer.
 
-Visualizations are formed from parameterized templates (see [Hanami](https://github.com/jsa-aerial/hanami) which are recursively transformed into legal VGL or VG specifications. In Saite, creating and transforming these templates is done on the server side in typical REPL style development. Generally, transformed templates (with their data or data source) are sent to one or more sessions (brower viewers) for rendering.
+Visualizations are formed from parameterized templates (see [Hanami](https://github.com/jsa-aerial/hanami)) which are recursively transformed into legal VGL or VG specifications. In Saite, creating and transforming these templates is done on the server side in typical REPL style development. Generally, transformed templates (with their data or data source) are sent to one or more sessions (brower viewers) for rendering.
 
 Saite also functions as an example application built with [Hanami](https://github.com/jsa-aerial/hanami). As such it has all the capability of Hanami's _template_ system and recursive transformation of parameterized templates.
 
@@ -62,6 +62,74 @@ To install, add the following to your project `:dependencies`:
 (as/start 3000)
 ```
 
-Browse to `localhost:3000` and you will see initial session page:
+Browse to `localhost:3000` and you will see an initial session page:
 
 ![Saite pic 1](resources/public/images/start-page.png?raw=true)
+
+The `[<->]` tab will be current and it holds the resources for converting JSON VGL to Clj. The left area is where you can type (or more typically paste) a JSON VGL specification. The dark arrow button converts to Clj and renders in the right area. The light arrow first compiles to VG and then converts to Clj. The open button clears both panels.
+
+For example, the following shows an example overlay+detail VGL specification, translated to VG and rendered as Clojure.
+
+![Saite pic 1.1](resources/public/images/vgl-vg-clj.png?raw=true)
+
+
+The following will create an example plot in the default tab
+
+```Clojure
+(->> (hc/xform ht/simple-point-chart
+       :UDATA "data/cars.json"
+       :X "Horsepower" :Y "Miles_per_Gallon" :COLOR "Origin")
+     hmi/sv!)
+```
+
+![Saite pic 1.2](resources/public/images/simple-scatter-plot.png?raw=true)
+
+
+User meta data is used to communicate information about such things which tab to use, the tab's options, whether the template is VegaLite or Vega, et. al. This meta data is contained in a map associated with _substitution key_ `:USERDATA` for VGL/VG specification key `:usermeta` (see [Hanami](https://github.com/jsa-aerial/hanami) for details on substitution keys and templates and transformations). The `:usermeta` key is recognized by VGL/VG and explicitly ignored by their processing. All your templates (or explicit specifications) need to supply `:usermeta` as a key with either explicit values, or more typically (and usefully) a value of `:USERDATA` which the recursive transformation will then transform to a value.  Saite sets a variety of defaults for this as follows:
+
+```Clojure
+:USERDATA
+{:tab {:id :TID, :label :TLBL, :opts :TOPTS},
+ :opts :OPTS,
+ :vid :VID,
+ :msgop :MSGOP,
+ :session-name :SESSION-NAME}
+
+:OPTS
+{:export {:png true, :svg false},
+  :renderer "canvas",
+  :mode "vega-lite"}
+
+:SESSION-NAME "Exploring"
+:TID :expl1
+:TLBL #(-> :TID % name cljstr/capitalize)
+:TOPTS {:order :col, :eltsper 2, :size "none"}
+
+:VID hc/RMV
+:MSGOP :tabs
+```
+
+The `TLBL` value is an example of a substitution key which is a function. Such functions are passed the current substitution map as an argument during recursive transformation. So, in this case, the current tab will get a label that is the capitalized string of the :TID value.
+
+All of these values can be changed, either via an explicit call to `hc/add-defaults` or implicitly per visualization by supplying them to the `hc/xform` function. For example, in the following, we specify a new tab `:dists` with a row order layout. The tab label will automatically be set to "Dists" (you could override this with an explicit :TLBL k/v):
+
+```Clojure
+(->>
+ [(hc/xform ht/simple-layer-chart
+    :TID :dists :TOPTS {:order :row, :size "auto"}
+    :TITLE "A Real (obvserved) distribution with incorrect sample mean"
+    :LAYER [(hc/xform ht/bar-layer :XTITLE "Count" :YTITLE "Probability")
+            (hc/xform ht/xrule-layer :AGG "mean")]
+    :DATA (mapv (fn[[x y]] {:x x :y y :m 5.7}) obsdist))
+
+  (hc/xform ht/simple-layer-chart
+    :TID :dists
+    :TITLE "The same distribution with correct weighted mean"
+    :LAYER [(hc/xform ht/bar-layer :XTITLE "Count" :YTITLE "Probability")
+            (hc/xform ht/xrule-layer :X "m")]
+    :DATA (mapv (fn[[x y]] {:x x :y y :m 5.7}) obsdist))]
+ hmi/sv!)
+```
+
+![Saite pic 1.2](resources/public/images/dists-tab-1.png?raw=true)
+
