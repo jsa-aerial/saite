@@ -159,14 +159,31 @@
             :label "<->"
             :opts {:extfn (tab<-> :NA)}}))
 
+(defn update-data
+  "Originally meant as general updater of vis plot/chart data
+  values. But to _render_ these, requires knowledge of the application
+  pages/structure. So, this is not currently used. If we can figure
+  out Vega chageSets and how they update, we may be able to make this
+  a general op in Hanami."
+  [data-maps]
+  (printchan :UPDATE-DATA data-maps)
+  (mapv (fn [{:keys [usermeta data]}]
+          (let [vid (usermeta :vid)
+                spec (dissoc (get-vspec vid) :data)]
+            (assoc-in spec [:data :values] data)))
+        data-maps))
+
+(defmethod user-msg :data [msg]
+  (update-data (msg :data)))
+
 
 
 ;;; Startup ============================================================== ;;;
 
-#_(when-let [elem (js/document.querySelector "#app")]
-    (start :elem elem
-           :port js/location.port
-           :instrumentor-fn test-instrumentor))
+(when-let [elem (js/document.querySelector "#app")]
+  (start :elem elem
+         :port js/location.port
+         :instrumentor-fn test-instrumentor))
 
 
 
