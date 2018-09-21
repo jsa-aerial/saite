@@ -10,8 +10,9 @@
     :refer [printchan user-msg
             re-com-xref xform-recom
             default-header-fn start
-            update-adb get-adb get-tab-field
-            add-tab update-tab-field active-tabs
+            update-adb get-adb
+            get-vspec update-vspecs
+            get-tab-field add-tab update-tab-field active-tabs
             app-stop]]
 
    [com.rpl.specter :as sp]
@@ -167,7 +168,7 @@
   a general op in Hanami."
   [data-maps]
   (printchan :UPDATE-DATA data-maps)
-  (mapv (fn [{:keys [usermeta data]}]
+  #_(mapv (fn [{:keys [usermeta data]}]
           (let [vid (usermeta :vid)
                 spec (dissoc (get-vspec vid) :data)]
             (assoc-in spec [:data :values] data)))
