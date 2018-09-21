@@ -101,7 +101,7 @@ User meta data is used to communicate information about such things as which tab
    :encoding :ENCODING})
 ```
 
-Saite sets a variety of defaults for :USERDATA as follows:
+Saite sets a variety of defaults for `:USERDATA` as follows:
 
 ```Clojure
 :USERDATA
@@ -125,9 +125,9 @@ Saite sets a variety of defaults for :USERDATA as follows:
 :MSGOP :tabs
 ```
 
-The `TLBL` value is an example of a substitution key which is a function. Such functions are passed the current substitution map as an argument during recursive transformation. So, in this case, the current tab will get a label that is the capitalized string of the :TID value.
+The `TLBL` value is an example of a substitution key which is a function. Such functions are passed the current substitution map as an argument during recursive transformation. So, in this case, the current tab will get a label that is the capitalized string of the `:TID` value.
 
-All of these values can be changed, either via an explicit call to `hc/add-defaults` or implicitly per visualization by supplying them to the `hc/xform` function. For example, in the following, we specify a new tab `:dists` with a row order layout. The tab label will automatically be set to "Dists" (you could override this with an explicit :TLBL k/v):
+All of these values can be changed, either via an explicit call to `hc/add-defaults` or implicitly per visualization by supplying them to the `hc/xform` function. For example, in the following, we specify a new tab `:dists` with a row order layout. The tab label will automatically be set to "Dists" (you could override this with an explicit `:TLBL` k/v):
 
 ```Clojure
 (->>
