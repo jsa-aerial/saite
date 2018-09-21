@@ -118,7 +118,7 @@
      {:x {:field "date", :type "temporal"},
       :y
       {:field "price",
-       :type "quantitative", 
+       :type "quantitative",
        :axis {:tickCount 3, :grid false}}}}]})
  hmi/sv!)
 
@@ -241,7 +241,6 @@
     (hc/xform ht/simple-layer-chart
               :TID :multi :TOPTS {:order :row, :size "auto"}
               :TITLE "Self Information (unexpectedness)"
-              :HEIGHT 300, :WIDTH 350
               :LAYER [(hc/xform ht/line-layer
                                 :XTITLE "Probability of event"
                                 :YTITLE "-log(p)")
@@ -253,13 +252,8 @@
                                :y (- (- (* p (m/log2 p)))
                                      (* (- 1 p) (m/log2 (- 1 p))))})))]
     (hc/xform ht/simple-layer-chart
-              :USERDATA (merge (hc/get-default :USERDATA)
-                               {:test2 [{:id 1 :label "One" :val 1}
-                                        {:id 2 :label "Two" :val 2}
-                                        {:id 3 :label "Three" :val 3}]})
               :TID :multi
               :TITLE "Entropy (Unpredictability)"
-              :HEIGHT 300, :WIDTH 350
               :LAYER [(hc/xform ht/gen-encode-layer
                                 :MARK "line"
                                 :XTITLE "Probability of event" :YTITLE "H(p)")
@@ -281,8 +275,7 @@
 (->>
  [(hc/xform ht/simple-layer-chart
             :TID :dists :TOPTS {:order :row, :size "auto"}
-            :TITLE "A Real (obvserved) distribution with incorrect simple mean"
-            :HEIGHT 400 :WIDTH 450
+            :TITLE "A Real (obvserved) distribution with incorrect sample mean"
             :LAYER
             [(hc/xform ht/bar-layer :XTITLE "Count" :YTITLE "Probability")
              (hc/xform ht/xrule-layer :AGG "mean")]
@@ -291,7 +284,6 @@
   (hc/xform ht/simple-layer-chart
             :TID :dists
             :TITLE "The same distribution with correct weighted mean"
-            :HEIGHT 400 :WIDTH 450
             :LAYER
             [(hc/xform ht/bar-layer :XTITLE "Count" :YTITLE "Probability")
              (hc/xform ht/xrule-layer :X "m")]
@@ -411,28 +403,25 @@
                       {:x % :y RE :RE "JSD"})
                    (range 0.06 0.98 0.01)))]
    (hc/xform ht/simple-layer-chart
-             :TITLE "Minimum entropy: True P to Binomial Q estimate"
-             :HEIGHT 400 :WIDTH 450
-             :DATA data
-             :LAYER
-             [(hc/xform ht/simple-line-chart
-                        :POINT true
-                        :TRANSFORM [{:filter {:field "RE" :equal "KLD"}}]
-                        :SELECTION ht/interval-scales :INAME "grid1"
-                        :COLOR {:field "RE" :type "nominal"
-                                :legend {:type "symbol" :offset 0 :title "RE"}}
-                        :XTITLE "Binomial Distribution P paramter"
-                        :YTITLE "KLD(P||Q)")
-              (hc/xform ht/simple-line-chart
-                        :POINT true
-                        :TRANSFORM [{:filter {:field "RE" :equal "JSD"}}]
-                        :SELECTION ht/interval-scales :INAME "grid2"
-                        :COLOR {:field "RE" :type "nominal"
-                                :legend {:type "symbol" :offset 0 :title "RE"}}
-                        :XTITLE "Binomial Distribution P paramter"
-                        :YTITLE "JSD(P||Q)")]
-             :RESOLVE {:scale {"y" "independent"}}
-             ))
+     :TITLE "Minimum entropy: True P to Binomial Q estimate"
+     :DATA data
+     :LAYER [(hc/xform ht/simple-line-chart
+                       :POINT true
+                       :TRANSFORM [{:filter {:field "RE" :equal "KLD"}}]
+                       :SELECTION ht/interval-scales :INAME "grid1"
+                       :COLOR {:field "RE" :type "nominal"
+                               :legend {:type "symbol" :offset 0 :title "RE"}}
+                       :XTITLE "Binomial Distribution P paramter"
+                       :YTITLE "KLD(P||Q)")
+             (hc/xform ht/simple-line-chart
+                       :POINT true
+                       :TRANSFORM [{:filter {:field "RE" :equal "JSD"}}]
+                       :SELECTION ht/interval-scales :INAME "grid2"
+                       :COLOR {:field "RE" :type "nominal"
+                               :legend {:type "symbol" :offset 0 :title "RE"}}
+                       :XTITLE "Binomial Distribution P paramter"
+                       :YTITLE "JSD(P||Q)")]
+     :RESOLVE {:scale {"y" "independent"}}))
  hmi/sv!)
 
 ;;; END ENTROPY GRAPHS ---------------------------------------------------
@@ -480,7 +469,7 @@
    (hc/xform ht/grouped-bar-chart
              :TID :dists
              :TITLE "Real distribution vs Binomials", :TOFFSET 10
-             :HEIGHT 80, :WIDTH 450
+             :HEIGHT 80
              :DATA data
              :X "cnt" :XTYPE "ordinal" :XTITLE ""
              :Y "y" :YTITLE "Probability"
