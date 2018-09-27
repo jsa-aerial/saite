@@ -119,20 +119,20 @@ Saite sets a variety of defaults for `:USERDATA` as follows:
 :SESSION-NAME "Exploring"
 :TID :expl1
 :TLBL #(-> :TID % name cljstr/capitalize)
-:TOPTS {:order :col, :eltsper 2, :size "none"}
+:TOPTS {:order :row, :eltsper 2, :size "auto"}
 
 :VID hc/RMV
 :MSGOP :tabs
 ```
 
-The `TLBL` value is an example of a substitution key which is a function. Such functions are passed the current substitution map as an argument during recursive transformation. So, in this case, the current tab will get a label that is the capitalized string of the `:TID` value.
+The `TLBL` value is an example of a substitution key which is a function. Such functions are passed the current substitution map as an argument during recursive transformation. So, in this case, the current tab will get a label that is the capitalized string of the `:TID` value. The `:TOPTS` provides a way of describing the layout of independent visualizations. Visualizations that are _independent_ are those that are separate VGL/VG renderings. So, they constitute different/independent VGL/VG specifications.
 
-All of these values can be changed, either via an explicit call to `hc/add-defaults` or implicitly per visualization by supplying them to the `hc/xform` function. For example, in the following, we specify a new tab `:dists` with a row order layout. The tab label will automatically be set to "Dists" (you could override this with an explicit `:TLBL` k/v):
+All of these values can be changed, either via an explicit call to `hc/add-defaults` or implicitly per visualization by supplying them to the `hc/xform` function. For example, in the following, we specify a new tab `:dists`. The tab label will automatically be set to "Dists" (you could override this with an explicit `:TLBL` k/v):
 
 ```Clojure
 (->>
  [(hc/xform ht/simple-layer-chart
-    :TID :dists :TOPTS {:order :row, :size "auto"}
+    :TID :dists
     :TITLE "A Real (obvserved) distribution with incorrect sample mean"
     :LAYER [(hc/xform ht/bar-layer :XTITLE "Count" :YTITLE "Probability")
             (hc/xform ht/xrule-layer :AGG "mean")]
@@ -148,4 +148,47 @@ All of these values can be changed, either via an explicit call to `hc/add-defau
 ```
 
 ![Saite pic 1.2](resources/public/images/dists-tab-1.png?raw=true)
+
+Exploring this a bit further let's look at four independent plots and charts. The actual visualizations are not particularly related - this is just to show the grid layout aspect (which is actually a direct Hanami capability).
+
+First, taking the defaults indicated above, the folowing lays out a row ordered 2X2 grid, where the first two charts are the first row, and the bar charts are the second row.
+
+
+```Clojure
+(->>
+ (mapv #(apply hc/xform %)
+       [[ht/simple-point-chart
+         :UDATA "data/cars.json"
+         :X "Horsepower" :Y "Miles_per_Gallon" :COLOR "Origin"]
+        (let [data (->> (range 0.005 0.999 0.001)
+                        (mapv (fn[p] {:x p, :y (- (m/log2 p)) :col "SI"})))]
+          [ht/simple-layer-chart
+           :TITLE "Self Information (unexpectedness)"
+           :LAYER [(hc/xform ht/xrule-layer :AGG "mean")
+                   (hc/xform ht/line-layer
+                     :XTITLE "Probability of event" :YTITLE "-log(p)")]
+           :DATA data])
+        [ht/simple-bar-chart
+         :UDATA "data/seattle-weather.csv" :TOOLTIP RMV
+         :X "date" :XTYPE "ordinal" :XUNIT "month"
+         :Y "precipitation" :YAGG "mean"]
+        [ht/simple-layer-chart
+         :UDATA "data/seattle-weather.csv"
+         :LAYER [(hc/xform ht/bar-layer
+                   :TOOLTIP RMV
+                   :X "date" :XTYPE "ordinal" :XUNIT "month"
+                   :Y "precipitation" :YAGG "mean"
+                   :SELECTION {:brush {:type "interval", :encodings ["x"]}}
+                   :OPACITY {:condition {:selection "brush", :value 1}, :value 0.7})
+                 (hc/xform ht/yrule-layer
+                   :TRANSFORM [{:filter {:selection "brush"}}]
+                   :Y "precipitation" :AGG "mean" :YRL-COLOR "firebrick")]]])
+ hmi/sv!)
+```
+
+![Saite pic 1.3](resources/public/images/row-auto-2.png?raw=true)
+
+If we add `:TOPTS {:order :col :size "none"}` after the first `:UDATA`, the result will be:
+
+![Saite pic 1.4](resources/public/images/col-auto-2.png?raw=true)
 
