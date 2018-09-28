@@ -1,5 +1,5 @@
 # saite
-Exploratory graphics and visualization system. 咲いて (in bloom). Built on top of hanami vega/vega-lite library
+Exploratory graphics and visualization system. 咲いて (in bloom). Built on top of [Hanami](https://github.com/jsa-aerial/hanami) Vega/Vega-Lite library
 
 <a href="https://saite.github.io"><img src="https://github.com/jsa-aerial/saite/blob/master/resources/public/images/in-bloom.png" align="left" hspace="10" vspace="6" alt="saite logo" width="150px"></a>
 
