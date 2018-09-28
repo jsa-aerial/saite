@@ -15,7 +15,7 @@
             [aerial.bio.utils.files :as bufiles]
             [aerial.bio.utils.aligners :as aln]
 
-            [aerial.hanami.common :as hc]
+            [aerial.hanami.common :as hc :refer [RMV]]
             [aerial.hanami.templates :as ht]
             [aerial.hanami.core :as hmi]
 
@@ -34,7 +34,7 @@
 
 
 ;;; Simple scatter with template
-(->> (hc/xform ht/simple-point-chart
+(->> (hc/xform ht/point-chart
        :HEIGHT 300 :WIDTH 400
        ;;:DATA (->> "http://localhost:3003/data/cars.json" slurp json/read-str)
        :UDATA "data/cars.json"
@@ -67,7 +67,7 @@
        minstr (-> min str (cljstr/split #"\.") first)
        max 10.0
        maxstr (-> max str (cljstr/split #"\.") first (#(str "+" %)))]
-   (hc/xform ht/simple-bar-chart
+   (hc/xform ht/bar-chart
              :USERDATA
              (merge
               (hc/get-default :USERDATA)
@@ -96,6 +96,7 @@
                        {:a "G", :b 19 },{:a "H", :b 87 },{:a "I", :b 52 }])})
 
 
+;;; Overview + Detail
 (->>
  (hc/xform
   {:usermeta :USERDATA
@@ -123,7 +124,19 @@
  hmi/sv!)
 
 
+;;; Area Chart
+(-> (hc/xform
+     ht/layer-chart
+     :UDATA  "data/unemployment-across-industries.json"
+     :LAYER [(hc/xform ht/area-layer :TOOLTIP RMV
+               :X :date, :XTYPE :temporal, :XUNIT :yearmonth, :XFORMAT "%Y"
+               :Y "count" :AGG "sum"
+               :COLOR {:field "series", :type "nominal", :scale {:scheme "category20b"}})])
+    hmi/sv!)
 
+
+
+;;; Log scales, error bars
 (->>
  (hc/xform
   {:usermeta :USERDATA
@@ -216,8 +229,8 @@
 (->>
  (hc/xform
   {:usermeta :USERDATA
-   :width 500,
-   :height 300,
+   :width 700,
+   :height 500,
    :data {:url "data/airports.csv"},
    :projection {:type "albersUsa"},
    :mark "circle",
@@ -238,8 +251,8 @@
  [(let [data (->> (range 0.005 0.999 0.001)
                   (mapv (fn[p] {:x p, :y (- (m/log2 p)) :col "SI"})))]
     ;; Self Info - unexpectedness
-    (hc/xform ht/simple-layer-chart
-              :TID :multi :TOPTS {:order :row, :size "auto"}
+    (hc/xform ht/layer-chart
+              :TID :multi ;:TOPTS {:order :col, :size "none"}
               :TITLE "Self Information (unexpectedness)"
               :LAYER [(hc/xform ht/line-layer
                                 :XTITLE "Probability of event"
@@ -251,7 +264,7 @@
                   (mapv (fn[p] {:x p,
                                :y (- (- (* p (m/log2 p)))
                                      (* (- 1 p) (m/log2 (- 1 p))))})))]
-    (hc/xform ht/simple-layer-chart
+    (hc/xform ht/layer-chart
               :TID :multi
               :TITLE "Entropy (Unpredictability)"
               :LAYER [(hc/xform ht/gen-encode-layer
@@ -273,7 +286,7 @@
     pdist))
 ;;(p/mean obsdist) => 5.7
 (->>
- [(hc/xform ht/simple-layer-chart
+ [(hc/xform ht/layer-chart
             :TID :dists :TOPTS {:order :row, :size "auto"}
             :TITLE "A Real (obvserved) distribution with incorrect sample mean"
             :LAYER
@@ -281,7 +294,7 @@
              (hc/xform ht/xrule-layer :AGG "mean")]
             :DATA (mapv (fn[[x y]] {:x x :y y :m 5.7}) obsdist))
 
-  (hc/xform ht/simple-layer-chart
+  (hc/xform ht/layer-chart
             :TID :dists
             :TITLE "The same distribution with correct weighted mean"
             :LAYER
@@ -326,7 +339,7 @@
 (->>
  (let [data (->> (range 0.005 0.999 0.001)
                  (mapv (fn[p] {:x p, :y (- (m/log2 p)) :col "SI"})))]
-   (hc/xform ht/simple-layer-chart
+   (hc/xform ht/layer-chart
              :TITLE "Self Information (unexpectedness)"
              :LAYER [(hc/xform ht/xrule-layer :AGG "mean")
                      (hc/xform ht/line-layer
@@ -342,7 +355,7 @@
                  (mapv (fn[p] {:x p,
                               :y (- (- (* p (m/log2 p)))
                                     (* (- 1 p) (m/log2 (- 1 p))))})))]
-   (hc/xform ht/simple-layer-chart
+   (hc/xform ht/layer-chart
              :TITLE "Entropy (Unpredictability)"
              :LAYER [(hc/xform ht/gen-encode-layer
                                :MARK "line"
@@ -361,7 +374,7 @@
                          ptt (ac/roundit % :places 2)]
                      {:x % :y RE})
                   (range 0.06 0.98 0.01))]
-   (hc/xform ht/simple-line-chart
+   (hc/xform ht/line-chart
              :POINT true
              :TITLE "KLD minimum entropy: True P to Binomial Q estimate"
              :XTITLE "Binomial Distribution P paramter"
@@ -380,7 +393,25 @@
                          ptt (ac/roundit % :places 2)]
                      {:x % :y RE})
                   (range 0.06 0.98 0.01))]
-   (hc/xform ht/simple-line-chart
+   (hc/xform ht/line-chart
+             :POINT true
+             :TITLE "JSD minimum entropy: True P to Binomial Q estimate"
+             :XTITLE "Binomial Distribution P paramter"
+             :YTITLE "JSD(P||Q)"
+             :DATA data))
+ hmi/sv!)
+;;; Sqrt(JSD) real vs binomial
+(->>
+ (let [data (mapv #(let [RE (Math/sqrt
+                             (it/jensen-shannon
+                              (->> obsdist (into {}))
+                              (->> (p/binomial-dist 10 %)
+                                   (into {}))))
+                         REtt (ac/roundit RE)
+                         ptt (ac/roundit % :places 2)]
+                     {:x % :y RE})
+                  (range 0.06 0.98 0.01))]
+   (hc/xform ht/line-chart
              :POINT true
              :TITLE "JSD minimum entropy: True P to Binomial Q estimate"
              :XTITLE "Binomial Distribution P paramter"
@@ -390,22 +421,23 @@
 
 
 (->>
- (let [data (concat
+ (let [JSD it/jensen-shannon #_(comp #(Math/sqrt (double %)) it/jensen-shannon)
+       data (concat
              (mapv #(let [RE (it/KLD (->> obsdist (into {}))
                                      (->> (p/binomial-dist 10 %)
                                           (into {})))]
                       {:x % :y RE :RE "KLD"})
                    (range 0.06 0.98 0.01))
-             (mapv #(let [RE (it/jensen-shannon
+             (mapv #(let [RE (JSD
                               (->> obsdist (into {}))
                               (->> (p/binomial-dist 10 %)
                                    (into {})))]
                       {:x % :y RE :RE "JSD"})
                    (range 0.06 0.98 0.01)))]
-   (hc/xform ht/simple-layer-chart
+   (hc/xform ht/layer-chart
      :TITLE "Minimum entropy: True P to Binomial Q estimate"
      :DATA data
-     :LAYER [(hc/xform ht/simple-line-chart
+     :LAYER [(hc/xform ht/line-chart
                        :POINT true
                        :TRANSFORM [{:filter {:field "RE" :equal "KLD"}}]
                        :SELECTION ht/interval-scales :INAME "grid1"
@@ -413,7 +445,7 @@
                                :legend {:type "symbol" :offset 0 :title "RE"}}
                        :XTITLE "Binomial Distribution P paramter"
                        :YTITLE "KLD(P||Q)")
-             (hc/xform ht/simple-line-chart
+             (hc/xform ht/line-chart
                        :POINT true
                        :TRANSFORM [{:filter {:field "RE" :equal "JSD"}}]
                        :SELECTION ht/interval-scales :INAME "grid2"
@@ -523,7 +555,7 @@
          (map (fn[[x y _ sq]] {:x x :y y :m 9.0})))))
 
 (->>
- (hc/xform ht/simple-layer-chart
+ (hc/xform ht/layer-chart
            :TITLE "CRE / Optimal Word Size"
            :DATA (conj credata {:x 1 :y 1.1 :m 9.0} {:x 2 :y 1.63 :m 9.0})
            :LAYER
