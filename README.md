@@ -76,7 +76,7 @@ For example, the following shows an example overlay+detail VGL specification, tr
 The following will create an example plot in the default tab
 
 ```Clojure
-(->> (hc/xform ht/simple-point-chart
+(->> (hc/xform ht/point-chart
        :UDATA "data/cars.json"
        :X "Horsepower" :Y "Miles_per_Gallon" :COLOR "Origin")
      hmi/sv!)
@@ -85,10 +85,10 @@ The following will create an example plot in the default tab
 ![Saite pic 1.2](resources/public/images/simple-scatter-plot.png?raw=true)
 
 
-User meta data is used to communicate information about such things as which tab to use, the tab's options, whether the template is VegaLite or Vega, et. al. This meta data is contained in a map associated with _substitution key_ `:USERDATA` for VGL/VG specification key `:usermeta` (see [Hanami](https://github.com/jsa-aerial/hanami) for details on substitution keys and templates and transformations). The `:usermeta` key is recognized by VGL/VG and explicitly ignored by their processing. All your templates (or explicit specifications) need to supply `:usermeta` as a key with either explicit values, or more typically (and usefully) a value of `:USERDATA` which the recursive transformation will then transform to a value. For example, here is what the `ht/simple-point-chart` template looks like:
+User meta data is used to communicate information about such things as which tab to use, the tab's options, whether the template is VegaLite or Vega, et. al. This meta data is contained in a map associated with _substitution key_ `:USERDATA` for VGL/VG specification key `:usermeta` (see [Hanami](https://github.com/jsa-aerial/hanami) for details on substitution keys and templates and transformations). The `:usermeta` key is recognized by VGL/VG and explicitly ignored by their processing. All your templates (or explicit specifications) need to supply `:usermeta` as a key with either explicit values, or more typically (and usefully) a value of `:USERDATA` which the recursive transformation will then transform to a value. For example, here is what the `ht/point-chart` template looks like:
 
 ```Clojure
-(def simple-point-chart
+(def point-chart
   {:usermeta :USERDATA
    :title  :TITLE
    :height :HEIGHT
@@ -131,14 +131,14 @@ All of these values can be changed, either via an explicit call to `hc/add-defau
 
 ```Clojure
 (->>
- [(hc/xform ht/simple-layer-chart
+ [(hc/xform ht/layer-chart
     :TID :dists
     :TITLE "A Real (obvserved) distribution with incorrect sample mean"
     :LAYER [(hc/xform ht/bar-layer :XTITLE "Count" :YTITLE "Probability")
             (hc/xform ht/xrule-layer :AGG "mean")]
     :DATA (mapv (fn[[x y]] {:x x :y y :m 5.7}) obsdist))
 
-  (hc/xform ht/simple-layer-chart
+  (hc/xform ht/layer-chart
     :TID :dists
     :TITLE "The same distribution with correct weighted mean"
     :LAYER [(hc/xform ht/bar-layer :XTITLE "Count" :YTITLE "Probability")
@@ -157,22 +157,22 @@ First, taking the defaults indicated above, the folowing lays out a row ordered 
 ```Clojure
 (->>
  (mapv #(apply hc/xform %)
-       [[ht/simple-point-chart
+       [[ht/point-chart
          :UDATA "data/cars.json"
          :X "Horsepower" :Y "Miles_per_Gallon" :COLOR "Origin"]
         (let [data (->> (range 0.005 0.999 0.001)
                         (mapv (fn[p] {:x p, :y (- (m/log2 p)) :col "SI"})))]
-          [ht/simple-layer-chart
+          [ht/layer-chart
            :TITLE "Self Information (unexpectedness)"
            :LAYER [(hc/xform ht/xrule-layer :AGG "mean")
                    (hc/xform ht/line-layer
                      :XTITLE "Probability of event" :YTITLE "-log(p)")]
            :DATA data])
-        [ht/simple-bar-chart
+        [ht/bar-chart
          :UDATA "data/seattle-weather.csv" :TOOLTIP RMV
          :X "date" :XTYPE "ordinal" :XUNIT "month"
          :Y "precipitation" :YAGG "mean"]
-        [ht/simple-layer-chart
+        [ht/layer-chart
          :UDATA "data/seattle-weather.csv"
          :LAYER [(hc/xform ht/bar-layer
                    :TOOLTIP RMV
