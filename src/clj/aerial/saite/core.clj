@@ -27,7 +27,7 @@
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
               :opts :OPTS
               :vid :VID, :msgop :MSGOP, :session-name :SESSION-NAME}
-   :VID hc/RMV, :MSGOP :tabs, :SESSION-NAME "Exploring"
+   :VID RMV, :MSGOP :tabs, :SESSION-NAME "Exploring"
    :TID :expl1, :TLBL #(-> :TID % name cljstr/capitalize)
    :OPTS (hc/default-opts :vgl)
    :TOPTS {:order :row, :eltsper 2 :size "auto"}))
