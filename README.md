@@ -11,9 +11,9 @@ Visualizations are formed from parameterized templates (see [Hanami](https://git
 
 Saite also functions as an example application built with [Hanami](https://github.com/jsa-aerial/hanami). As such it has all the capability of Hanami's _template_ system and recursive transformation of parameterized templates.
 
-Saite also uses of the _tab system_ provided by Hanami for automatic tab constructtion and updates, plus the application specific tab capabilities of that system. Further, Saite makes use of Hanami's visualization messaging system, in particular, the `user-msg` multimethod with implementations for the `:app-init` user msg as well as the `:data` msg for streaming data plots/charts.
+Saite also uses of the _tab system_ provided by Hanami for automatic tab construction and updates, plus the application specific tab capabilities of that system. Further, Saite makes use of Hanami's visualization messaging system, in particular, the `user-msg` multimethod with implementations for the `:app-init` user msg as well as the `:data` msg for streaming data plots/charts.
 
-In addition, Saite also makes use of `default-header-fn` provided by Hanami. This creates a simple page header giving the 'session name' for a session as well as a input area to change the name of the session. Updating is based on session name - all sessions with the same name will get the updates from the server.
+In addition, Saite also makes use of `default-header-fn` provided by Hanami. This creates a simple page header giving the 'session name' for a session as well as an input area to change the name of the session. Updating is based on session name - all sessions with the same name will get the updates from the server.
 
 
 ## Installation
