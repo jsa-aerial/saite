@@ -4,6 +4,7 @@
     :as async
     :refer (<! >! put! chan)
     :refer-macros [go go-loop]]
+   [clojure.string :as cljstr]
 
    [aerial.hanami.core
     :as hmi
@@ -14,6 +15,9 @@
             get-vspec update-vspecs
             get-tab-field add-tab update-tab-field active-tabs
             app-stop]]
+   [aerial.hanami.common
+    :as hc
+    :refer [RMV]]
 
    [com.rpl.specter :as sp]
 
@@ -182,6 +186,15 @@
 ;;; Startup ============================================================== ;;;
 
 (when-let [elem (js/document.querySelector "#app")]
+  (hc/add-defaults
+   :HEIGHT 400 :WIDTH 450
+   :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
+              :opts :OPTS
+              :vid :VID, :msgop :MSGOP, :session-name :SESSION-NAME}
+   :VID RMV, :MSGOP :tabs, :SESSION-NAME "Exploring"
+   :TID :expl1, :TLBL #(-> :TID % name cljstr/capitalize)
+   :OPTS (hc/default-opts :vgl)
+   :TOPTS {:order :row, :eltsper 2 :size "auto"})
   (start :elem elem
          :port js/location.port
          :instrumentor-fn test-instrumentor))
