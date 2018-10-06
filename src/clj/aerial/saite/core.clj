@@ -35,7 +35,8 @@
 
 
 (defn start [port]
-  (hmi/start-server 3000 :idfn (constantly "Exploring")
+  (hmi/start-server port
+                    :idfn (constantly "Exploring")
                     :title "咲いて"
                     :logo "images/small-in-bloom.png"
                     :img "images/in-bloom.png")
