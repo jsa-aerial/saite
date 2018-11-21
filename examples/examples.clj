@@ -19,6 +19,7 @@
             [aerial.hanami.templates :as ht]
             [aerial.hanami.core :as hmi]
 
+            [aerial.saite.core :as saite]
             [aerial.saite.common :as ac]
             [aerial.saite.templates :as at]))
 
@@ -33,6 +34,10 @@
 ;;; :BACKGROUND "oldlace"
 
 
+(saite/start 3000)
+
+
+
 ;;; Simple scatter with template
 (->> (hc/xform ht/point-chart
        :HEIGHT 300 :WIDTH 400
@@ -40,6 +45,89 @@
        :UDATA "data/cars.json"
        :X "Horsepower" :Y "Miles_per_Gallon" :COLOR "Origin")
      hmi/sv!)
+
+
+
+
+(let [_ (hc/add-defaults
+         :NAME #(-> :SIDE % name cljstr/capitalize)
+         :STYLE hc/RMV)
+      frame-template {:frame
+                      {:SIDE `[[gap :size :GAP]
+                               [p {:style :STYLE}
+                                "This is the " [:span.bold :NAME]
+                                " 'board' of a picture "
+                                [:span.italic.bold "frame."]]]}}
+      frame-top (hc/xform
+                 frame-template :SIDE :top :GAP "10px")
+
+      frame-left (hc/xform
+                  frame-template :SIDE :left :GAP "10px"
+                  :STYLE {:width "100px" :min-width "50px"})
+      frame-right (merge-with merge
+                   (hc/xform
+                    frame-template :SIDE :right :GAP "2px"
+                    :STYLE {:width "100px" :min-width "50px"})
+                   (hc/xform
+                    frame-template :SIDE :left :GAP "2px"
+                    :STYLE {:width "100px" :min-width "50px"
+                            :color "white"}))
+      frame-bot (hc/xform
+                 frame-template :SIDE :bottom :GAP "10px")]
+  (->> (mapv #(hc/xform ht/point-chart
+                :HEIGHT 200 :WIDTH 250
+                :USERDATA (merge (hc/get-default :USERDATA) %)
+                :UDATA "data/cars.json"
+                :X "Horsepower" :Y "Miles_per_Gallon" :COLOR "Origin")
+             [frame-top frame-left frame-bot frame-right])
+       hmi/sv!))
+
+
+(let [text "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quod si ita est, sequitur id ipsum, quod te velle video, omnes semper beatos esse sapientes. Tamen a proposito, inquam, aberramus."
+      frame {:frame
+             {:top `[[gap :size "150px"]
+                     [p "An example showing a "
+                      [:span.bold "picture "] [:span.italic.bold "frame"]
+                      ". This is the top 'board'"
+                      [:br] ~text]]
+              :left `[[gap :size "10px"]
+                      [p {:style {:width "100px" :min-width "50px"}}
+                       "Some text on the " [:span.bold "left:"] [:br] ~text]]
+              :right `[[gap :size "2px"]
+                       [p {:style {:width "200px" :min-width "50px"
+                                   :font-size "20px" :color "red"}}
+                        "Some large text on the " [:span.bold "right:"] [:br]
+                        ~(.substring text 0 180)]]
+              :bottom `[[gap :size "200px"]
+                        [title :level :level3
+                         :label [p {:style {:font-size "large"}}
+                                 "Some text on the "
+                                 [:span.bold "bottom"] [:br]
+                                 "With a cool info button "
+                                 [info-button
+                                  :info
+                                  [:p "Check out Saite Visualizer!" [:br]
+                                   "Built with Hanami!" [:br]
+                                   [hyperlink-href
+                                    :label "Saite "
+                                    :href  "https://github.com/jsa-aerial/saite"
+                                    :target "_blank"]]]]]]}}]
+  (->> [(hc/xform ht/point-chart
+          :USERDATA
+          (merge
+           (hc/get-default :USERDATA) frame)
+          :UDATA "data/cars.json"
+          :X "Horsepower" :Y "Miles_per_Gallon" :COLOR "Origin")
+        #_(hc/xform ht/point-chart
+          :USERDATA
+          (merge
+           (hc/get-default :USERDATA) frame)
+          :UDATA "data/cars.json"
+          :X "Horsepower" :Y "Miles_per_Gallon" :COLOR "Origin")]
+       hmi/sv!))
+
+
+
 
 (->>
  (hc/xform
@@ -136,6 +224,7 @@
 
 
 
+
 ;;; Log scales, error bars
 (->>
  (hc/xform
@@ -161,26 +250,17 @@
      {:dose 50, :response 20999}]},
    :layer
    [{:selection
-     {:grid
-      {:type "interval",
-       :bind "scales",
-       :on "[mousedown, window:mouseup] > window:mousemove!",
-       :encodings ["x" "y"],
-       :translate "[mousedown, window:mouseup] > window:mousemove!",
-       :zoom "wheel!",
-       :mark {:fill "#333", :fillOpacity 0.125, :stroke "white"},
-       :resolve "global"}},
+     {:grid {:type "interval", :bind "scales"}},
      :mark {:type "point", :filled true, :color "green"},
      :encoding
      {:x {:field "dose", :type "quantitative", :scale {:type "log"}},
       :y {:field "response", :type "quantitative", :aggregate "mean"}}}
-    #_{:mark {:type "errorbar", :ticks true},
-       :encoding
-       {:x {:field "dose", :type "quantitative", :scale {:zero false}},
-        :y {:field "response", :type "quantitative"},
-        :color {:value "#4682b4"}}}]})
+    {:mark {:type "errorbar", :ticks true},
+     :encoding
+     {:x {:field "dose", :type "quantitative", :scale {:zero false}},
+      :y {:field "response", :type "quantitative"},
+      :color {:value "#4682b4"}}}]})
  hmi/sv!)
-
 
 (->>
  (hc/xform
@@ -189,29 +269,29 @@
    :width 600,
    :data
    {:values
-    [{:Dose 0.5, :Response 32659.00003}
-     {:Dose 0.5, :Response 40659.00002340234}
-     {:Dose 0.5, :Response 29000}
-     {:Dose 1, :Response 31781}
-     {:Dose 1, :Response 30781}
-     {:Dose 1, :Response 35781}
-     {:Dose 2, :Response 30054}
-     {:Dose 4, :Response 29398}
-     {:drc_dose 0.05, :drc_ll3 35597.08053881955}
-     {:drc_dose 1, :drc_ll3 35597.08053881955}
-     {:drc_dose 2, :drc_ll3 35597.08053881955}
-     {:drc_dose 5, :drc_ll3 35597.08053881955}
-     {:drc_dose 10, :drc_ll3 35597.08053881955}
-     {:drc_dose 50, :drc_ll3 35597.08053881955}
-     {:drc_dose 200, :drc_ll3 35597.08053881955}
-     {:drc_dose 1000, :drc_ll3 35597.08053881955}]},
+    [{:Dose 0.5, :Response 32659.00003,
+      :drc_dose 0.05, :drc_ll3 35597.08053881955},
+     {:Dose 0.5, :Response 40659.00002340234,
+      :drc_dose 1, :drc_ll3 35597.08053881955},
+     {:Dose 0.5, :Response 29000,
+      :drc_dose 2, :drc_ll3 35597.08053881955},
+     {:Dose 1, :Response 31781,
+      :drc_dose 5, :drc_ll3 35597.08053881955},
+     {:Dose 1, :Response 30781,
+      :drc_dose 10, :drc_ll3 35597.08053881955},
+     {:Dose 1, :Response 35781,
+      :drc_dose 50, :drc_ll3 35597.08053881955},
+     {:Dose 2, :Response 30054,
+      :drc_dose 200, :drc_ll3 35597.08053881955},
+     {:Dose 4, :Response 29398,
+      :drc_dose 1000, :drc_ll3 35597.08053881955}]},
    :layer
-   [{:selection {:view {:type "interval", :bind "scales"}},
+   [{:selection {:grid {:type "interval", :bind "scales"}},
      :mark {:type "point", :filled true, :color "black"},
      :encoding
      {:x {:field "Dose", :type "quantitative", :scale {:type "log"}},
       :y {:field "Response", :type "quantitative", :aggregate "mean"}}}
-    #_{:mark {:type "errorbar", :ticks true},
+    {:mark {:type "errorbar", :ticks true},
        :encoding
        {:x {:field "Dose", :type "quantitative", :scale {:zero false}},
         :y {:field "Response", :type "quantitative"},
@@ -243,6 +323,8 @@
    :config {:view {:stroke "transparent"}}}
   :TID :geo)
  hmi/sv!)
+
+
 
 
 ;;; Multi Chart - cols and rows
