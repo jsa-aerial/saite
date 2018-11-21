@@ -1,4 +1,4 @@
-(defproject aerial.saite "0.1.1"
+(defproject aerial.saite "0.2.0"
   :description "Exploratory graphics and visualization system"
   :url "https://github.com/jsa-aerial/saite"
   :license {:name "MIT"
@@ -10,7 +10,7 @@
 
                  [com.rpl/specter "1.1.1"]
 
-                 [aerial.hanami "0.2.0"]
+                 [aerial.hanami "0.3.0"]
 
                  [net.apribase/clj-dns "0.1.0"]
                  [aerial.fs "1.1.5"]
