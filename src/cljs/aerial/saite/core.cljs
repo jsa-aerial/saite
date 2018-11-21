@@ -45,51 +45,68 @@
 
 ;;; Components ============================================================ ;;;
 
-
 (defn bar-slider-fn [tid val]
   (let [tabval (get-tab-field tid)
-        spec-children-pairs (tabval :spec-children-pairs)]
+        spec-frame-pairs (tabval :spec-frame-pairs)]
     (printchan "Slider update " val)
     (update-tab-field tid :compvis nil)
     (update-tab-field
-     tid :spec-children-pairs
-     (mapv (fn[[spec children]]
+     tid :spec-frame-pairs
+     (mapv (fn[[spec frame]]
              (let [cljspec spec
                    data (mapv (fn[m] (assoc m :b (+ (m :b) val)))
                               (get-in cljspec [:data :values]))
                    newspec (assoc-in cljspec [:data :values] data)]
-               [newspec children]))
-           spec-children-pairs))))
+               [newspec frame]))
+           spec-frame-pairs))))
 
-(defn test-instrumentor [{:keys [tabid spec opts]}]
+(defn instrumentor [{:keys [tabid spec opts]}]
   (printchan "Test Instrumentor called" :TID tabid #_:SPEC #_spec)
   (let [cljspec spec
-        udata (cljspec :usermeta)] (update-adb [:udata] udata)
-       (cond
-         (not (map? udata)) []
+        udata (cljspec :usermeta)
+        default-frame {:top [], :bottom [],
+                       :left [[box :size "0px" :child ""]],
+                       :right [[box :size "0px" :child ""]]}]
+    (update-adb [:udata] udata)
+    (cond
+      (not (map? udata)) []
 
-         (udata :slider)
-         (let [sval (rgt/atom "0.0")]
-           (printchan :SLIDER-INSTRUMENTOR)
-           (xform-recom (udata :slider)
-                        :m1 sval
-                        :oc1 #(do (bar-slider-fn tabid %)
-                                  (reset! sval (str %)))
-                        :oc2 #(do (bar-slider-fn tabid (js/parseFloat %))
-                                  (reset! sval %))))
+      (udata :frame)
+      (let [frame-sides (udata :frame)]
+        (printchan :Frame-Instrumentor)
+        (update-adb [:dbg :frame]
+                    (->> (keys frame-sides)
+                         (reduce
+                          (fn[F k]
+                            (assoc F k (xform-recom
+                                        (frame-sides k) re-com-xref)))
+                          default-frame)))
+        (get-adb [:dbg :frame]))
 
-         (udata :test2)
-         [[gap :size "10px"]
-          [label :label "Select a demo"]
-          [single-dropdown
-           :choices (udata :test2)
-           :on-change #(printchan "Dropdown: " %)
-           :model nil
-           :placeholder "Hi there"
-           :width "100px"]]
+      (udata :slider)
+      (let [sval (rgt/atom "0.0")]
+        (printchan :SLIDER-INSTRUMENTOR)
+        (merge default-frame
+               {:top (xform-recom
+                      (udata :slider)
+                      :m1 sval
+                      :oc1 #(do (bar-slider-fn tabid %)
+                                (reset! sval (str %)))
+                      :oc2 #(do (bar-slider-fn tabid (js/parseFloat %))
+                                (reset! sval %)))}))
 
-         :else []
-         )))
+      (udata :test2)
+      [[gap :size "10px"]
+       [label :label "Select a demo"]
+       [single-dropdown
+        :choices (udata :test2)
+        :on-change #(printchan "Dropdown: " %)
+        :model nil
+        :placeholder "Hi there"
+        :width "100px"]]
+
+      :else default-frame
+      )))
 
 
 (defn tab<-> [tabval]
@@ -197,16 +214,27 @@
    :TOPTS {:order :row, :eltsper 2 :size "auto"})
   (start :elem elem
          :port js/location.port
-         :instrumentor-fn test-instrumentor))
+         :instrumentor-fn instrumentor))
 
 
 
 (comment
 
   (when-let [elem (js/document.querySelector "#app")]
+    (hc/add-defaults
+     :HEIGHT 400 :WIDTH 450
+     :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
+                :opts :OPTS
+                :vid :VID, :msgop :MSGOP, :session-name :SESSION-NAME}
+     :VID RMV, :MSGOP :tabs, :SESSION-NAME "Exploring"
+     :TID :expl1, :TLBL #(-> :TID % name cljstr/capitalize)
+     :OPTS (hc/default-opts :vgl)
+     :TOPTS {:order :row, :eltsper 2 :size "auto"})
     (start :elem elem
            :port 3000
-           :instrumentor-fn test-instrumentor))
+           :instrumentor-fn instrumentor))
+
+
 
   (add-tab {:id :px
            :label "MultiChartSVG"
