@@ -5,6 +5,19 @@ Exploratory graphics and visualization system. 咲いて (in bloom). Built on to
 
 **Saite** is a Clojure(Script) mini "client/server" application for exploratory creation of interactive visualizations based in [Vega-Lite](https://vega.github.io/vega-lite/) (VGL) and/or [Vega](https://vega.github.io/vega/) (VG) specifications. These specifications are declarative and completely specified by _data_ (JSON maps). VGL compiles into the lower level grammar of VG which in turn compiles to a runtime format utilizting lower level runtime environments such as [D3](https://d3js.org/), HTML5 Canvas, and [WebGL](https://github.com/vega/vega-webgl-renderer).
 
+Table of Contents
+=================
+
+   * [saite](#saite)
+      * [Installation](#installation)
+      * [Features](#features)
+      * [Usage](#usage)
+
+[toc](https://github.com/ekalinin/github-markdown-toc)
+# saite
+
+**Saite** is a Clojure(Script) mini "client/server" application for exploratory creation of interactive visualizations based in [Vega-Lite](https://vega.github.io/vega-lite/) (VGL) and/or [Vega](https://vega.github.io/vega/) (VG) specifications. These specifications are declarative and completely specified by _data_ (JSON maps). VGL compiles into the lower level grammar of VG which in turn compiles to a runtime format utilizting lower level runtime environments such as [D3](https://d3js.org/), HTML5 Canvas, and [WebGL](https://github.com/vega/vega-webgl-renderer).
+
 Typical work flow starts by requiring `aerial.saite.core` and running the `start` function which takes a port. This port is for the websocket messaging. Browsing to this port on localhost will open the viewer.
 
 Visualizations are formed from parameterized templates (see [Hanami](https://github.com/jsa-aerial/hanami)) which are recursively transformed into legal VGL or VG specifications. In Saite, creating and transforming these templates is done on the server side in typical REPL style development. Generally, transformed templates (with their data or data source) are sent to one or more sessions (brower viewers) for rendering.
@@ -20,7 +33,7 @@ In addition, Saite also makes use of `default-header-fn` provided by Hanami. Thi
 
 To install, add the following to your project `:dependencies`:
 
-    [aerial.saite "0.1.1"]
+    [aerial.saite "0.2.0"]
 
 
 ## Features
