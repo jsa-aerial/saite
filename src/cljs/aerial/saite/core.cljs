@@ -14,7 +14,7 @@
             update-adb get-adb
             get-vspec update-vspecs
             get-tab-field add-tab update-tab-field active-tabs
-            app-stop]]
+            vgl app-stop]]
    [aerial.hanami.common
     :as hc
     :refer [RMV]]
@@ -40,7 +40,6 @@
     :refer [filter-choices-by-keyword single-dropdown-args-desc]]
 
    ))
-
 
 
 ;;; Components ============================================================ ;;;
@@ -109,48 +108,122 @@
       )))
 
 
+(defn alert-panel [closefn]
+  (printchan :alert-panel)
+  [modal-panel
+   :child [re-com.core/alert-box
+           :id 1 :alert-type :warning
+           :heading "Empty specification can't be rendered"
+           :closeable? true
+           :on-close closefn]
+   :backdrop-color "grey" :backdrop-opacity 0.0])
+
+(defn vis-panel [inspec donefn] (printchan :vis-panel)
+  (go
+    (if-let [otchart (get-adb [:main :otchart])]
+      otchart
+      (let [nm (get-adb [:main :uid :name])
+            msg {:op :read-clj
+                 :data {:session-name nm
+                        :render? true
+                        :cljstg inspec}}
+            _ (hmi/app-send msg)
+            otspec (async/<! (get-adb [:main :convert-chan]))
+            otchart (modal-panel
+                     :backdrop-color   "grey"
+                     :backdrop-opacity 0.4
+                     :child [v-box
+                             :gap "10px"
+                             :children [[vgl otspec]
+                                        [h-box :gap "5px" :justify :end
+                                         :children
+                                         [[md-circle-icon-button
+                                           :md-icon-name "zmdi-close"
+                                           :tooltip "Close"
+                                           :on-click donefn]]]]])]
+        (update-adb [:main :otchart] otchart)
+        otchart))))
+
 (defn tab<-> [tabval]
   (let [input (rgt/atom "")
-        output (rgt/atom "")]
+        output (rgt/atom "")
+        show? (rgt/atom false)
+        alert? (rgt/atom false)
+        process-done (fn[event]
+                       (reset! show? false)
+                       (update-adb [:main :otspec] :rm
+                                  [:main :otchart] :rm))
+        process-close (fn[event] (reset! alert? false))]
     (fn [tabval] (printchan "TAB<-> called ")
       [v-box :gap "5px"
        :children
-       [[h-box :gap "10px"
+       [[h-box :gap "10px" :justify :between
          :children
-         [[gap :size "10px"]
-          [md-circle-icon-button
-           :md-icon-name "zmdi-circle-o"
-           :tooltip "Clear"
-           :on-click
-           #(do (reset! input "") (reset! output ""))]
-          [md-circle-icon-button
-           :md-icon-name "zmdi-long-arrow-right"
-           :tooltip "Translate VGL to VG (Clj)"
-           :on-click
-           #(reset! output
-                    (if (= @input "")
-                      ""
-                      (try
-                        (with-out-str
-                          (-> (js/JSON.parse @input)
-                              js/vl.compile .-spec
-                              #_js/JSON.stringify
-                              (js->clj :keywordize-keys true)
-                              cljs.pprint/pprint))
-                        (catch js/Error e (str e)))))]
-          [md-circle-icon-button
-           :md-icon-name "zmdi-forward"
-           :tooltip "Translate JSON to Clj"
-           :on-click
-           #(reset! output
-                    (if (= @input "")
-                      ""
-                      (try
-                        (with-out-str
-                          (cljs.pprint/pprint
-                           (js->clj (js/JSON.parse @input)
-                                    :keywordize-keys true)))
-                        (catch js/Error e (str e)))))]]]
+         [[h-box :gap "10px"
+           :children
+           [[gap :size "10px"]
+            [md-circle-icon-button
+             :md-icon-name "zmdi-circle-o"
+             :tooltip "Clear"
+             :on-click
+             #(do (reset! input "") (reset! output ""))]
+            [md-circle-icon-button
+             :md-icon-name "zmdi-long-arrow-right"
+             :tooltip "Translate VGL -> VG -> Clj"
+             :on-click
+             #(reset! output
+                      (if (= @input "")
+                        ""
+                        (try
+                          (with-out-str
+                            (-> (js/JSON.parse @input)
+                                js/vl.compile .-spec
+                                (js->clj :keywordize-keys true)
+                                cljs.pprint/pprint))
+                          (catch js/Error e (str e)))))]
+            [md-circle-icon-button
+             :md-icon-name "zmdi-caret-right-circle"
+             :tooltip "Translate JSON to Clj"
+             :on-click
+             #(reset! output
+                      (if (= @input "")
+                        ""
+                        (try
+                          (with-out-str
+                            (cljs.pprint/pprint
+                             (js->clj (js/JSON.parse @input)
+                                      :keywordize-keys true)))
+                          (catch js/Error e (str e)))))]]]
+          [h-box :gap "10px" :justify :end
+           :children
+           [[box :child (cond @alert?
+                              [alert-panel process-close]
+                              @show?
+                              (get-adb [:main :otchart])
+                              :else [p])]
+            [md-circle-icon-button
+             :md-icon-name "zmdi-caret-left-circle"
+             :tooltip "Translate Clj to JSON"
+             :on-click
+             #(go (reset! input
+                          (if (= @output "")
+                            ""
+                            (let [nm (get-adb [:main :uid :name])
+                                  msg {:op :read-clj
+                                       :data {:session-name nm
+                                              :render? false
+                                              :cljstg @output}}]
+                              (hmi/app-send msg)
+                              (async/<! (get-adb [:main :convert-chan]))))))]
+            [md-circle-icon-button
+             :md-icon-name "zmdi-long-arrow-up"
+             :tooltip "Render in Popup"
+             :on-click #(if (= @output "")
+                          (reset! alert? true)
+                          (let [ch (vis-panel @output process-done)]
+                            (go (async/<! ch)
+                                (reset! show? true))))]
+            [gap :size "10px"]]]]]
         [line]
         [h-split
          :panel-1 [box :size "auto"
@@ -168,7 +241,6 @@
          :size    "auto"]]])))
 
 
-
 ;;; Messaging ============================================================ ;;;
 
 
@@ -176,10 +248,25 @@
   (printchan :DATA msg))
 
 
+(defmethod user-msg :clj-read [msg]
+  (let [data (msg :data)
+        render? (data :render?)
+        clj (dissoc data :render?)
+        result (if render?
+                 clj
+                 (try (-> clj clj->js (js/JSON.stringify nil, 2))
+                      (catch js/Error e (str e))))
+        ch (get-adb [:main :convert-chan])]
+    (printchan render? result)
+    (go (async/>! ch result))))
+
+
 (defmethod user-msg :app-init [msg]
+  (update-adb [:main :convert-chan] (async/chan))
   (add-tab {:id :xvgl
             :label "<->"
             :opts {:extfn (tab<-> :NA)}}))
+
 
 (defn update-data
   "Originally meant as general updater of vis plot/chart data
