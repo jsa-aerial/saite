@@ -35,7 +35,7 @@
 
 
 (saite/start 3000)
-
+(saite/stop)
 
 
 ;;; Simple scatter with template
@@ -105,6 +105,7 @@
                                  [:span.bold "bottom"] [:br]
                                  "With a cool info button "
                                  [info-button
+                                  :position :right-center
                                   :info
                                   [:p "Check out Saite Visualizer!" [:br]
                                    "Built with Hanami!" [:br]
@@ -113,12 +114,6 @@
                                     :href  "https://github.com/jsa-aerial/saite"
                                     :target "_blank"]]]]]]}}]
   (->> [(hc/xform ht/point-chart
-          :USERDATA
-          (merge
-           (hc/get-default :USERDATA) frame)
-          :UDATA "data/cars.json"
-          :X "Horsepower" :Y "Miles_per_Gallon" :COLOR "Origin")
-        #_(hc/xform ht/point-chart
           :USERDATA
           (merge
            (hc/get-default :USERDATA) frame)
@@ -219,9 +214,9 @@
      :LAYER [(hc/xform ht/area-layer :TOOLTIP RMV
                :X :date, :XTYPE :temporal, :XUNIT :yearmonth, :XFORMAT "%Y"
                :Y "count" :AGG "sum"
-               :COLOR {:field "series", :type "nominal", :scale {:scheme "category20b"}})])
+               :COLOR {:field "series", :type "nominal",
+                       :scale {:scheme "category20b"}})])
     hmi/sv!)
-
 
 
 
