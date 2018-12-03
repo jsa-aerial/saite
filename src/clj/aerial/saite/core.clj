@@ -21,6 +21,36 @@
             [aerial.saite.templates :as at]))
 
 
+;;; (->> (resolve (read-string "ht/point-chart")) meta :ns str)
+;;; (->> (resolve (read-string "ht/point-chart")) var-get fn?)
+(defmethod hmi/user-msg :read-clj [msg]
+  (let [{:keys [session-name cljstg render?]} (msg :data)
+        uuids (hmi/get-adb session-name)
+        clj (try
+              (let [clj (->> cljstg clojure.core/read-string)
+                    [spec params] (when (vector? clj)[(first clj) (rest clj)])]
+                (cond
+                  (and spec (symbol? spec))
+                  (let [v (resolve spec)
+                        v (when v (var-get v))]
+                    (if (nil? v)
+                      (format "Error: unknown var '%s'" (name spec))
+                      (if (not (fn? v))
+                        (apply hc/xform v params)
+                        (format "Error: fns (%s) cannot be converted"
+                                (name spec)))))
+
+                  spec (apply hc/xform spec params)
+
+                  :else (hc/xform clj)))
+              (catch Exception e
+                (format "Error %s" (or (.getMessage e) e)))
+              (catch Error e
+                (format "Error %s" (or (.getMessage e) e))))]
+    (hmi/printchan :CLJ clj)
+    (hmi/s! uuids :clj-read (assoc clj :render? render?))))
+
+
 (defn init []
   (hc/add-defaults
    :HEIGHT 400 :WIDTH 450
