@@ -1,4 +1,4 @@
-(defproject aerial.saite "0.2.0"
+(defproject aerial.saite "0.3.0"
   :description "Exploratory graphics and visualization system"
   :url "https://github.com/jsa-aerial/saite"
   :license {:name "MIT"
@@ -22,7 +22,7 @@
 
   :source-paths ["src/cljc" "src/clj" "src/cljs"]
 
-  :prep-tasks ["compile" ["cljsbuild" "once" "min"]]
+  ;:prep-tasks ["compile" ["cljsbuild" "once" "min"]]
 
   :cljsbuild {:builds
               [{:id "dev"
