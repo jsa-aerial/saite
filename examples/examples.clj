@@ -209,13 +209,13 @@
 
 ;;; Area Chart
 (-> (hc/xform
-     ht/layer-chart
+     ht/area-chart
      :UDATA  "data/unemployment-across-industries.json"
-     :LAYER [(hc/xform ht/area-layer :TOOLTIP RMV
-               :X :date, :XTYPE :temporal, :XUNIT :yearmonth, :XFORMAT "%Y"
-               :Y "count" :AGG "sum"
-               :COLOR {:field "series", :type "nominal",
-                       :scale {:scheme "category20b"}})])
+     :TOOLTIP RMV
+     :X :date, :XTYPE :temporal, :XUNIT :yearmonth, :XFORMAT "%Y"
+     :Y "count" :AGG "sum"
+     :COLOR {:field "series", :type "nominal",
+             :scale {:scheme "category20b"}})
     hmi/sv!)
 
 
