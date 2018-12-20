@@ -168,7 +168,7 @@
              :on-click
              #(do (reset! input "") (reset! output ""))]
             [md-circle-icon-button
-             :md-icon-name "zmdi-long-arrow-right"
+             :md-icon-name "zmdi-fast-forward"
              :tooltip "Translate VGL -> VG -> Clj"
              :on-click
              #(reset! output
@@ -216,7 +216,7 @@
                               (hmi/app-send msg)
                               (async/<! (get-adb [:main :convert-chan]))))))]
             [md-circle-icon-button
-             :md-icon-name "zmdi-long-arrow-up"
+             :md-icon-name "zmdi-caret-up-circle"
              :tooltip "Render in Popup"
              :on-click #(if (= @output "")
                           (reset! alert? true)
@@ -289,7 +289,7 @@
 
 ;;; Startup ============================================================== ;;;
 
-(when-let [elem (js/document.querySelector "#app")]
+#_(when-let [elem (js/document.querySelector "#app")]
   (hc/add-defaults
    :HEIGHT 400 :WIDTH 450
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
@@ -321,20 +321,7 @@
            :port 3000
            :instrumentor-fn instrumentor))
 
+  (js/document.createElement "a")
 
-
-  (add-tab {:id :px
-           :label "MultiChartSVG"
-            :opts (merge-old-new-opts
-                   (get-adb [:main :opts])
-                   {:vgl {:renderer "svg"}
-                    :layout {:size "auto"}})
-            :specs [js/vglspec js/vglspec2
-                    js/vglspec3 js/vglspec]})
-
-  (update-adb :tabs :current :p1)
-
-
-  (get-adb :tabs)
 
   )
