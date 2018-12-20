@@ -21,33 +21,65 @@
             [aerial.saite.templates :as at]))
 
 
+
+(defn xform-cljform
+  [clj-form]
+  #_(println :CLJ-FORM clj-form)
+  (sp/transform
+   sp/ALL
+   (fn[v]
+     (cond
+       (symbol? v)
+       (let [vvar (resolve v)
+             vval (when vvar (var-get vvar))]
+         (cond
+           (and (fn? vval) (not= (var hc/xform) vvar))
+           (throw (Exception. (format "fns (%s) cannot be converted" (name v))))
+
+           (= v 'RMV) v
+
+           :else vval))
+
+       (or (vector? v) (list? v))
+       (let [hd (first v)
+             hdvar (and (symbol? hd) (resolve hd))
+             hdval (when hdvar (var-get hdvar))]
+         #_(println :V v :HDVAL hdval (= hdvar (var hc/xform)))
+         (cond
+           (and hdvar (fn? hdval) (= (var hc/xform) hdvar))
+           (hc/xform (eval (apply xform-cljform (rest v))))
+
+           (and hdvar (coll? hdval))
+           (hc/xform hdval (eval (apply xform-cljform (rest v))))
+
+           (and hdval (fn? hdval))
+           (throw (Exception.
+                   (format "fns (%s) cannot be converted" (name hd))))
+
+           (and (vector? v) (coll? hd) (not= (first hd) 'hc/xform))
+           [(apply hc/xform (xform-cljform hd))]
+
+           :else v))
+
+       :else v))
+   clj-form))
+
 ;;; (->> (resolve (read-string "ht/point-chart")) meta :ns str)
 ;;; (->> (resolve (read-string "ht/point-chart")) var-get fn?)
+(def dbg (atom {}))
 (defmethod hmi/user-msg :read-clj [msg]
   (let [{:keys [session-name cljstg render?]} (msg :data)
         uuids (hmi/get-adb session-name)
         clj (try
-              (let [clj (->> cljstg clojure.core/read-string)
-                    [spec params] (when (vector? clj)[(first clj) (rest clj)])]
-                (cond
-                  (and spec (symbol? spec))
-                  (let [v (resolve spec)
-                        v (when v (var-get v))]
-                    (if (nil? v)
-                      (format "Error: unknown var '%s'" (name spec))
-                      (if (not (fn? v))
-                        (apply hc/xform v params)
-                        (format "Error: fns (%s) cannot be converted"
-                                (name spec)))))
-
-                  spec (apply hc/xform spec params)
-
-                  :else (hc/xform clj)))
+              (let [clj (->> cljstg clojure.core/read-string)]
+                (swap! dbg (fn[m] (assoc m :clj clj)))
+                (->> clj xform-cljform eval (apply hc/xform)))
               (catch Exception e
-                (format "Error %s" (or (.getMessage e) e)))
+                {:error (format "Error %s" (or (.getMessage e) e))})
               (catch Error e
-                (format "Error %s" (or (.getMessage e) e))))]
-    (hmi/printchan :CLJ clj)
+                {:error (format "Error %s" (or (.getMessage e) e))}))]
+    (swap! dbg (fn[m] (assoc m :xform-clj clj)))
+    #_(hmi/printchan :CLJ clj)
     (hmi/s! uuids :clj-read (assoc clj :render? render?))))
 
 
