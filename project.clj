@@ -10,7 +10,7 @@
 
                  [com.rpl/specter "1.1.1"]
 
-                 [aerial.hanami "0.4.0"]
+                 [aerial.hanami "0.4.1"]
 
                  [net.apribase/clj-dns "0.1.0"]
                  [aerial.fs "1.1.5"]
