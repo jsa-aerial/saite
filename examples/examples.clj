@@ -38,6 +38,33 @@
 (saite/stop)
 
 
+;;; Examples for browser popup renderings. Cut and paste into Clj panel
+
+[ht/point-chart
+ :HEIGHT 300 :WIDTH 400
+ :UDATA "data/cars.json"
+ :X "Horsepower" :Y "Miles_per_Gallon" :COLOR "Origin"]
+
+[ht/area-chart
+ :UDATA  "data/unemployment-across-industries.json"
+ :TOOLTIP RMV
+ :X :date, :XTYPE :temporal, :XUNIT :yearmonth, :XFORMAT "%Y"
+ :Y "count" :AGG "sum"
+ :COLOR {:field "series", :type "nominal",
+ :scale {:scheme "category20b"}}]
+
+[ht/layer-chart
+ :UDATA  "data/unemployment-across-industries.json"
+ :LAYER [(ht/area-layer :TOOLTIP RMV
+          :X :date, :XTYPE :temporal, :XUNIT :yearmonth, :XFORMAT "%Y"
+          :Y "count" :AGG "sum"
+          :COLOR {:field "series", :type "nominal",
+                  :scale {:scheme "category20b"}})]]
+
+
+
+
+
 ;;; Simple scatter with template
 (->> (hc/xform ht/point-chart
        :HEIGHT 300 :WIDTH 400
