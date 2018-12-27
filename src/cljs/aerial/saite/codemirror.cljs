@@ -63,7 +63,7 @@
         (js/console.log comp, (rgt/dom-node comp))
         (let [opts (clj->js (merge
                              {:lineNumbers true
-                              :lineWrapping true,
+                              :lineWrapping false,
                               :viewportMargin js/Infinity
                               :autofocus true
                               :keyMap "emacs"
