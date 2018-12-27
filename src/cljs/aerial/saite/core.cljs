@@ -19,6 +19,10 @@
     :as hc
     :refer [RMV]]
 
+   [aerial.saite.codemirror
+    :as cm
+    :refer [code-mirror]]
+
    [com.rpl.specter :as sp]
 
    [reagent.core :as rgt]
@@ -227,18 +231,10 @@
         [line]
         [h-split
          :panel-1 [box :size "auto"
-                   :child [input-textarea
-                           :model input
-                           :placeholder "JSON VGL/VG"
-                           :on-change #(reset! input %)
-                           :width "500px" :rows 20]]
+                   :child [code-mirror input {:name "javascript", :json true}]]
          :panel-2 [box :size "auto"
-                   :child [input-textarea
-                           :model output
-                           :placeholder "Clj"
-                           :on-change #(reset! output %)
-                           :width "500px" :rows 20]]
-         :size    "auto"]]])))
+                   :child [code-mirror output "clojure"]]
+         :size    "auto", :width "1050px", :height "600px"]]])))
 
 
 ;;; Messaging ============================================================ ;;;
