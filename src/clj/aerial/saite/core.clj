@@ -64,6 +64,11 @@
        :else v))
    clj-form))
 
+(defn final-xform [x]
+  (if (vector? x)
+    (apply hc/xform x)
+    (hc/xform x)))
+
 ;;; (->> (resolve (read-string "ht/point-chart")) meta :ns str)
 ;;; (->> (resolve (read-string "ht/point-chart")) var-get fn?)
 (def dbg (atom {}))
@@ -73,13 +78,14 @@
         clj (try
               (let [clj (->> cljstg clojure.core/read-string)]
                 (swap! dbg (fn[m] (assoc m :clj clj)))
-                (->> clj xform-cljform eval (apply hc/xform)))
+                (->> clj xform-cljform eval final-xform))
               (catch Exception e
                 {:error (format "Error %s" (or (.getMessage e) e))})
               (catch Error e
                 {:error (format "Error %s" (or (.getMessage e) e))}))]
     (swap! dbg (fn[m] (assoc m :xform-clj clj)))
-    #_(hmi/printchan :CLJ clj)
+    (when (hmi/dbg? [:pchan :umsg])
+      (hmi/printchan :CLJ clj))
     (hmi/s! uuids :clj-read (assoc clj :render? render?))))
 
 
