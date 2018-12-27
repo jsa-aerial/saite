@@ -50,7 +50,7 @@
  :X :date, :XTYPE :temporal, :XUNIT :yearmonth, :XFORMAT "%Y"
  :Y "count" :AGG "sum"
  :COLOR {:field "series", :type "nominal",
- :scale {:scheme "category20b"}}]
+         :scale {:scheme "category20b"}}]
 
 [ht/layer-chart
  :UDATA  "data/unemployment-across-industries.json"
