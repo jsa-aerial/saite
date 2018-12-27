@@ -138,7 +138,7 @@
         (update-adb [:main :otchart] otchart)
         otchart))))
 
-(defn tab<-> [tabval]
+(defn tab<-> [tabval] (printchan "Make TAB<-> called ")
   (let [input (rgt/atom "")
         output (rgt/atom "")
         show? (rgt/atom false)
@@ -243,7 +243,7 @@
                  (try (-> clj clj->js (js/JSON.stringify nil, 2))
                       (catch js/Error e (str e))))
         ch (get-adb [:main :convert-chan])]
-    (printchan render? result)
+    #_(printchan render? result)
     (go (async/>! ch result))))
 
 
