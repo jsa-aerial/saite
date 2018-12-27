@@ -53,14 +53,15 @@
   :js-cm-opts
     options passed into the CodeMirror constructor"
   [input mode & {:keys [js-cm-opts]}]
-
+  (printchan "CODE-MIRROR called")
   (let [cm (atom nil)]
     (rgt/create-class
      {:display-name "CMirror"
 
       :component-did-mount
       (fn [comp]
-        (js/console.log comp, (rgt/dom-node comp))
+        (printchan "CM did-mount called")
+        #_(js/console.log comp, (rgt/dom-node comp))
         (let [opts (clj->js (merge
                              {:lineNumbers true
                               :lineWrapping false,
@@ -68,23 +69,25 @@
                               :autofocus true
                               :keyMap "emacs"
                               :matchBrackets true
-                              :value @input
                               :autoCloseBrackets true
+                              :value @input
                               :mode mode}
                              js-cm-opts))
               inst (.fromTextArea js/CodeMirror (rgt/dom-node comp) opts)]
 
+          (.setValue inst @input)
           (reset! cm inst)
           (.on inst "change" #_#(reset! input (.getValue %))
                (fn []
                  (let [value (.getValue inst)]
-                   (when-not (= value @input)
+                   (when true #_(not= value @input)
                      (reset! input value) #_(on-change value)))))
           ))
 
       :component-did-update
       (fn [comp old-argv]
-        (when-not (= @input (.getValue @cm))
+        (printchan "CM did-update called")
+        (when true #_(not= @input (.getValue @cm))
           (.setValue @cm @input)
           ;; reset the cursor to the end of the text, if the text was
           ;; changed externally
