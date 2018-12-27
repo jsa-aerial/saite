@@ -98,18 +98,6 @@
                       :oc2 #(do (bar-slider-fn tabid (js/parseFloat %))
                                 (reset! sval %)))}))
 
-      (udata :test2)
-      (merge default-frame
-             {:right [[gap :size "10px"]
-                      [v-box :children
-                       [[label :label "Select a demo"]
-                        [single-dropdown
-                         :choices (udata :test2)
-                         :on-change #(printchan "Dropdown: " %)
-                         :model nil
-                         :placeholder "Hi there"
-                         :width "100px"]]]]})
-
       :else default-frame
       )))
 
