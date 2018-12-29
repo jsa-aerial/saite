@@ -87,7 +87,7 @@
       :component-did-update
       (fn [comp old-argv]
         (printchan "CM did-update called")
-        (when true #_(not= @input (.getValue @cm))
+        (when (not= @input (.getValue @cm))
           (.setValue @cm @input)
           ;; reset the cursor to the end of the text, if the text was
           ;; changed externally
