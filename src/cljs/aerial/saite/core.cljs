@@ -29,7 +29,7 @@
 
    [re-com.core
     :as rcm
-    :refer [h-box v-box box gap line h-split v-split
+    :refer [h-box v-box box gap line h-split v-split scroller
             button row-button md-icon-button md-circle-icon-button info-button
             input-text input-password input-textarea
             label title p
@@ -126,15 +126,18 @@
             otchart (modal-panel
                      :backdrop-color   "grey"
                      :backdrop-opacity 0.4
-                     :child [v-box
-                             :gap "10px"
-                             :children [[vgl otspec]
-                                        [h-box :gap "5px" :justify :end
-                                         :children
-                                         [[md-circle-icon-button
-                                           :md-icon-name "zmdi-close"
-                                           :tooltip "Close"
-                                           :on-click donefn]]]]])]
+                     :child [scroller
+                             :max-height "700px"
+                             :max-width "800px"
+                             :child [v-box
+                                     :gap "10px"
+                                     :children [[vgl otspec]
+                                                [h-box :gap "5px" :justify :end
+                                                 :children
+                                                 [[md-circle-icon-button
+                                                   :md-icon-name "zmdi-close"
+                                                   :tooltip "Close"
+                                                   :on-click donefn]]]]]])]
         (update-adb [:main :otchart] otchart)
         otchart))))
 
@@ -146,7 +149,7 @@
         process-done (fn[event]
                        (reset! show? false)
                        (update-adb [:main :otspec] :rm
-                                  [:main :otchart] :rm))
+                                   [:main :otchart] :rm))
         process-close (fn[event] (reset! alert? false))]
     (fn [tabval] (printchan "TAB<-> called ")
       [v-box :gap "5px"
