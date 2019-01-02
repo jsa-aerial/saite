@@ -24,7 +24,7 @@
 
 (defn xform-cljform
   [clj-form]
-  #_(println :CLJ-FORM clj-form)
+  (hmi/print-when [:pchan :xform :cljform] :CLJ-FORM clj-form)
   (sp/transform
    sp/ALL
    (fn[v]
@@ -45,7 +45,8 @@
        (let [hd (first v)
              hdvar (and (symbol? hd) (resolve hd))
              hdval (when hdvar (var-get hdvar))]
-         #_(println :V v :HDVAL hdval (= hdvar (var hc/xform)))
+         (hmi/print-when [:pchan :xform :vec]
+                         :V v :HDVAL hdval (= hdvar (var hc/xform)))
          (cond
            (and hdvar (fn? hdval) (= (var hc/xform) hdvar))
            (hc/xform (eval (apply xform-cljform (rest v))))
@@ -60,7 +61,8 @@
            (throw (Exception.
                    (format "fns (%s) cannot be converted" (name hd))))
 
-           (and (vector? v) (coll? hd) (not= (first hd) 'hc/xform))
+           (and (vector? v) (coll? hd) (not (map? hd))
+                (not= (first hd) 'hc/xform))
            [(apply hc/xform (xform-cljform hd))]
 
            :else v))
@@ -88,8 +90,7 @@
               (catch Error e
                 {:error (format "Error %s" (or (.getMessage e) e))}))]
     (swap! dbg (fn[m] (assoc m :xform-clj clj)))
-    (when (hmi/dbg? [:pchan :umsg])
-      (hmi/printchan :CLJ clj))
+    (hmi/print-when [:pchan :umsg] :CLJ clj)
     (hmi/s! uuids :clj-read (assoc clj :render? render?))))
 
 
