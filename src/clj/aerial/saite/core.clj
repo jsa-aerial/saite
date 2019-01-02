@@ -33,7 +33,8 @@
        (let [vvar (resolve v)
              vval (when vvar (var-get vvar))]
          (cond
-           (and (fn? vval) (not= (var hc/xform) vvar))
+           (and (fn? vval)
+                (not (#{(var hc/xform) (var merge)} vvar)))
            (throw (Exception. (format "fns (%s) cannot be converted" (name v))))
 
            (= v 'RMV) v
@@ -48,6 +49,9 @@
          (cond
            (and hdvar (fn? hdval) (= (var hc/xform) hdvar))
            (hc/xform (eval (apply xform-cljform (rest v))))
+
+           (and hdvar (fn? hdval) (= (var merge) hdvar))
+           (merge (eval (rest v)))
 
            (and hdvar (coll? hdval))
            (hc/xform hdval (eval (apply xform-cljform (rest v))))
