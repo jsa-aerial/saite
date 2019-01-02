@@ -33,7 +33,7 @@ In addition, Saite also makes use of `default-header-fn` provided by Hanami. Thi
 
 To install, add the following to your project `:dependencies`:
 
-    [aerial.saite "0.2.0"]
+    [aerial.saite "0.3.0"]
 
 
 ## Features
@@ -44,7 +44,10 @@ To install, add the following to your project `:dependencies`:
   * Each tab can have arbitrary number of _independent_ visulaizations
   * Tab layout is configurable - row/col and number of elements/(row/col)
   * Tabs can have names that make sense to you
-* Initial tab for converting VGL to Clj and VGL to VG and rendered as Clj
+* Initial tab for converting VGL to Clj and VGL to VG to Clj
+  * CodeMirror enabled editors for each panel
+  * Clj panel can render the spec in a modal panel popup
+  * Clj can also make use of templates in conversion and renderings
   * useful for creating starting point specs that you turn into templates
   * useful for merging VGL with VG only capabilities
   * Visualization templates have a default tab, with name "Expl"
