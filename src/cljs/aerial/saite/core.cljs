@@ -128,7 +128,7 @@
                      :backdrop-opacity 0.4
                      :child [scroller
                              :max-height "700px"
-                             :max-width "800px"
+                             :max-width "1000px"
                              :child [v-box
                                      :gap "10px"
                                      :children [[vgl otspec]
@@ -163,7 +163,7 @@
              :md-icon-name "zmdi-circle-o"
              :tooltip "Clear"
              :on-click
-             #(do (reset! input "") (reset! output ""))]
+             #(do (reset! input ""))]
             [md-circle-icon-button
              :md-icon-name "zmdi-fast-forward"
              :tooltip "Translate VGL -> VG -> Clj"
@@ -220,6 +220,11 @@
                           (let [ch (vis-panel @output process-done)]
                             (go (async/<! ch)
                                 (reset! show? true))))]
+            [md-circle-icon-button
+             :md-icon-name "zmdi-circle-o"
+             :tooltip "Clear"
+             :on-click
+             #(do (reset! output ""))]
             [gap :size "10px"]]]]]
         [line]
         [h-split
