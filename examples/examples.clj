@@ -211,6 +211,33 @@
                        {:a "G", :b 19 },{:a "H", :b 87 },{:a "I", :b 52 }])})
 
 
+;;; Tree Layouts
+;;;
+(->>
+ [(hc/xform
+   ht/tree-layout
+   :OPTS (merge (hc/default-opts :vgl) {:mode "vega"})
+   :WIDTH 650, :HEIGHT 1600
+   :UDATA "data/flare.json"
+   :LINKSHAPE "diagonal" :LAYOUT "cluster" :FONTSIZE 11
+   :CFIELD "depth")
+  (hc/xform
+   ht/tree-layout
+   :OPTS (merge (hc/default-opts :vgl) {:mode "vega"})
+   :WIDTH 650, :HEIGHT 1600
+   :UDATA "data/flare.json"
+   :LINKSHAPE "line" :LAYOUT "cluster"
+   :CFIELD "depth")
+  (hc/xform
+   ht/tree-layout
+   :OPTS (merge (hc/default-opts :vgl) {:mode "vega"})
+   :WIDTH 650, :HEIGHT 1600
+   :UDATA "data/flare.json"
+   :LINKSHAPE "curve" :LAYOUT "cluster"
+   :CFIELD "depth")]
+ hmi/sv!)
+
+
 ;;; Overview + Detail
 (->>
  (hc/xform
