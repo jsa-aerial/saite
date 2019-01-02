@@ -60,6 +60,13 @@
           :COLOR {:field "series", :type "nominal",
                   :scale {:scheme "category20b"}}]]]
 
+[ht/tree-layout
+ :OPTS (merge (hc/default-opts :vgl) {:mode "vega"})
+ :WIDTH 650, :HEIGHT 1600
+ :UDATA "data/flare.json"
+ :LINKSHAPE "diagonal" :LAYOUT "cluster"
+ :CFIELD "depth"]
+
 
 
 
@@ -432,6 +439,7 @@
                      d2 (% :Y)]
                  (format "datum['%s'] != null && datum['%s'] !=null" d1 d2)))
  hmi/sv!)
+
 
 
 
