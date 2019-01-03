@@ -33,7 +33,7 @@ In addition, Saite also makes use of `default-header-fn` provided by Hanami. Thi
 
 To install, add the following to your project `:dependencies`:
 
-    [aerial.saite "0.3.0"]
+    [aerial.saite "0.3.1"]
 
 
 ## Features
