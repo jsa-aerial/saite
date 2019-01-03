@@ -89,18 +89,24 @@ Browse to `localhost:3000` and you will see an initial session page:
 
 ## The `[<->]` tab
 
-The `[<->]` tab will be current upon startup. It holds the resources for converting JSON VGL to Clj. The left area is where you can type (or more typically paste) a JSON VGL specification. The dark arrow button converts to Clj and renders in the right area. The light arrow first compiles to VG and then converts to Clj. The open button clears both panels.
+The `[<->]` tab will be current upon startup. It holds the resources for converting JSON VGL to Clj. Both areas are code editors [CodeMirror](https://codemirror.net/doc/manual.html). The left editor is where you can type (or more typically paste) a JSON VGL specification. The caret-right button converts to Clj and renders in the right editor pane. Clicking the double (fast-forward) arrow button first compiles the (expected) VGL code to VG and then converts to Clj. The open buttons for each editor clear their respective editor panels.
 
-For example, the following shows an example overlay+detail VGL specification, translated to VG and rendered as Clojure.
+The caret-left button over the Clj editor area will take a Clj encoded specification, including templates, and convert to the correponding VGL specification, or VG specification if the original Clj corresponded to a Vega spec - including Vega templates.
+
+Lastly the caret-up button over the Clj editor will render the Clj specification in a modal panel popup window. This supports rapid exploration on the client as you can edit the Clj pane and reclick to see the results.
+
+
+As a first example, the following shows an overlay+detail VGL specification, translated to VG and rendered as Clojure.
 
 ![Saite pic 1.1](resources/public/images/vgl-vg-clj.png?raw=true)
 
-You can also translate Clj specifications, including hanami templates, over to their JS/JSON Vega and Vega-Lite specifications. For example, the following shows an area chart as template and translated to the corresponding Vega-Lite JSON specification.
+
+Here is an example where we translate a Clj specifications for an area chart, using the hanami template for area charts, over to its JS/JSON Vega-Lite specification.
 
 ![Saite pic 1.2](resources/public/images/clj-vgl-json.png?raw=true)
 
 
-And further, you can quickly test render any Clj specification (including templates) in a modal panel popup by clicking the caret-up button. For example, we render the previoius area chart:
+Next we render this specification in a modal panel popup by clicking the caret-up button:
 
 ![Saite pic 1.3](resources/public/images/clj-modal-render.png?raw=true)
 
@@ -121,7 +127,7 @@ The following will create an example plot in the default tab
      hmi/sv!)
 ```
 
-![Saite pic 1.4](resources/public/images/simple-scatter-plot.png?raw=true)
+![Saite pic 2.1](resources/public/images/simple-scatter-plot.png?raw=true)
 
 Each new rendering will overwrite the content of the tab. Also, the default tab need not be used - just specify a tab id in all your specifications.
 
@@ -192,7 +198,7 @@ All of these values can be changed, either via an explicit call to `hc/add-defau
  hmi/sv!)
 ```
 
-![Saite pic 1.2](resources/public/images/dists-tab-1.png?raw=true)
+![Saite pic 2.2](resources/public/images/dists-tab-1.png?raw=true)
 
 Exploring this a bit further let's look at four independent plots and charts. The actual visualizations are not particularly related - this is just to show the grid layout aspect (which is actually a direct Hanami capability).
 
@@ -231,9 +237,9 @@ First, taking the defaults indicated above, the folowing lays out a row ordered 
  hmi/sv!)
 ```
 
-![Saite pic 1.3](resources/public/images/row-auto-2.png?raw=true)
+![Saite pic 2.3](resources/public/images/row-auto-2.png?raw=true)
 
 If we add `:TOPTS {:order :col :size "none"}` after the first `:UDATA`, the result will be:
 
-![Saite pic 1.4](resources/public/images/col-auto-2.png?raw=true)
+![Saite pic 2.4](resources/public/images/col-auto-2.png?raw=true)
 
