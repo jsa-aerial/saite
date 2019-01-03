@@ -12,6 +12,10 @@ Table of Contents
       * [Installation](#installation)
       * [Features](#features)
       * [Usage](#usage)
+      * [The [&lt;-&gt;] tab](#the---tab)
+      * [Tabs](#tabs)
+         * [The default Expl1 tab](#the-default-expl1-tab)
+         * [User tabs](#user-tabs)
 
 [toc](https://github.com/ekalinin/github-markdown-toc)
 # saite
@@ -82,6 +86,9 @@ Browse to `localhost:3000` and you will see an initial session page:
 
 ![Saite pic 1](resources/public/images/start-page.png?raw=true)
 
+
+## The `[<->]` tab
+
 The `[<->]` tab will be current and it holds the resources for converting JSON VGL to Clj. The left area is where you can type (or more typically paste) a JSON VGL specification. The dark arrow button converts to Clj and renders in the right area. The light arrow first compiles to VG and then converts to Clj. The open button clears both panels.
 
 For example, the following shows an example overlay+detail VGL specification, translated to VG and rendered as Clojure.
@@ -99,6 +106,11 @@ And further, you can quickly test render any Clj specification (including templa
 
 
 
+## Tabs
+
+Saite incorporates and uses Hanami's default tab system to provide 'pages' for organizing your document and visual explorations (see [Hanami](https://github.com/jsa-aerial/hanami))
+
+### The default `Expl1` tab
 
 The following will create an example plot in the default tab
 
@@ -111,6 +123,12 @@ The following will create an example plot in the default tab
 
 ![Saite pic 1.4](resources/public/images/simple-scatter-plot.png?raw=true)
 
+Each new rendering will overwrite the content of the tab. Also, the default tab need not be used - just specify a tab id in all your specifications.
+
+
+### User tabs
+
+Any number of other tabs may be specified, with all manner of text based (hiccup and re-com enabled) areas to picture frames ([frames](https://github.com/jsa-aerial/hanami#picture-frames)) with descriptive areas (top, bottom, left, and right) surrounding visulaizations. There may be any number of visualizations (with or without picture frames) and/or empty frames (textual areas) per tab.
 
 User meta data is used to communicate information about such things as which tab to use, the tab's options, whether the template is VegaLite or Vega, et. al. This meta data is contained in a map associated with _substitution key_ `:USERDATA` for VGL/VG specification key `:usermeta` (see [Hanami](https://github.com/jsa-aerial/hanami) for details on substitution keys and templates and transformations). The `:usermeta` key is recognized by VGL/VG and explicitly ignored by their processing. All your templates (or explicit specifications) need to supply `:usermeta` as a key with either explicit values, or more typically (and usefully) a value of `:USERDATA` which the recursive transformation will then transform to a value. For example, here is what the `ht/point-chart` template looks like:
 
