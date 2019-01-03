@@ -283,7 +283,7 @@
 
 ;;; Startup ============================================================== ;;;
 
-#_(when-let [elem (js/document.querySelector "#app")]
+(when-let [elem (js/document.querySelector "#app")]
   (hc/add-defaults
    :HEIGHT 400 :WIDTH 450
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
