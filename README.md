@@ -89,7 +89,7 @@ Browse to `localhost:3000` and you will see an initial session page:
 
 ## The `[<->]` tab
 
-The `[<->]` tab will be current and it holds the resources for converting JSON VGL to Clj. The left area is where you can type (or more typically paste) a JSON VGL specification. The dark arrow button converts to Clj and renders in the right area. The light arrow first compiles to VG and then converts to Clj. The open button clears both panels.
+The `[<->]` tab will be current upon startup. It holds the resources for converting JSON VGL to Clj. The left area is where you can type (or more typically paste) a JSON VGL specification. The dark arrow button converts to Clj and renders in the right area. The light arrow first compiles to VG and then converts to Clj. The open button clears both panels.
 
 For example, the following shows an example overlay+detail VGL specification, translated to VG and rendered as Clojure.
 
