@@ -88,6 +88,17 @@ For example, the following shows an example overlay+detail VGL specification, tr
 
 ![Saite pic 1.1](resources/public/images/vgl-vg-clj.png?raw=true)
 
+You can also translate Clj specifications, including hanami templates, over to their JS/JSON Vega and Vega-Lite specifications. For example, the following shows an area chart as template and translated to the corresponding Vega-Lite JSON specification.
+
+![Saite pic 1.2](resources/public/images/clj-vgl-json.png?raw=true)
+
+
+And further, you can quickly test render any Clj specification (including templates) in a modal panel popup by clicking the caret-up button. For example, we render the previoius area chart:
+
+![Saite pic 1.3](resources/public/images/clj-modal-render.png?raw=true)
+
+
+
 
 The following will create an example plot in the default tab
 
@@ -98,7 +109,7 @@ The following will create an example plot in the default tab
      hmi/sv!)
 ```
 
-![Saite pic 1.2](resources/public/images/simple-scatter-plot.png?raw=true)
+![Saite pic 1.4](resources/public/images/simple-scatter-plot.png?raw=true)
 
 
 User meta data is used to communicate information about such things as which tab to use, the tab's options, whether the template is VegaLite or Vega, et. al. This meta data is contained in a map associated with _substitution key_ `:USERDATA` for VGL/VG specification key `:usermeta` (see [Hanami](https://github.com/jsa-aerial/hanami) for details on substitution keys and templates and transformations). The `:usermeta` key is recognized by VGL/VG and explicitly ignored by their processing. All your templates (or explicit specifications) need to supply `:usermeta` as a key with either explicit values, or more typically (and usefully) a value of `:USERDATA` which the recursive transformation will then transform to a value. For example, here is what the `ht/point-chart` template looks like:
