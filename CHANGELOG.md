@@ -10,8 +10,8 @@ All notable changes to this project, starting from 0.3.0, will be documented in 
 ### Added
 - Conversion tab panels are now CodeMirror enabled (JS/JSON and CLJ).
 - Clj CodeMirror specs (including nested templates) can now be converted to their Vega/Vega-Lite JSON specs
-- Clj CodeMirror specs (including nested tempates) can now be rendered in modal panel popups
-- Empty picture frames (frames are hiccup and re-com enabled top, bottom, left, right areas surrounding a vis) So, now can easily support full text based areas in tabs (chapters) Inherited from Hanami 0.5.0
+- Clj CodeMirror specs (including nested templates) can now be rendered in modal panel popups
+- Empty picture frames (frames are hiccup and re-com enabled top, bottom, left, right areas surrounding a vis) are now available. Easy support for full text based areas in tabs (chapters) Inherited from Hanami 0.5.0
 - File data sources. Inherited from Hanami 0.5.0
 
 
