@@ -2,6 +2,10 @@
 All notable changes to this project, starting from 0.3.0, will be documented in this file.
 
 
+## [0.3.2] - 01-03-2019
+### Changed
+- Use Hanami 0.5.2 - new templates and substitution keys
+
 ## [0.3.1] - 01-03-2019
 ### Fixed
 - Forgot to enable page load start code...
