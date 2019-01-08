@@ -89,7 +89,7 @@ Browse to `localhost:3000` and you will see an initial session page:
 
 ## The `[<->]` tab
 
-The `[<->]` tab will be current upon startup. It holds the resources for converting JSON VGL to Clj. Both areas are code editors [CodeMirror](https://codemirror.net/doc/manual.html). The left editor is where you can type (or more typically paste) a JSON VGL specification. The caret-right button converts to Clj and renders in the right editor pane. Clicking the double (fast-forward) arrow button first compiles the (expected) VGL code to VG and then converts to Clj. The open buttons for each editor clear their respective editor panels.
+The `[<->]` tab will be current upon startup. It holds the resources for converting JSON VG/VGL to Clj and Clj VG/VGL (including templates) to JSON. Both areas are code editors [CodeMirror](https://codemirror.net/doc/manual.html). The left editor is where you can type (or more typically paste) a JSON VGL specification. The caret-right button converts to Clj and renders in the right editor pane. Clicking the double (fast-forward) arrow button first compiles the (expected) VGL code to VG and then converts to Clj. The open buttons for each editor clear their respective editor panels.
 
 The caret-left button over the Clj editor area will take a Clj encoded specification, including templates, and convert to the correponding VGL specification, or VG specification if the original Clj corresponded to a Vega spec - including Vega templates.
 
