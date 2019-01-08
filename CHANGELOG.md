@@ -19,5 +19,6 @@ All notable changes to this project, starting from 0.3.0, will be documented in 
 - File data sources. Inherited from Hanami 0.5.0
 
 
+[0.3.2]: https://github.com/jsa-aerial/saite/compare/0.3.1...0.3.2
 [0.3.1]: https://github.com/jsa-aerial/saite/compare/0.3.0...0.3.1
 [0.3.0]: https://github.com/jsa-aerial/saite/compare/0.2.0...0.3.0
