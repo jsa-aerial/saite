@@ -61,9 +61,9 @@
                   :scale {:scheme "category20b"}}]]]
 
 [ht/tree-layout
- :OPTS (merge (hc/default-opts :vgl) {:mode "vega"})
- :WIDTH 650, :HEIGHT 1600
+ :MODE "vega"
  :UDATA "data/flare.json"
+ :WIDTH 650, :HEIGHT 1600
  :LINKSHAPE "diagonal" :LAYOUT "cluster"
  :CFIELD "depth"]
 
@@ -82,12 +82,12 @@
 
 
 (let [_ (hc/add-defaults
-         :NAME #(-> :SIDE % name cljstr/capitalize)
+         :FMNM #(-> :SIDE % name cljstr/capitalize)
          :STYLE hc/RMV)
       frame-template {:frame
                       {:SIDE `[[gap :size :GAP]
                                [p {:style :STYLE}
-                                "This is the " [:span.bold :NAME]
+                                "This is the " [:span.bold :FMNM]
                                 " 'board' of a picture "
                                 [:span.italic.bold "frame."]]]}}
       frame-top (hc/xform
@@ -154,6 +154,67 @@
        hmi/sv!))
 
 
+;;; Empty picture frame
+;;;
+(let [text "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quod si ita est, sequitur id ipsum, quod te velle video, omnes semper beatos esse sapientes. Tamen a proposito, inquam, aberramus."
+      frame {:frame
+             {:top `[[gap :size "50px"]
+                     [p {:style {:width "600px" :min-width "50px"}}
+                      "An example empty picture frame showing all four areas."
+                      " This is the " [:span.bold "top"] " area. "
+                       ~text ~text ~text]]
+              :left `[[gap :size "50px"]
+                      [p {:style {:width "300px" :min-width "50px"}}
+                       "The " [:span.bold "left "] "area as a column of text. "
+                       ~text ~text ~text ~text]]
+              :right `[[gap :size "70px"]
+                      [p {:style {:width "300px" :min-width "50px"}}
+                       "The " [:span.bold "right "] "area as a column of text. "
+                       ~text ~text ~text ~text]]
+              :bottom `[[gap :size "50px"]
+                        [v-box
+                         :children
+                         [ [p {:style {:width "600px" :min-width "50px"}}
+                           "The " [:span.bold "bottom "]
+                           "area showing a variety of text. "
+                           [:span.italic ~text] [:span.bold ~text]]
+                          [p {:style {:width "600px" :min-width "50px"
+                                      :color "red"}}
+                           ~text]]]]}}]
+  (->> (hc/xform
+        ht/empty-chart
+        :TID :picframes
+        :USERDATA (merge (hc/get-default :USERDATA) frame))
+       hmi/sv!))
+
+
+;;; With and without chart frame
+;;;
+(let [text "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quod si ita est, sequitur id ipsum, quod te velle video, omnes semper beatos esse sapientes. Tamen a proposito, inquam, aberramus."
+      frame1 {:frame
+              {:top `[[gap :size "50px"]
+                      [p "Here's a 'typical' chart/plot filled picture frame."
+                       "It only has the top area"
+                       [:br] ~text]]}}
+      frame2 {:frame
+              {:left `[[gap :size "20px"]
+                       [p {:style {:width "200px" :min-width "50px"}}
+                        "This is an empty frame with a " [:span.bold "left "]
+                        "column of text" [:br] ~text ~text ~text ~text]]
+               :right `[[gap :size "30px"]
+                        [p {:style {:width "200px" :min-width "50px"}}
+                         "And a " [:span.bold "right "]
+                         "column of text"
+                         [:br] ~text ~text ~text ~text]]}}]
+  (->> [(hc/xform ht/point-chart
+          :USERDATA (merge (hc/get-default :USERDATA) frame1)
+          :TID :picframes :UDATA "data/cars.json"
+          :X "Horsepower" :Y "Miles_per_Gallon" :COLOR "Origin")
+        (hc/xform ht/empty-chart
+          :USERDATA (merge (hc/get-default :USERDATA) frame2)
+          :TID :picframes)]
+       hmi/sv!))
+
 
 
 (->>
@@ -211,10 +272,13 @@
                        {:a "G", :b 19 },{:a "H", :b 87 },{:a "I", :b 52 }])})
 
 
+
+(hc/get-default :NAME)
+(hc/update-defaults :NAME :name)
 ;;; Tree Layouts
 ;;;
 (->>
- [(hc/xform
+ [#_(hc/xform
    ht/tree-layout
    :OPTS (merge (hc/default-opts :vgl) {:mode "vega"})
    :WIDTH 650, :HEIGHT 1600
@@ -228,7 +292,7 @@
    :UDATA "data/flare.json"
    :LINKSHAPE "line" :LAYOUT "cluster"
    :CFIELD "depth")
-  (hc/xform
+  #_(hc/xform
    ht/tree-layout
    :OPTS (merge (hc/default-opts :vgl) {:mode "vega"})
    :WIDTH 650, :HEIGHT 1600
@@ -264,6 +328,7 @@
        :type "quantitative",
        :axis {:tickCount 3, :grid false}}}}]})
  hmi/sv!)
+
 
 
 ;;; Area Chart
@@ -446,7 +511,7 @@
 (->>
  (hc/xform
   ht/contour-plot
-  :OPTS (merge (hc/default-opts :vgl) {:mode "vega"})
+  :MODE "vega"
   :HEIGHT 400, :WIDTH 500
   :X "Horsepower", :XTITLE "Engine Horsepower"
   :Y "Miles_per_Gallon" :YTITLE "Miles/Gallon"
@@ -460,7 +525,7 @@
  (hc/xform
   ht/contour-plot
   :HEIGHT 500, :WIDTH 600
-  :OPTS (merge (hc/default-opts :vgl) {:mode "vega"})
+  :MODE "vega"
   :DATA (take 400 (repeatedly #(do {:x (rand-int 300) :y (rand-int 50)})))
   :XFORM-EXPR #(let [d1 (% :X)
                      d2 (% :Y)]
