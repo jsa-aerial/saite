@@ -136,7 +136,7 @@ Each new rendering will overwrite the content of the tab. Also, the default tab 
 
 Any number of other tabs may be specified, with all manner of text based (hiccup and re-com enabled) areas to picture frames ([frames](https://github.com/jsa-aerial/hanami#picture-frames)) with descriptive areas (top, bottom, left, and right) surrounding visulaizations. There may be any number of visualizations (with or without picture frames) and/or empty frames (textual areas) per tab.
 
-User meta data is used to communicate information about such things as which tab to use, the tab's options, whether the template is VegaLite or Vega, et. al. This meta data is contained in a map associated with _substitution key_ `:USERDATA` for VGL/VG specification key `:usermeta` (see [Hanami](https://github.com/jsa-aerial/hanami) for details on substitution keys and templates and transformations). The `:usermeta` key is recognized by VGL/VG and explicitly ignored by their processing. All your templates (or explicit specifications) need to supply `:usermeta` as a key with either explicit values, or more typically (and usefully) a value of `:USERDATA` which the recursive transformation will then transform to a value. For example, here is what the `ht/point-chart` template looks like:
+[User meta data](https://github.com/jsa-aerial/hanami#meta-data-and-the-userdata-key) is used to communicate information about such things as which tab to use, the tab's options, whether the template is Vega-Lite or Vega, et. al. This meta data is contained in a map associated with [substitution key](https://github.com/jsa-aerial/hanami#templates-substitution-keys-and-transformations) `:USERDATA` for VGL/VG specification key `:usermeta`. The `:usermeta` key is recognized by VGL/VG and explicitly ignored by their processing. All your templates (or explicit specifications) need to supply `:usermeta` as a key with either explicit values, or more typically (and usefully) a value of `:USERDATA` which the recursive transformation will then transform to a value. For example, here is what the `ht/point-chart` template looks like:
 
 ```Clojure
 (def point-chart
@@ -164,8 +164,8 @@ Saite sets a variety of defaults for `:USERDATA` as follows:
 
 :OPTS
 {:export {:png true, :svg false},
- :renderer "canvas",
- :mode "vega-lite"}
+ :renderer :RENDERER,
+ :mode :MODE}
 
 :SESSION-NAME "Exploring"
 :TID :expl1
@@ -176,9 +176,9 @@ Saite sets a variety of defaults for `:USERDATA` as follows:
 :MSGOP :tabs
 ```
 
-The `TLBL` value is an example of a substitution key which is a function. Such functions are passed the current substitution map as an argument during recursive transformation. So, in this case, the current tab will get a label that is the capitalized string of the `:TID` value. The `:TOPTS` provides a way of describing the layout of independent visualizations. Visualizations that are _independent_ are those that are separate VGL/VG renderings. So, they constitute different/independent VGL/VG specifications.
+The `TLBL` value is an example of a substitution key which is a [function](https://github.com/jsa-aerial/hanami#function-values-for-substitution-keys). Such functions are passed the current substitution map as an argument during recursive transformation. So, in this case, the current tab will get a label that is the capitalized string of the `:TID` value. The `:TOPTS` provides a way of describing the layout of independent visualizations. Visualizations that are _independent_ are those that are separate VGL/VG renderings. So, they constitute different/independent VGL/VG specifications.
 
-All of these values can be changed, either via an explicit call to `hc/add-defaults` or implicitly per visualization by supplying them to the `hc/xform` function. For example, in the following, we specify a new tab `:dists`. The tab label will automatically be set to "Dists" (you could override this with an explicit `:TLBL` k/v):
+All of these values can be changed, either via an explicit call to [hc/add-defaults](https://github.com/jsa-aerial/hanami#templates-and-substitution-keys) or implicitly per visualization by supplying them to the [hc/xform](https://github.com/jsa-aerial/hanami#templates-and-substitution-keys) function. For example, in the following, we specify a new tab `:dists`. The tab label will automatically be set to "Dists" (you could override this with an explicit `:TLBL` k/v):
 
 ```Clojure
 (->>
