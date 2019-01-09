@@ -24,13 +24,15 @@ Table of Contents
 
 Typical work flow starts by requiring `aerial.saite.core` and running the `start` function which takes a port. This port is for the websocket messaging. Browsing to this port on localhost will open the viewer.
 
-Visualizations are formed from parameterized templates (see [Hanami](https://github.com/jsa-aerial/hanami)) which are recursively transformed into legal VGL or VG specifications. In Saite, creating and transforming these templates is done on the server side in typical REPL style development. Generally, transformed templates (with their data or data source) are sent to one or more sessions (brower viewers) for rendering.
+Visualizations are formed from parameterized [templates](https://github.com/jsa-aerial/hanami#templates-substitution-keys-and-transformations) which are recursively transformed into legal VGL or VG specifications. In Saite, creating and transforming these templates is generally done on the server side in typical REPL style development. Transformed templates (with their data or data source) are sent to one or more sessions (brower viewers) for rendering.
+
+In versions 0.3.1+, there is CodeMirror editor support for creating templates on the client side and rendering them via a modal panel popup. There are serveral [issues](https://github.com/jsa-aerial/saite/issues) concerning the expansion of this to support more full notebook oriented documents.
 
 Saite also functions as an example application built with [Hanami](https://github.com/jsa-aerial/hanami). As such it has all the capability of Hanami's _template_ system and recursive transformation of parameterized templates.
 
-Saite also uses of the _tab system_ provided by Hanami for automatic tab construction and updates, plus the application specific tab capabilities of that system. Further, Saite makes use of Hanami's visualization messaging system, in particular, the `user-msg` multimethod with implementations for the `:app-init` user msg as well as the `:data` msg for streaming data plots/charts.
+Saite also uses of the [tab system](https://github.com/jsa-aerial/hanami#tabs) provided by Hanami for automatic tab construction and updates, plus the application specific tab capabilities of that system. Further, Saite makes use of Hanami's visualization [messaging system](https://github.com/jsa-aerial/hanami#messages), in particular, the `user-msg` multimethod with implementations for the `:app-init` user msg as well as the `:data` msg for streaming data plots/charts.
 
-In addition, Saite also makes use of `default-header-fn` provided by Hanami. This creates a simple page header giving the 'session name' for a session as well as an input area to change the name of the session. Updating is based on session name - all sessions with the same name will get the updates from the server.
+In addition, Saite also makes use of [header support](https://github.com/jsa-aerial/hanami#header) via the `default-header-fn`. This creates a simple page header giving [session support](https://github.com/jsa-aerial/hanami#sessions): a 'session name' for a session as well as an input area to change the name of the session. Updating is based on session name - all sessions with the same name will get the same updates from the server.
 
 
 ## Installation
