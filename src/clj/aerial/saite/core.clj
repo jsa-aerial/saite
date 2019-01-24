@@ -80,7 +80,6 @@
 (def dbg (atom {}))
 (defmethod hmi/user-msg :read-clj [msg]
   (let [{:keys [session-name cljstg render?]} (msg :data)
-        uuids (hmi/get-adb session-name)
         clj (try
               (let [clj (->> cljstg clojure.core/read-string)]
                 (swap! dbg (fn[m] (assoc m :clj clj)))
@@ -91,7 +90,7 @@
                 {:error (format "Error %s" (or (.getMessage e) e))}))]
     (swap! dbg (fn[m] (assoc m :xform-clj clj)))
     (hmi/print-when [:pchan :umsg] :CLJ clj)
-    (hmi/s! uuids :clj-read (assoc clj :render? render?))))
+    (hmi/send-msg session-name :clj-read (assoc clj :render? render?))))
 
 
 (defn init []

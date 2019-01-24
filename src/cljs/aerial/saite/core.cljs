@@ -74,18 +74,6 @@
     (cond
       (not (map? udata)) []
 
-      (udata :frame)
-      (let [frame-sides (udata :frame)]
-        (printchan :Frame-Instrumentor)
-        (update-adb [:dbg :frame]
-                    (->> (keys frame-sides)
-                         (reduce
-                          (fn[F k]
-                            (assoc F k (xform-recom
-                                        (frame-sides k) re-com-xref)))
-                          default-frame)))
-        (get-adb [:dbg :frame]))
-
       (udata :slider)
       (let [sval (rgt/atom "0.0")]
         (printchan :SLIDER-INSTRUMENTOR)
@@ -98,7 +86,7 @@
                       :oc2 #(do (bar-slider-fn tabid (js/parseFloat %))
                                 (reset! sval %)))}))
 
-      :else default-frame
+      :else {}
       )))
 
 
@@ -121,7 +109,7 @@
                  :data {:session-name nm
                         :render? true
                         :cljstg inspec}}
-            _ (hmi/app-send msg)
+            _ (hmi/send-msg msg)
             otspec (async/<! (get-adb [:main :convert-chan]))
             otchart (modal-panel
                      :backdrop-color   "grey"
@@ -210,7 +198,7 @@
                                        :data {:session-name nm
                                               :render? false
                                               :cljstg @output}}]
-                              (hmi/app-send msg)
+                              (hmi/send-msg msg)
                               (async/<! (get-adb [:main :convert-chan]))))))]
             [md-circle-icon-button
              :md-icon-name "zmdi-caret-up-circle"
