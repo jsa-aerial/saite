@@ -424,7 +424,7 @@
 
 
 
-;;; Geo Example
+;;; Geo Examples
 (->>
  (hc/xform
   {:usermeta :USERDATA
@@ -442,6 +442,28 @@
    :config {:view {:stroke "transparent"}}}
   :TID :geo)
  hmi/sv!)
+
+(->>
+ (hc/xform
+  {:usermeta :USERDATA
+   :$schema "https://vega.github.io/schema/vega-lite/v3.json",
+   :width 1000,
+   :height 600,
+   :data
+   {:url "https://raw.githubusercontent.com/vega/vega-datasets/gh-pages/data/us-10m.json",
+    :format {:type "topojson", :feature "counties"}},
+   :transform
+   [{:lookup "id",
+     :from
+     {:data {:url "https://raw.githubusercontent.com/vega/vega-datasets/gh-pages/data/unemployment.tsv"},
+      :key "id",
+      :fields ["rate"]}}],
+   :projection {:type "albersUsa"},
+   :mark "geoshape",
+   :encoding {:color {:field "rate", :type "quantitative"}}}
+  :TID :geo)
+ hmi/sv!)
+
 
 
 
