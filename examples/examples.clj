@@ -278,26 +278,26 @@
 ;;; Tree Layouts
 ;;;
 (->>
- [#_(hc/xform
+ [(hc/xform
    ht/tree-layout
    :OPTS (merge (hc/default-opts :vgl) {:mode "vega"})
    :WIDTH 650, :HEIGHT 1600
    :UDATA "data/flare.json"
-   :LINKSHAPE "diagonal" :LAYOUT "cluster" :FONTSIZE 11
+   :LINKSHAPE "diagonal" :LAYOUT "tidy" :FONTSIZE 11
    :CFIELD "depth")
   (hc/xform
    ht/tree-layout
    :OPTS (merge (hc/default-opts :vgl) {:mode "vega"})
    :WIDTH 650, :HEIGHT 1600
    :UDATA "data/flare.json"
-   :LINKSHAPE "line" :LAYOUT "cluster"
+   :LINKSHAPE "orthogonal" :LAYOUT "cluster"
    :CFIELD "depth")
-  #_(hc/xform
+  (hc/xform
    ht/tree-layout
    :OPTS (merge (hc/default-opts :vgl) {:mode "vega"})
    :WIDTH 650, :HEIGHT 1600
    :UDATA "data/flare.json"
-   :LINKSHAPE "curve" :LAYOUT "cluster"
+   :LINKSHAPE "curve" :LAYOUT "tidy"
    :CFIELD "depth")]
  hmi/sv!)
 
@@ -609,38 +609,36 @@
 
 ;; JSD real vs binomial
 (->>
- (let [data (mapv #(let [RE (it/jensen-shannon
-                             (->> obsdist (into {}))
-                             (->> (p/binomial-dist 10 %)
-                                  (into {})))
-                         REtt (ac/roundit RE)
-                         ptt (ac/roundit % :places 2)]
-                     {:x % :y RE})
-                  (range 0.06 0.98 0.01))]
-   (hc/xform ht/line-chart
-             :POINT true
-             :TITLE "JSD minimum entropy: True P to Binomial Q estimate"
-             :XTITLE "Binomial Distribution P paramter"
-             :YTITLE "JSD(P||Q)"
-             :DATA data))
- hmi/sv!)
-;;; Sqrt(JSD) real vs binomial
-(->>
- (let [data (mapv #(let [RE (Math/sqrt
-                             (it/jensen-shannon
+ [(let [data (mapv #(let [RE (it/jensen-shannon
                               (->> obsdist (into {}))
                               (->> (p/binomial-dist 10 %)
-                                   (into {}))))
-                         REtt (ac/roundit RE)
-                         ptt (ac/roundit % :places 2)]
-                     {:x % :y RE})
-                  (range 0.06 0.98 0.01))]
-   (hc/xform ht/line-chart
-             :POINT true
-             :TITLE "JSD minimum entropy: True P to Binomial Q estimate"
-             :XTITLE "Binomial Distribution P paramter"
-             :YTITLE "JSD(P||Q)"
-             :DATA data))
+                                   (into {})))
+                          REtt (ac/roundit RE)
+                          ptt (ac/roundit % :places 2)]
+                      {:x % :y RE})
+                   (range 0.06 0.98 0.01))]
+    (hc/xform ht/line-chart
+              :POINT true
+              :TITLE "JSD minimum entropy: True P to Binomial Q estimate"
+              :XTITLE "Binomial Distribution P paramter"
+              :YTITLE "JSD(P||Q)"
+              :DATA data))
+;;; Sqrt(JSD) real vs binomial
+  (let [data (mapv #(let [RE (Math/sqrt
+                              (it/jensen-shannon
+                               (->> obsdist (into {}))
+                               (->> (p/binomial-dist 10 %)
+                                    (into {}))))
+                          REtt (ac/roundit RE)
+                          ptt (ac/roundit % :places 2)]
+                      {:x % :y RE})
+                   (range 0.06 0.98 0.01))]
+    (hc/xform ht/line-chart
+              :POINT true
+              :TITLE "SQRT(JSD) minimum entropy: True P to Binomial Q estimate"
+              :XTITLE "Binomial Distribution P paramter"
+              :YTITLE "JSD(P||Q)"
+              :DATA data))]
  hmi/sv!)
 
 
