@@ -146,9 +146,8 @@
                                     :href  "https://github.com/jsa-aerial/saite"
                                     :target "_blank"]]]]]]}}]
   (->> [(hc/xform ht/point-chart
-          :USERDATA
-          (merge
-           (hc/get-default :USERDATA) frame)
+          :TID :picframes
+          :USERDATA (merge (hc/get-default :USERDATA) frame)
           :UDATA "data/cars.json"
           :X "Horsepower" :Y "Miles_per_Gallon" :COLOR "Origin")]
        hmi/sv!))
@@ -248,6 +247,14 @@
              (merge
               (hc/get-default :USERDATA)
               {:vid :bc1
+               :frame {:bottom
+                       `[[gap :size "50px"]
+                         [latex {:style {:width "450px" :min-width "50px"
+                                         :font-size "20px"}}
+                          "here, have some TeX: " "\\(f(x) = \\sqrt x\\)"]
+                         #_[latex "some tex \\(f(x) = x^2\\)"]
+                         #_[latex "\\(f(x) = \\sqrt x\\)"]
+                         #_[latex "\\(ax^2 + bx + c = 0\\)"]]}
                :slider `[[gap :size "10px"] [label :label "Add Bar"]
                          [label :label ~minstr]
                          [slider
