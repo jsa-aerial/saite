@@ -48,6 +48,31 @@
 
 ;;; Components ============================================================ ;;;
 
+#_(js/MathJax.Hub.Queue #js ["Typeset" js/MathJax.Hub])
+#_(js/MathJax.Hub.Queue
+   #js ["Typeset" js/MathJax.Hub
+        (js/document.getElementById (get-adb [:mathjax]))])
+
+(defn latex-orig [stg & {:keys [fsz] :or {fsz "16px"}}]
+  (let [para (js/document.createElement "p")
+        txt (js/document.createTextNode stg)
+        div (js/document.createElement "div")]
+    (set! para.style.fontSize fsz)
+    (.appendChild para txt)
+    (.replaceChild div para (aget elt.childNodes 0))
+    (update-adb [:mathjax] div)
+    div))
+(defn latex [& components]
+  (let [x (first components)
+        attr (if (map? x)
+               (if (x :id) x (assoc x :id (gensym "jx")))
+               {:id (gensym "jx")})
+        components (if (map? x) (rest components) components)]
+    (update-adb [:mathjax] (attr :id))
+    (apply p attr components)))
+
+
+
 (defn bar-slider-fn [tid val]
   (let [tabval (get-tab-field tid)
         spec-frame-pairs (tabval :spec-frame-pairs)]
@@ -66,25 +91,22 @@
 (defn instrumentor [{:keys [tabid spec opts]}]
   (printchan "Test Instrumentor called" :TID tabid #_:SPEC #_spec)
   (let [cljspec spec
-        udata (cljspec :usermeta)
-        default-frame {:top [], :bottom [],
-                       :left [[box :size "0px" :child ""]],
-                       :right [[box :size "0px" :child ""]]}]
+        udata (cljspec :usermeta)]
     (update-adb [:udata] udata)
+
     (cond
       (not (map? udata)) []
 
       (udata :slider)
       (let [sval (rgt/atom "0.0")]
         (printchan :SLIDER-INSTRUMENTOR)
-        (merge default-frame
-               {:top (xform-recom
-                      (udata :slider)
-                      :m1 sval
-                      :oc1 #(do (bar-slider-fn tabid %)
-                                (reset! sval (str %)))
-                      :oc2 #(do (bar-slider-fn tabid (js/parseFloat %))
-                                (reset! sval %)))}))
+        {:top (xform-recom
+               (udata :slider)
+               :m1 sval
+               :oc1 #(do (bar-slider-fn tabid %)
+                         (reset! sval (str %)))
+               :oc2 #(do (bar-slider-fn tabid (js/parseFloat %))
+                         (reset! sval %)))})
 
       :else {}
       )))
@@ -271,7 +293,7 @@
 
 ;;; Startup ============================================================== ;;;
 
-(when-let [elem (js/document.querySelector "#app")]
+#_(when-let [elem (js/document.querySelector "#app")]
   (hc/add-defaults
    :HEIGHT 400 :WIDTH 450
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
@@ -303,7 +325,39 @@
            :port 3000
            :instrumentor-fn instrumentor))
 
-  (js/document.createElement "a")
+  (js/MathJax.Hub.Config
+   #js {"HTML-CSS" {"font-size" "20px", :scale 400,
+                    :linebreaks {:automatic true }},
+        :SVG {:linebreaks {:automatic true}},
+        :displayAlign "left"})
 
+  (def appdiv (js/document.getElementById "app"))
+  (def divelt (js/document.createElement "div"))
+  (.appendChild divelt para)
+  (let [stg
+        #_"$$x = {-b \\pm \\sqrt{b^2-4ac} \\over 2a} .$$"
+        #_"\\(f(x) = \\sqrt x \\)"
+        #_"\\(x = {-b \\pm \\sqrt{b^2-4ac} \\over 2a} .\\)"
+        "\\(ax^2 + bx + c = 0\\)"
+        para (latex divelt stg)]
+    (js/MathJax.Hub.Queue #js ["Typeset" js/MathJax.Hub para]))
+
+
+
+  (def para (js/document.createElement "P"))
+  (def paratxt (js/document.createTextNode "\\(x \\ne y\\)"))
+  (.appendChild para paratxt)
+
+  (do (js/document.body.insertBefore divelt appdiv)
+      (js/MathJax.Hub.Queue #js ["Typeset" js/MathJax.Hub para]))
+
+  (def paratxt2 (js/document.createTextNode "\\(f(x) = \\sqrt x \\)"))
+  (def para (js/document.createElement "P"))
+  (.appendChild para paratxt2)
+  (do
+    (.replaceChild divelt para (aget divelt.childNodes 0))
+    (js/MathJax.Hub.Queue #js ["Typeset" js/MathJax.Hub para]))
+
+  (js/document.createElement "a")
 
   )
