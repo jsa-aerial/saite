@@ -22,6 +22,9 @@
    [aerial.saite.codemirror
     :as cm
     :refer [code-mirror]]
+   [aerial.saite.md2hiccup :as m2h]
+
+   [cljsjs.mathjax]
 
    [com.rpl.specter :as sp]
 
@@ -46,31 +49,86 @@
    ))
 
 
+
+
+(defn react-hack
+  "Monkey patching ... sigh ... This changes the (incorrect) behavior of
+  React's removeChild and insertBefore functions which do not properly
+  track changes in the DOM as effected by 3rd party libs. MathJax,
+  Google Translate, etc. For details see
+  `https://github.com/facebook/react/issues/11538`"
+  []
+  (when (and (fn? js/Node) js/Node.prototype)
+    (let [orig-rm-child Node.prototype.removeChild
+          new-rm-child
+          (fn [child]
+            (this-as this
+              (if (not= child.parentNode this)
+                (do (when js/console
+                      (js/console.error
+                       "Cannot remove a child from a different parent"
+                       child this))
+                    child)
+                (do #_(printchan this (js-arguments))
+                    (.apply orig-rm-child this (js-arguments))))))
+
+          orig-ins-b4 Node.prototype.insertBefore
+          new-ins-b4 (fn [newNode referenceNode]
+                       (this-as this
+                         (if (and referenceNode
+                                  (not= referenceNode.parentNode this))
+                           (do (when js/console
+                                 (js/console.error
+                                  "Cannot insert before a reference node "
+                                  "from a different parent" referenceNode this))
+                               newNode)
+                           (do #_(printchan this (js-arguments))
+                               (.apply orig-ins-b4 this (js-arguments))))))]
+      (set! Node.prototype.removeChild new-rm-child)
+      (set! Node.prototype.insertBefore new-ins-b4))))
+
+(react-hack)
+
+
+
+
 ;;; Components ============================================================ ;;;
 
-#_(js/MathJax.Hub.Queue #js ["Typeset" js/MathJax.Hub])
-#_(js/MathJax.Hub.Queue
-   #js ["Typeset" js/MathJax.Hub
-        (js/document.getElementById (get-adb [:mathjax]))])
+(defn md [ & stg]
+  (let [base-style {:flex "none", :width "450px", :min-width "450px"}
+        x (first stg)
+        stg (cljstr/join "\n" (if (map? x) (rest stg) stg))
+        style (->> (if (map? x) (x :style) {}) (merge base-style))
+        attr (if (map? x) (assoc x :style style) {:style style})
+        hiccup (vec (concat [:div.md attr] (rest (m2h/parse stg))))]
+    (hmi/print-when [:md] :MD hiccup)
+    hiccup))
 
-(defn latex-orig [stg & {:keys [fsz] :or {fsz "16px"}}]
-  (let [para (js/document.createElement "p")
-        txt (js/document.createTextNode stg)
-        div (js/document.createElement "div")]
-    (set! para.style.fontSize fsz)
-    (.appendChild para txt)
-    (.replaceChild div para (aget elt.childNodes 0))
-    (update-adb [:mathjax] div)
-    div))
-(defn latex [& components]
-  (let [x (first components)
-        attr (if (map? x)
-               (if (x :id) x (assoc x :id (gensym "jx")))
-               {:id (gensym "jx")})
-        components (if (map? x) (rest components) components)]
-    (update-adb [:mathjax] (attr :id))
-    (apply p attr components)))
 
+(defn cm [& opts]
+  (let [input (rgt/atom "")]
+    (fn [& opts]
+      (let [opts (if (seq opts) (first opts) {:size "auto"})]
+        [h-box :gap "5px"
+         :children
+         [[box
+           :size (opts :size "auto")
+           :width (opts :width "500px")
+           :height (opts :height "600px")
+           :justify (opts :justify :start)
+           :align (opts :justify :stretch)
+           :child [code-mirror input "clojure"]]
+          [v-box :gap "5px"
+           :children
+           [[md-circle-icon-button
+             :md-icon-name "zmdi-caret-left-circle"
+             :tooltip "Eval Code"
+             :on-click #(printchan :eval @input)]
+            [md-circle-icon-button
+             :md-icon-name "zmdi-circle-o"
+             :tooltip "Clear"
+             :on-click
+             #(do (reset! input ""))]]]]]))))
 
 
 (defn bar-slider-fn [tid val]
@@ -88,7 +146,7 @@
                [newspec frame]))
            spec-frame-pairs))))
 
-(defn instrumentor [{:keys [tabid spec opts]}]
+(defn instrumentor [{:keys [tabid spec]}]
   (printchan "Test Instrumentor called" :TID tabid #_:SPEC #_spec)
   (let [cljspec spec
         udata (cljspec :usermeta)]
@@ -291,7 +349,47 @@
 
 
 
+
+;;; Call Backs ============================================================ ;;;
+
+#_(js/MathJax.Hub.Queue #js ["Typeset" js/MathJax.Hub])
+#_(js/MathJax.Hub.Queue
+   #js ["Typeset" js/MathJax.Hub
+        (js/document.getElementById (get-adb [:mathjax]))])
+
+(def mathjax-chan (async/chan 10))
+
+(go-loop [id (async/<! mathjax-chan)]
+  (let [elt (js/document.getElementById id)
+        _ (printchan :ID id, :ELT elt)
+        jsvec (when elt (clj->js ["Typeset" js/MathJax.Hub elt]))]
+    (async/<! (async/timeout 50))
+    (cond
+      ::global (js/MathJax.Hub.Queue #js ["Typeset" js/MathJax.Hub])
+      jsvec    (js/MathJax.Hub.Queue jsvec)
+      :else    (async/>! mathjax-chan id)))
+  (recur (async/<! mathjax-chan)))
+
+
+(defn frame-callback
+  ([]
+   (go (async/>! mathjax-chan ::global)))
+  ([spec frame]
+   (let [id (frame :frameid)]
+     (go (async/>! mathjax-chan id))
+     #_(go (async/>! mathjax-chan ::global))
+     frame)))
+
+
+(defn symxlate-callback [sym]
+  (let [snm (name sym)]
+    (cond (= snm "md") md
+          (= snm "cm") (cm)
+          :else sym)))
+
+
 ;;; Startup ============================================================== ;;;
+
 
 #_(when-let [elem (js/document.querySelector "#app")]
   (hc/add-defaults
@@ -305,6 +403,8 @@
    :TOPTS {:order :row, :eltsper 2 :size "auto"})
   (start :elem elem
          :port js/location.port
+         :symxlate-cb symxlate-callback
+         :frame-cb frame-callback
          :instrumentor-fn instrumentor))
 
 
@@ -323,7 +423,20 @@
      :TOPTS {:order :row, :eltsper 2 :size "auto"})
     (start :elem elem
            :port 3000
+           :symxlate-cb symxlate-callback
+           :frame-cb frame-callback
            :instrumentor-fn instrumentor))
+
+
+
+  (defn foo []
+    (sp/select [sp/ATOM :tabs :active sp/ATOM sp/ALL]
+               hmi/app-db))
+  (->> (foo)
+       (mapv (fn[tab] (mapv #(tab %) [:id :label :opts :specs]))))
+
+
+
 
   (js/MathJax.Hub.Config
    #js {"HTML-CSS" {"font-size" "20px", :scale 400,
