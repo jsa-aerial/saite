@@ -173,10 +173,17 @@
               :bottom `[[gap :size "50px"]
                         [v-box
                          :children
-                         [ [p {:style {:width "600px" :min-width "50px"}}
+                         [[p {:style {:width "600px" :min-width "50px"}}
                            "The " [:span.bold "bottom "]
                            "area showing a variety of text. "
                            [:span.italic ~text] [:span.bold ~text]]
+                          [p {:style {:width "400px" :min-width "50px"
+                                      :font-size "20px"}}
+                           "some TeX: " "\\(f(x) = \\sqrt x\\)"]
+                          [md {:style {:font-size "16px" :color "blue"}}
+"#### Some Markup
+* **Item 1** Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+* **Item 2** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quod si ita est, sequitur id ipsum, quod te velle video, omnes semper beatos esse sapientes. Tamen a proposito, inquam, aberramus."]
                           [p {:style {:width "600px" :min-width "50px"
                                       :color "red"}}
                            ~text]]]]}}]
@@ -218,7 +225,9 @@
 
 (->>
  (hc/xform
-  {:usermeta :USERDATA
+  {:usermeta
+   (assoc (hc/get-default :USERDATA)
+          :frame {:right `[[gap :size "10px"] [cm {}]]})
    :data {:url "data/cars.json"},
    :mark "point",
    :encoding {:x {:field "Horsepower", :type "quantitative"},
@@ -249,12 +258,15 @@
               {:vid :bc1
                :frame {:bottom
                        `[[gap :size "50px"]
-                         [latex {:style {:width "450px" :min-width "50px"
-                                         :font-size "20px"}}
-                          "here, have some TeX: " "\\(f(x) = \\sqrt x\\)"]
-                         #_[latex "some tex \\(f(x) = x^2\\)"]
-                         #_[latex "\\(f(x) = \\sqrt x\\)"]
-                         #_[latex "\\(ax^2 + bx + c = 0\\)"]]}
+                         [v-box
+                          :children
+                          [[p "some text to test, default 14px"]
+                           [p {:style {:font-size "16px"}}
+                            "some tex \\(f(x) = x^2\\), 16px"]
+                           [p {:style {:font-size "18px"}}
+                            "\\(f(x) = \\sqrt x\\), 18px"]
+                           [p {:style {:font-size "20px"}}
+                            "\\(ax^2 + bx + c = 0\\), 20px"]]]]}
                :slider `[[gap :size "10px"] [label :label "Add Bar"]
                          [label :label ~minstr]
                          [slider
@@ -272,11 +284,33 @@
              :DATA data))
  hmi/sv!)
 
-(hmi/sd! {:usermeta {:msgop :data :vid :bc1}
+;;; Data streaming
+#_(hmi/sd! {:usermeta {:msgop :data :vid :bc1}
           :data (mapv #(assoc % :b (+ 50 (% :b)))
                       [{:a "A", :b 28 },{:a "B", :b 55 },{:a "C", :b 43 },
                        {:a "D", :b 91 },{:a "E", :b 81 },{:a "F", :b 53 },
                        {:a "G", :b 19 },{:a "H", :b 87 },{:a "I", :b 52 }])})
+
+
+(let [data (->> (range 0.001 100.0 0.1)
+                (mapv #(do {:x (ac/roundit %)
+                            :y (-> % Math/sqrt ac/roundit)})))]
+  (->> (hc/xform ht/line-chart
+        :USERDATA
+        (assoc (hc/get-default :USERDATA)
+               :frame {:bottom
+                       `[[gap :size "230px"]
+                         [p {:style {:font-size "18px"}}
+                          "\\(f(x) = \\sqrt x\\)"]]
+                       :right
+                       `[[gap :size "10px"]
+                         [v-box
+                          :children
+                          [(md "#### The square root function")
+                           (md "* \\\\(f(x) = \\\\sqrt x\\\\)")
+                           (md "* _two_\n* **three**")]]]})
+        :DATA data) hmi/sv!))
+
 
 
 
