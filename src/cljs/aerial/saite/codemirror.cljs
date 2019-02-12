@@ -16,10 +16,22 @@
    [cljsjs.codemirror]
    [cljsjs.codemirror.mode.clojure]
    [cljsjs.codemirror.mode.javascript]
+   [cljsjs.codemirror.addon.hint.show-hint]
+
    [cljsjs.codemirror.addon.comment.comment]
+   [cljsjs.codemirror.addon.dialog.dialog]
+   [cljsjs.codemirror.addon.display.panel]
+
+   [cljsjs.codemirror.addon.search.search]
+   [cljsjs.codemirror.addon.search.searchcursor]
+   [cljsjs.codemirror.addon.search.jump-to-line]
+
    [cljsjs.codemirror.addon.edit.closebrackets]
    [cljsjs.codemirror.addon.edit.matchbrackets]
+
    [cljsjs.codemirror.keymap.emacs]
+   [cljsjs.codemirror.keymap.sublime]
+   [cljsjs.codemirror.keymap.vim]
 
    [cljsjs.highlight]
    [cljsjs.highlight.langs.clojure]
