@@ -106,29 +106,49 @@
 
 
 (defn cm [& opts]
-  (let [input (rgt/atom "")]
+  (let [input (rgt/atom "")
+        output (rgt/atom "")]
     (fn [& opts]
-      (let [opts (if (seq opts) (first opts) {:size "auto"})]
-        [h-box :gap "5px"
-         :children
-         [[box
-           :size (opts :size "auto")
-           :width (opts :width "500px")
-           :height (opts :height "600px")
-           :justify (opts :justify :start)
-           :align (opts :justify :stretch)
-           :child [code-mirror input "clojure"]]
-          [v-box :gap "5px"
-           :children
-           [[md-circle-icon-button
-             :md-icon-name "zmdi-caret-left-circle"
-             :tooltip "Eval Code"
-             :on-click #(printchan :eval @input)]
-            [md-circle-icon-button
-             :md-icon-name "zmdi-circle-o"
-             :tooltip "Clear"
-             :on-click
-             #(do (reset! input ""))]]]]]))))
+      (let [opts (if (seq opts) (first opts) {:size "auto"})
+            ch (opts :height "400px")
+            oh (opts :out-height "100px")
+            id (gensym "cm-")
+            kwid (-> id name keyword)
+            cm [h-box :gap "5px" :attr {:id id}
+                :children
+                [[v-box :gap "5px"
+                  :width (opts :width "500px")
+                  :height (+ ch oh 50)
+                  :children
+                  [[h-box
+                    :children
+                    [[box
+                      :size (opts :size "auto")
+                      :width (opts :width "500px")
+                      :height (opts :height "300px")
+                      :justify (opts :justify :start)
+                      :align (opts :justify :stretch)
+                      :child [code-mirror input "clojure"]]]]
+                   [input-textarea
+                    :model output
+                    :on-change (fn[_])
+                    :placeholder "results"
+                    :width (opts :width "500px")
+                    :height (opts :out-height "100px")
+                    :rows (opts :rows 5)]]]
+                 [v-box :gap "5px"
+                  :children
+                  [[md-circle-icon-button
+                    :md-icon-name "zmdi-caret-left-circle"
+                    :tooltip "Eval Code"
+                    :on-click #(printchan :eval @input)]
+                   [md-circle-icon-button
+                    :md-icon-name "zmdi-circle-o"
+                    :tooltip "Clear"
+                    :on-click
+                    #(do (reset! input ""))]]]]]]
+        (update-adb [:editors kwid] cm)
+        cm))))
 
 
 (defn bar-slider-fn [tid val]
@@ -325,6 +345,7 @@
 
 (defmethod user-msg :app-init [msg]
   (update-adb [:main :convert-chan] (async/chan))
+  (update-adb [:editors] {})
   (add-tab {:id :xvgl
             :label "<->"
             :opts {:extfn (tab<-> :NA)}}))
@@ -377,8 +398,7 @@
   ([spec frame]
    (let [id (frame :frameid)]
      (go (async/>! mathjax-chan id))
-     #_(go (async/>! mathjax-chan ::global))
-     frame)))
+     [spec frame])))
 
 
 (defn symxlate-callback [sym]
@@ -437,32 +457,6 @@
 
 
 
-
-  (js/MathJax.Hub.Config
-   #js {"HTML-CSS" {"font-size" "20px", :scale 400,
-                    :linebreaks {:automatic true }},
-        :SVG {:linebreaks {:automatic true}},
-        :displayAlign "left"})
-
-  (def appdiv (js/document.getElementById "app"))
-  (def divelt (js/document.createElement "div"))
-  (.appendChild divelt para)
-  (let [stg
-        #_"$$x = {-b \\pm \\sqrt{b^2-4ac} \\over 2a} .$$"
-        #_"\\(f(x) = \\sqrt x \\)"
-        #_"\\(x = {-b \\pm \\sqrt{b^2-4ac} \\over 2a} .\\)"
-        "\\(ax^2 + bx + c = 0\\)"
-        para (latex divelt stg)]
-    (js/MathJax.Hub.Queue #js ["Typeset" js/MathJax.Hub para]))
-
-
-
-  (def para (js/document.createElement "P"))
-  (def paratxt (js/document.createTextNode "\\(x \\ne y\\)"))
-  (.appendChild para paratxt)
-
-  (do (js/document.body.insertBefore divelt appdiv)
-      (js/MathJax.Hub.Queue #js ["Typeset" js/MathJax.Hub para]))
 
   (def paratxt2 (js/document.createTextNode "\\(f(x) = \\sqrt x \\)"))
   (def para (js/document.createElement "P"))
