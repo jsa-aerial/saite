@@ -107,13 +107,13 @@
 
 (defn cm [& opts]
   (let [input (rgt/atom "")
-        output (rgt/atom "")]
+        output (rgt/atom "")
+        id (gensym "cm-")
+        kwid (-> id name keyword)]
     (fn [& opts]
       (let [opts (if (seq opts) (first opts) {:size "auto"})
             ch (opts :height "400px")
             oh (opts :out-height "100px")
-            id (gensym "cm-")
-            kwid (-> id name keyword)
             cm [h-box :gap "5px" :attr {:id id}
                 :children
                 [[v-box :gap "5px"
@@ -147,7 +147,8 @@
                     :tooltip "Clear"
                     :on-click
                     #(do (reset! input ""))]]]]]]
-        (update-adb [:editors kwid] cm)
+        (update-adb [:editors kwid]
+                    {:hiccup cm :in input :ot output :id id})
         cm))))
 
 
