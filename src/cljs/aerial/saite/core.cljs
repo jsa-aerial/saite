@@ -105,51 +105,56 @@
     hiccup))
 
 
-(defn cm [& opts]
+(defn cm-hiccup [opts input output]
+  (let [id (opts :id)
+        kwid (-> id name keyword)
+        ch (opts :height "400px")
+        oh (opts :out-height "100px")]
+    [h-box :gap "5px" :attr {:id id}
+     :children
+     [[v-box :gap "5px"
+       :width (opts :width "500px")
+       :height (+ ch oh 50)
+       :children
+       [[h-box
+         :children
+         [[box
+           :size (opts :size "auto")
+           :width (opts :width "500px")
+           :height (opts :height "300px")
+           :justify (opts :justify :start)
+           :align (opts :justify :stretch)
+           :child [code-mirror input "clojure"]]]]
+        [input-textarea
+         :model output
+         :on-change (fn[_])
+         :placeholder "results"
+         :width (opts :width "500px")
+         :height (opts :out-height "100px")
+         :rows (opts :rows 5)]]]
+      [v-box :gap "5px"
+       :children
+       [[md-circle-icon-button
+         :md-icon-name "zmdi-caret-left-circle"
+         :tooltip "Eval Code"
+         :on-click #(printchan :eval @input)]
+        [md-circle-icon-button
+         :md-icon-name "zmdi-circle-o"
+         :tooltip "Clear"
+         :on-click
+         #(do (reset! input ""))]]]]]))
+
+(defn cm []
   (let [input (rgt/atom "")
-        output (rgt/atom "")
-        id (gensym "cm-")
-        kwid (-> id name keyword)]
+        output (rgt/atom "")]
     (fn [& opts]
-      (let [opts (if (seq opts) (first opts) {:size "auto"})
-            ch (opts :height "400px")
-            oh (opts :out-height "100px")
-            cm [h-box :gap "5px" :attr {:id id}
-                :children
-                [[v-box :gap "5px"
-                  :width (opts :width "500px")
-                  :height (+ ch oh 50)
-                  :children
-                  [[h-box
-                    :children
-                    [[box
-                      :size (opts :size "auto")
-                      :width (opts :width "500px")
-                      :height (opts :height "300px")
-                      :justify (opts :justify :start)
-                      :align (opts :justify :stretch)
-                      :child [code-mirror input "clojure"]]]]
-                   [input-textarea
-                    :model output
-                    :on-change (fn[_])
-                    :placeholder "results"
-                    :width (opts :width "500px")
-                    :height (opts :out-height "100px")
-                    :rows (opts :rows 5)]]]
-                 [v-box :gap "5px"
-                  :children
-                  [[md-circle-icon-button
-                    :md-icon-name "zmdi-caret-left-circle"
-                    :tooltip "Eval Code"
-                    :on-click #(printchan :eval @input)]
-                   [md-circle-icon-button
-                    :md-icon-name "zmdi-circle-o"
-                    :tooltip "Clear"
-                    :on-click
-                    #(do (reset! input ""))]]]]]]
-        (update-adb [:editors kwid]
-                    {:hiccup cm :in input :ot output :id id})
-        cm))))
+      (let [opts (->> opts (partition-all 2) (mapv vec)
+                      (into {:id (gensym "cm-"), :size "auto"
+                             :height "300px", :out-height "100px"}))
+            kwid (name (opts :id))]
+        (printchan :CM kwid :called :OPTS opts)
+        (update-adb [:editors kwid] {:in input, :ot output, :opts opts})
+        (cm-hiccup opts input output)))))
 
 
 (defn bar-slider-fn [tid val]
