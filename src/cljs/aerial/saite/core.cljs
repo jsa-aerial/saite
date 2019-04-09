@@ -470,6 +470,49 @@
   (->> (foo)
        (mapv (fn[tab] (mapv #(tab %) [:id :label :opts :specs]))))
 
+  (->> (foo)
+       ((fn [tabs]
+          (mapv (fn[tab]
+                  (let [[id label opts specs] (mapv #(tab %)
+                                                    [:id :label :opts :specs])
+                        specs (mapv
+                               (fn [spec]
+                                 (let [frame (or (-> spec :usermeta :frame) {})
+                                       [top bottom left right]
+                                       (mapv frame [:top :bottom :left :right])]
+                                   frame))
+                               specs)]
+                    [id label opts specs]))
+                tabs))))
+
+  (def CM-VALS
+    (sp/recursive-path
+     [] p
+     (sp/cond-path #(and (vector? %)
+                         (and (-> % first symbol?)
+                              (= (-> % first name) "cm")))
+                   sp/STAY
+                   vector? [sp/ALL p])))
+
+  (let [hiccup (sp/transform
+                [sp/ALL CM-VALS]
+                (fn[cm]
+                  (let [m (->> cm rest (partition-all 2) (mapv vec) (into {}))
+                        id (m :id)
+                        ed (get-adb [:editors id])
+                        instg (deref (ed :in))
+                        otstg (deref (ed :ot))
+                        opts (merge (ed :opts) {:instg instg :otstg otstg} m)]
+                    [(-> cm first name symbol) ::opts opts]))
+                '[[aerial.saite.examples/gap :size "10px"]
+                  [aerial.saite.examples/cm :id "cm-scatter-1"]])]
+    [(->> hiccup second first (= 'cm))
+     (->> hiccup second second (= ::opts))])
+
+  (sp/select [sp/ALL CM-VALS] '[[aerial.saite.examples/gap :size "10px"]
+                                [aerial.saite.examples/cm :id "cm-scatter-1"]])
+
+  cljs.reader/read-string
 
   (def paratxt2 (js/document.createTextNode "\\(f(x) = \\sqrt x \\)"))
   (def para (js/document.createElement "P"))
