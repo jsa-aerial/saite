@@ -137,12 +137,21 @@
        [[md-circle-icon-button
          :md-icon-name "zmdi-caret-left-circle"
          :tooltip "Eval Code"
-         :on-click #(printchan :eval @input)]
+         :on-click #(printchan :ID id :VID (opts :vid) :eval @input)]
         [md-circle-icon-button
          :md-icon-name "zmdi-circle-o"
          :tooltip "Clear"
          :on-click
          #(do (reset! input ""))]]]]]))
+
+#_(hmi/visualize (get-vspec :scatter-1)
+                 (js/document.getElementById "scatter-1"))
+#_(hmi/visualize (get-vspec :bc1)
+                 (js/document.getElementById "scatter-1"))
+#_(hmi/visualize (get-vspec :sqrt)
+                 (js/document.getElementById "scatter-1"))
+#_(hmi/visualize (get-vspec :scatter-1)
+                 (js/document.getElementById "bc1"))
 
 (defn cm []
   (let [input (rgt/atom "")
@@ -401,7 +410,7 @@
 (defn frame-callback
   ([]
    (go (async/>! mathjax-chan ::global)))
-  ([spec frame]
+  ([spec frame] (printchan :FRAME-CALLBACK :spec spec)
    (let [id (frame :frameid)]
      (go (async/>! mathjax-chan id))
      [spec frame])))
@@ -460,8 +469,6 @@
                hmi/app-db))
   (->> (foo)
        (mapv (fn[tab] (mapv #(tab %) [:id :label :opts :specs]))))
-
-
 
 
   (def paratxt2 (js/document.createTextNode "\\(f(x) = \\sqrt x \\)"))
