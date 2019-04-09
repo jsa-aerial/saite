@@ -107,7 +107,7 @@
       frame-bot (hc/xform
                  frame-template :SIDE :bottom :GAP "10px")]
   (->> (mapv #(hc/xform ht/point-chart
-                :HEIGHT 200 :WIDTH 250
+                :HEIGHT 200 :WIDTH 250 :TID :picframes
                 :USERDATA (merge (hc/get-default :USERDATA) %)
                 :UDATA "data/cars.json"
                 :X "Horsepower" :Y "Miles_per_Gallon" :COLOR "Origin")
@@ -116,38 +116,37 @@
 
 
 (let [text "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quod si ita est, sequitur id ipsum, quod te velle video, omnes semper beatos esse sapientes. Tamen a proposito, inquam, aberramus."
-      frame {:frame
-             {:top `[[gap :size "150px"]
-                     [p "An example showing a "
-                      [:span.bold "picture "] [:span.italic.bold "frame"]
-                      ". This is the top 'board'"
-                      [:br] ~text]]
-              :left `[[gap :size "10px"]
-                      [p {:style {:width "100px" :min-width "50px"}}
-                       "Some text on the " [:span.bold "left:"] [:br] ~text]]
-              :right `[[gap :size "2px"]
-                       [p {:style {:width "200px" :min-width "50px"
-                                   :font-size "20px" :color "red"}}
-                        "Some large text on the " [:span.bold "right:"] [:br]
-                        ~(.substring text 0 180)]]
-              :bottom `[[gap :size "200px"]
-                        [title :level :level3
-                         :label [p {:style {:font-size "large"}}
-                                 "Some text on the "
-                                 [:span.bold "bottom"] [:br]
-                                 "With a cool info button "
-                                 [info-button
-                                  :position :right-center
-                                  :info
-                                  [:p "Check out Saite Visualizer!" [:br]
-                                   "Built with Hanami!" [:br]
-                                   [hyperlink-href
-                                    :label "Saite "
-                                    :href  "https://github.com/jsa-aerial/saite"
-                                    :target "_blank"]]]]]]}}]
+      top `[[gap :size "150px"]
+            [p "An example showing a "
+             [:span.bold "picture "] [:span.italic.bold "frame"]
+             ". This is the top 'board'"
+             [:br] ~text]]
+      left `[[gap :size "10px"]
+             [p {:style {:width "100px" :min-width "50px"}}
+              "Some text on the " [:span.bold "left:"] [:br] ~text]]
+      right `[[gap :size "2px"]
+              [p {:style {:width "200px" :min-width "50px"
+                          :font-size "20px" :color "red"}}
+               "Some large text on the " [:span.bold "right:"] [:br]
+               ~(.substring text 0 180)]]
+      bottom `[[gap :size "200px"]
+               [title :level :level3
+                :label [p {:style {:font-size "large"}}
+                        "Some text on the "
+                        [:span.bold "bottom"] [:br]
+                        "With a cool info button "
+                        [info-button
+                         :position :right-center
+                         :info
+                         [:p "Check out Saite Visualizer!" [:br]
+                          "Built with Hanami!" [:br]
+                          [hyperlink-href
+                           :label "Saite "
+                           :href  "https://github.com/jsa-aerial/saite"
+                           :target "_blank"]]]]]]]
   (->> [(hc/xform ht/point-chart
           :TID :picframes
-          :USERDATA (merge (hc/get-default :USERDATA) frame)
+          :TOP top :BOTTOM bottom :LEFT left :RIGHT right
           :UDATA "data/cars.json"
           :X "Horsepower" :Y "Miles_per_Gallon" :COLOR "Origin")]
        hmi/sv!))
@@ -156,83 +155,79 @@
 ;;; Empty picture frame
 ;;;
 (let [text "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quod si ita est, sequitur id ipsum, quod te velle video, omnes semper beatos esse sapientes. Tamen a proposito, inquam, aberramus."
-      frame {:frame
-             {:top `[[gap :size "50px"]
-                     [p {:style {:width "600px" :min-width "50px"}}
-                      "An example empty picture frame showing all four areas."
-                      " This is the " [:span.bold "top"] " area. "
-                       ~text ~text ~text]]
-              :left `[[gap :size "50px"]
-                      [p {:style {:width "300px" :min-width "50px"}}
-                       "The " [:span.bold "left "] "area as a column of text. "
-                       ~text ~text ~text ~text]]
-              :right `[[gap :size "70px"]
-                      [p {:style {:width "300px" :min-width "50px"}}
-                       "The " [:span.bold "right "] "area as a column of text. "
-                       ~text ~text ~text ~text]]
-              :bottom `[[gap :size "50px"]
-                        [v-box
-                         :children
-                         [[p {:style {:width "600px" :min-width "50px"}}
-                           "The " [:span.bold "bottom "]
-                           "area showing a variety of text. "
-                           [:span.italic ~text] [:span.bold ~text]]
-                          [p {:style {:width "400px" :min-width "50px"
-                                      :font-size "20px"}}
-                           "some TeX: " "\\(f(x) = \\sqrt x\\)"]
-                          [md {:style {:font-size "16px" :color "blue"}}
-"#### Some Markup
+      top `[[gap :size "50px"]
+            [p {:style {:width "600px" :min-width "50px"}}
+             "An example empty picture frame showing all four areas."
+             " This is the " [:span.bold "top"] " area. "
+             ~text ~text ~text]]
+      left `[[gap :size "50px"]
+             [p {:style {:width "300px" :min-width "50px"}}
+              "The " [:span.bold "left "] "area as a column of text. "
+              ~text ~text ~text ~text]]
+      right `[[gap :size "70px"]
+              [p {:style {:width "300px" :min-width "50px"}}
+               "The " [:span.bold "right "] "area as a column of text. "
+               ~text ~text ~text ~text]]
+      bottom `[[gap :size "50px"]
+               [v-box
+                :children
+                [[p {:style {:width "600px" :min-width "50px"}}
+                  "The " [:span.bold "bottom "]
+                  "area showing a variety of text. "
+                  [:span.italic ~text] [:span.bold ~text]]
+                 [p {:style {:width "400px" :min-width "50px"
+                             :font-size "20px"}}
+                  "some TeX: " "\\(f(x) = \\sqrt x\\)"]
+                 [md {:style {:font-size "16px" :color "blue"}}
+                  "#### Some Markup
 * **Item 1** Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 * **Item 2** Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quod si ita est, sequitur id ipsum, quod te velle video, omnes semper beatos esse sapientes. Tamen a proposito, inquam, aberramus."]
-                          [p {:style {:width "600px" :min-width "50px"
-                                      :color "red"}}
-                           ~text]]]]}}]
-  (->> (hc/xform
-        ht/empty-chart
-        :TID :picframes
-        :USERDATA (merge (hc/get-default :USERDATA) frame))
+                 [p {:style {:width "600px" :min-width "50px"
+                             :color "red"}}
+                  ~text]]]]]
+  (->> (hc/xform ht/empty-chart
+        :TID :picframes :TOP top :BOTTOM bottom :LEFT left :RIGHT right)
        hmi/sv!))
 
 
 ;;; With and without chart frame
 ;;;
 (let [text "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quod si ita est, sequitur id ipsum, quod te velle video, omnes semper beatos esse sapientes. Tamen a proposito, inquam, aberramus."
-      frame1 {:frame
-              {:top `[[gap :size "50px"]
-                      [p "Here's a 'typical' chart/plot filled picture frame."
-                       "It only has the top area"
-                       [:br] ~text]]}}
-      frame2 {:frame
-              {:left `[[gap :size "20px"]
-                       [p {:style {:width "200px" :min-width "50px"}}
-                        "This is an empty frame with a " [:span.bold "left "]
-                        "column of text" [:br] ~text ~text ~text ~text]]
-               :right `[[gap :size "30px"]
-                        [p {:style {:width "200px" :min-width "50px"}}
-                         "And a " [:span.bold "right "]
-                         "column of text"
-                         [:br] ~text ~text ~text ~text]]}}]
+      top `[[gap :size "50px"]
+            [p "Here's a 'typical' chart/plot filled picture frame."
+             "It only has the top area"
+             [:br] ~text]]
+      left `[[gap :size "20px"]
+             [p {:style {:width "200px" :min-width "50px"}}
+              "This is an empty frame with a " [:span.bold "left "]
+              "column of text" [:br] ~text ~text ~text ~text]]
+      right `[[gap :size "30px"]
+              [p {:style {:width "200px" :min-width "50px"}}
+               "And a " [:span.bold "right "]
+               "column of text"
+               [:br] ~text ~text ~text ~text]]]
   (->> [(hc/xform ht/point-chart
-          :USERDATA (merge (hc/get-default :USERDATA) frame1)
           :TID :picframes :UDATA "data/cars.json"
+          :TOP top
           :X "Horsepower" :Y "Miles_per_Gallon" :COLOR "Origin")
         (hc/xform ht/empty-chart
-          :USERDATA (merge (hc/get-default :USERDATA) frame2)
-          :TID :picframes)]
+          :TID :picframes
+          :LEFT left :RIGHT right)]
        hmi/sv!))
 
 
 
 (->>
  (hc/xform
-  {:usermeta
-   (assoc (hc/get-default :USERDATA)
-          :frame {:right `[[gap :size "10px"] [cm {}]]})
+  {:usermeta :USERDATA
    :data {:url "data/cars.json"},
    :mark "point",
    :encoding {:x {:field "Horsepower", :type "quantitative"},
               :y {:field "Miles_per_Gallon", :type "quantitative"},
-              :color {:field "Origin", :type "nominal"}}})
+              :color {:field "Origin", :type "nominal"}}}
+  :VID :scatter-1
+  :RIGHT `[[gap :size "10px"]
+           [cm :id "cm-scatter-1" :vid :VID]])
  hmi/sv!)
 
 
@@ -250,24 +245,22 @@
        min -10.0
        minstr (-> min str (cljstr/split #"\.") first)
        max 10.0
-       maxstr (-> max str (cljstr/split #"\.") first (#(str "+" %)))]
+       maxstr (-> max str (cljstr/split #"\.") first (#(str "+" %)))
+       bottom `[[gap :size "50px"]
+                [v-box
+                 :children
+                 [[p "some text to test, default 14px"]
+                  [p {:style {:font-size "16px"}}
+                   "some tex \\(f(x) = x^2\\), 16px"]
+                  [p {:style {:font-size "18px"}}
+                   "\\(f(x) = \\sqrt x\\), 18px"]
+                  [p {:style {:font-size "20px"}}
+                   "\\(ax^2 + bx + c = 0\\), 20px"]]]]]
    (hc/xform ht/bar-chart
              :USERDATA
              (merge
               (hc/get-default :USERDATA)
-              {:vid :bc1
-               :frame {:bottom
-                       `[[gap :size "50px"]
-                         [v-box
-                          :children
-                          [[p "some text to test, default 14px"]
-                           [p {:style {:font-size "16px"}}
-                            "some tex \\(f(x) = x^2\\), 16px"]
-                           [p {:style {:font-size "18px"}}
-                            "\\(f(x) = \\sqrt x\\), 18px"]
-                           [p {:style {:font-size "20px"}}
-                            "\\(ax^2 + bx + c = 0\\), 20px"]]]]}
-               :slider `[[gap :size "10px"] [label :label "Add Bar"]
+              {:slider `[[gap :size "10px"] [label :label "Add Bar"]
                          [label :label ~minstr]
                          [slider
                           :model :m1
@@ -280,8 +273,17 @@
                           :width "60px", :height "26px"
                           :on-change :oc2]]})
              :HEIGHT 300, :WIDTH 350
+             :BOTTOM bottom :VID :bc1
              :X "a" :XTYPE "ordinal" :XTITLE "Foo" :Y "b" :YTITLE "Bar"
              :DATA data))
+ hmi/sv!)
+
+(->
+ (hc/xform
+  ht/bar-chart
+  :UDATA "data/seattle-weather.csv" :TOOLTIP RMV
+  :X "date" :XTYPE "ordinal" :XUNIT "month"
+  :Y "precipitation" :YAGG "mean")
  hmi/sv!)
 
 ;;; Data streaming
@@ -295,20 +297,16 @@
 (let [data (->> (range 0.001 100.0 0.1)
                 (mapv #(do {:x (ac/roundit %)
                             :y (-> % Math/sqrt ac/roundit)})))]
-  (->> (hc/xform ht/line-chart
-        :USERDATA
-        (assoc (hc/get-default :USERDATA)
-               :frame {:bottom
-                       `[[gap :size "230px"]
-                         [p {:style {:font-size "18px"}}
-                          "\\(f(x) = \\sqrt x\\)"]]
-                       :right
-                       `[[gap :size "10px"]
-                         [v-box
-                          :children
-                          [(md "#### The square root function")
-                           (md "* \\\\(f(x) = \\\\sqrt x\\\\)")
-                           (md "* _two_\n* **three**")]]]})
+  (->> (hc/xform ht/line-chart :VID :sqrt
+        :BOTTOM `[[gap :size "230px"]
+                  [p {:style {:font-size "18px"}}
+                   "\\(f(x) = \\sqrt x\\)"]]
+        :RIGHT `[[gap :size "10px"]
+                 [v-box
+                  :children
+                  [(md "#### The square root function")
+                   (md "* \\\\(f(x) = \\\\sqrt x\\\\)")
+                   (md "* _two_\n* **three**")]]]
         :DATA data) hmi/sv!))
 
 
@@ -343,7 +341,7 @@
  hmi/sv!)
 
 
-;;; Overview + Detail
+;;; Overview + Detail as straight VGL JSON
 (->>
  (hc/xform
   {:usermeta :USERDATA
@@ -371,6 +369,28 @@
  hmi/sv!)
 
 
+;;; (hc/update-defaults :WIDTH 480 :HEIGHT 200)
+;;; (hc/update-defaults :HEIGHT 400 :WIDTH 450)
+(->>
+ (hc/xform
+  ht/vconcat-chart
+  :UDATA "data/sp500.csv",
+  :VCONCAT [(hc/xform ht/area-chart
+             :X :date, :XTYPE :temporal, :XSCALE {:domain {:selection :brush}}
+             :Y :price)
+            (hc/xform ht/area-chart
+             :HEIGHT 60,
+             :SELECTION {:brush {:type :interval, :encodings [:x]}},
+             :X :date :XTYPE :temporal
+             :Y :price, :YAXIS {:tickCount 3, :grid false})])
+ hmi/sv!)
+
+(mapv #(let [{:keys [year month day]} (% :date)]
+         (assoc % :vgldate (str year "-" month "-" day)))
+      your-data)
+      [{:date {:year 2019, :month 2, :day 12}}
+       {:date {:year 2019, :month 2, :day 17}}
+       {:date {:year 2019, :month 3, :day 1}}])
 
 ;;; Area Chart
 (-> (hc/xform
