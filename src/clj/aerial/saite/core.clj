@@ -97,8 +97,12 @@
   (hc/add-defaults
    :HEIGHT 400 :WIDTH 450
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
+              :frame {:top :TOP, :bottom :BOTTOM, :left :LEFT, :right :RIGHT}
               :opts :OPTS
-              :vid :VID, :msgop :MSGOP, :session-name :SESSION-NAME}
+              :vid :VID,
+              :msgop :MSGOP,
+              :session-name :SESSION-NAME}
+   :TOP RMV, :BOTTOM RMV, :LEFT RMV, :RIGHT RMV
    :VID RMV, :MSGOP :tabs, :SESSION-NAME "Exploring"
    :TID :expl1, :TLBL #(-> :TID % name cljstr/capitalize)
    :OPTS (hc/default-opts :vgl)
