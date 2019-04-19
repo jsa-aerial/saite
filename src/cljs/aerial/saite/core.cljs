@@ -21,8 +21,11 @@
 
    [aerial.saite.codemirror
     :as cm
-    :refer [code-mirror]]
+    :refer [code-mirror get-cm-sexpr dbg-cm]]
    [aerial.saite.md2hiccup :as m2h]
+   [aerial.saite.compiler
+    :as comp
+    :refer [evaluate expr*!]]
 
    [cljsjs.mathjax]
 
@@ -98,6 +101,8 @@
   (let [base-style {:flex "none", :width "450px", :min-width "450px"}
         x (first stg)
         stg (cljstr/join "\n" (if (map? x) (rest stg) stg))
+        stg (cljstr/replace stg "\\(" "\\\\(")
+        stg (cljstr/replace stg "\\)" "\\\\)")
         style (->> (if (map? x) (x :style) {}) (merge base-style))
         attr (if (map? x) (assoc x :style style) {:style style})
         hiccup (vec (concat [:div.md attr] (rest (m2h/parse stg))))]
@@ -113,10 +118,21 @@
     [h-box :gap "5px" :attr {:id id}
      :children
      [[v-box :gap "5px"
+       :children
+       [[md-circle-icon-button
+         :md-icon-name "zmdi-caret-right-circle"
+         :tooltip "Eval Code"
+         :on-click #(printchan :ID id :VID (opts :vid) :eval @input)]
+        [md-circle-icon-button
+         :md-icon-name "zmdi-circle-o"
+         :tooltip "Clear"
+         :on-click
+         #(do (reset! input ""))]]]
+      [v-box :gap "5px"
        :width (opts :width "500px")
        :height (+ ch oh 50)
        :children
-       [[h-box
+       [[v-box
          :children
          [[box
            :size (opts :size "auto")
@@ -132,26 +148,39 @@
          :width (opts :width "500px")
          :height (opts :out-height "100px")
          :rows (opts :rows 5)]]]
-      [v-box :gap "5px"
-       :children
-       [[md-circle-icon-button
-         :md-icon-name "zmdi-caret-left-circle"
-         :tooltip "Eval Code"
-         :on-click #(printchan :ID id :VID (opts :vid) :eval @input)]
-        [md-circle-icon-button
-         :md-icon-name "zmdi-circle-o"
-         :tooltip "Clear"
-         :on-click
-         #(do (reset! input ""))]]]]]))
+      [gap :size "10px"]]]))
 
-#_(hmi/visualize (get-vspec :scatter-1)
-                 (js/document.getElementById "scatter-1"))
-#_(hmi/visualize (get-vspec :bc1)
-                 (js/document.getElementById "scatter-1"))
-#_(hmi/visualize (get-vspec :sqrt)
-                 (js/document.getElementById "scatter-1"))
-#_(hmi/visualize (get-vspec :scatter-1)
-                 (js/document.getElementById "bc1"))
+(comment
+  (hmi/visualize
+   (get-vspec :scatter-1)
+   (js/document.getElementById "scatter-1"))
+
+  (hmi/visualize
+   (get-vspec :bc1)
+   (js/document.getElementById "scatter-1"))
+
+  (hmi/visualize
+   (get-vspec :sqrt)
+   (js/document.getElementById "scatter-1"))
+
+  (hmi/visualize
+   (get-vspec :scatter-1)
+   (js/document.getElementById "bc1")))
+
+(defn vis! [vid picid]
+  (hmi/visualize
+   (get-vspec vid)
+   (js/document.getElementById picid)))
+
+(comment
+  (vis! :bc1 "scatter-1")
+  (vis! :sqrt "scatter-1")
+  (vis! :scatter-1 "scatter-1")
+
+  (when-let [source (get-cm-sexpr @dbg-cm)]
+    (evaluate source #(printchan (expr*! %))))
+  )
+
 
 (defn cm []
   (let [input (rgt/atom "")
@@ -162,6 +191,7 @@
                              :height "300px", :out-height "100px"}))
             kwid (name (opts :id))]
         (printchan :CM kwid :called :OPTS opts)
+        (when-let [init (opts :init)] (reset! input init))
         (update-adb [:editors kwid] {:in input, :ot output, :opts opts})
         (cm-hiccup opts input output)))))
 
