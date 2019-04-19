@@ -56,6 +56,53 @@
    ))
 
 
+(def dbg-cm (atom nil))
+
+(comment
+  (js/console.log (.setCursor @dbg-cm 2 42))
+  (js/console.log (.getCursor @dbg-cm))
+  (js/console.log (.findMatchingBracket @dbg-cm (.getCursor @dbg-cm)))
+
+  (if-let [bounds (.findMatchingBracket @dbg-cm (.getCursor @dbg-cm))]
+    (.setCursor @dbg-cm bounds.to))
+
+  (if-let [bounds (.findMatchingBracket @dbg-cm (.getCursor @dbg-cm))]
+    (let [start bounds.to
+          end bounds.from
+          stgval (.getValue @dbg-cm)
+          lines (subvec (clojure.string/split-lines stgval)
+                        start.line (inc end.line))
+          begstg (-> lines first (subs start.ch))
+          endstg (-> lines last (subs 0 (inc end.ch)))]
+      (if (= start.line end.line)
+        (subs begstg 0 end.ch)
+        (let [midstg (clojure.string/join
+                      " " (subvec lines 1 (dec (count lines))))]
+          (clojure.string/join " " [begstg midstg endstg]))))
+    "cursor not at sexpr end")
+
+  js/CodeMirror.keyNames
+  js/CodeMirror.keyMap
+  js/CodeMirror.keyMap.emacs
+  )
+
+
+(defn get-cm-sexpr [cm]
+  (when-let [bounds (.findMatchingBracket cm (.getCursor cm))]
+    (when (not bounds.forward)
+      (let [start bounds.to
+            end bounds.from
+            stgval (.getValue cm)
+            lines (subvec (clojure.string/split-lines stgval)
+                          start.line (inc end.line))
+            begstg (-> lines first (subs start.ch))
+            endstg (-> lines last (subs 0 (inc end.ch)))]
+        (if (= start.line end.line)
+          (subs begstg 0 end.ch)
+          (let [midstg (clojure.string/join
+                        " " (subvec lines 1 (dec (count lines))))]
+            (clojure.string/join " " [begstg midstg endstg])))))))
+
 
 (defn code-mirror
   "Create a code-mirror editor. The parameters:
@@ -89,6 +136,7 @@
 
           (.setValue inst @input)
           (reset! cm inst)
+          (reset! dbg-cm inst)
           (.on inst "change" #_#(reset! input (.getValue %))
                (fn []
                  (let [value (.getValue inst)]
