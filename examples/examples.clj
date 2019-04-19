@@ -226,8 +226,21 @@
               :y {:field "Miles_per_Gallon", :type "quantitative"},
               :color {:field "Origin", :type "nominal"}}}
   :VID :scatter-1
-  :RIGHT `[[gap :size "10px"]
-           [cm :id "cm-scatter-1" :vid :VID]])
+  :LEFT `[[gap :size "10px"]
+          [cm :id "cm-scatter-1" :vid :VID
+           :init
+"(hmi/visualize
+ (get-vspec :scatter-1)
+ (js/document.getElementById \"scatter-1\"))
+
+(hmi/visualize
+ (get-vspec :bc1)
+ (js/document.getElementById \"scatter-1\"))
+
+(hmi/visualize
+ (get-vspec :sqrt)
+ (js/document.getElementById \"scatter-1\"))"]])
+
  hmi/sv!)
 
 
@@ -301,13 +314,19 @@
         :BOTTOM `[[gap :size "230px"]
                   [p {:style {:font-size "18px"}}
                    "\\(f(x) = \\sqrt x\\)"]]
-        :RIGHT `[[gap :size "10px"]
-                 [v-box
-                  :children
-                  [(md "#### The square root function")
-                   (md "* \\\\(f(x) = \\\\sqrt x\\\\)")
-                   (md "* _two_\n* **three**")]]]
+        :RIGHT
+        `[[gap :size "10px"]
+          [v-box
+           :children
+           [(md "#### The square root function")
+            (md "* \\(f(x) = \\sqrt x\\)")
+            (md "* _two_\n* **three**")]]]
         :DATA data) hmi/sv!))
+
+
+
+
+(md "* P(x) = \\(\\frac{1}{\\sqrt{2\\pi \\sigma^2}} e^{- \\frac{(x - \\mu)^2}{2\\sigma ^2}}\\)")
 
 
 
