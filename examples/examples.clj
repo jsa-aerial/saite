@@ -260,6 +260,19 @@
   :DATA (mapv (fn[[x y]] {:x x :y y :m 5.7}) obsdist))
  (js/document.getElementById \"scatter-1\"))
 
+(hmi/visualize
+ (hc/xform
+  ht/contour-plot
+  :MODE \"vega\"
+  :HEIGHT 400, :WIDTH 500
+  :X \"Horsepower\", :XTITLE \"Engine Horsepower\"
+  :Y \"Miles_per_Gallon\" :YTITLE \"Miles/Gallon\"
+  :UDATA \"data/cars.json\"
+  :XFORM-EXPR #(let [d1 (% :X)
+                     d2 (% :Y)]
+                 (format \"datum['%s'] != null && datum['%s'] !=null\" d1 d2)))
+ (js/document.getElementById \"scatter-1\"))
+
 "]])
 
  hmi/sv!)
