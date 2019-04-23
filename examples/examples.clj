@@ -228,7 +228,8 @@
   :VID :scatter-1
   :LEFT `[[gap :size "10px"]
           [cm :id "cm-scatter-1" :vid :VID
-           :init
+           :width "550px"
+           :src
 "(hmi/visualize
  (get-vspec :scatter-1)
  (js/document.getElementById \"scatter-1\"))
@@ -239,7 +240,27 @@
 
 (hmi/visualize
  (get-vspec :sqrt)
- (js/document.getElementById \"scatter-1\"))"]])
+ (js/document.getElementById \"scatter-1\"))
+
+(def obsdist
+  (let [obs [[0 9] [1 78] [2 305] [3 752] [4 1150] [5 1166]
+             [6 899] [7 460] [8 644] [9 533] [10 504]]
+        totcnt (->> obs (mapv second) (apply +))
+        pdist (map (fn[[k cnt]] [k (/ cnt totcnt)]) obs)]
+    pdist))
+
+(hmi/visualize
+ (hc/xform
+  ht/layer-chart
+  :TID :dists
+  :TITLE \"Distribution with weighted mean\"
+  :LAYER
+  [(hc/xform ht/bar-layer :XTITLE \"Count\" :YTITLE \"Probability\")
+   (hc/xform ht/xrule-layer :X \"m\")]
+  :DATA (mapv (fn[[x y]] {:x x :y y :m 5.7}) obsdist))
+ (js/document.getElementById \"scatter-1\"))
+
+"]])
 
  hmi/sv!)
 
