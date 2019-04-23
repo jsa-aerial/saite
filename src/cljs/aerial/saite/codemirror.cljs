@@ -8,6 +8,7 @@
 
    [aerial.hanami.core :as hmi :refer [printchan]]
    [aerial.hanami.common :as hc :refer [RMV]]
+   [aerial.saite.compiler :refer [evaluate]]
 
    [com.rpl.specter :as sp]
 
@@ -56,52 +57,51 @@
    ))
 
 
+
 (def dbg-cm (atom nil))
 
-(comment
-  (js/console.log (.setCursor @dbg-cm 2 42))
-  (js/console.log (.getCursor @dbg-cm))
-  (js/console.log (.findMatchingBracket @dbg-cm (.getCursor @dbg-cm)))
-
-  (if-let [bounds (.findMatchingBracket @dbg-cm (.getCursor @dbg-cm))]
-    (.setCursor @dbg-cm bounds.to))
-
-  (if-let [bounds (.findMatchingBracket @dbg-cm (.getCursor @dbg-cm))]
-    (let [start bounds.to
-          end bounds.from
-          stgval (.getValue @dbg-cm)
-          lines (subvec (clojure.string/split-lines stgval)
-                        start.line (inc end.line))
-          begstg (-> lines first (subs start.ch))
-          endstg (-> lines last (subs 0 (inc end.ch)))]
-      (if (= start.line end.line)
-        (subs begstg 0 end.ch)
-        (let [midstg (clojure.string/join
-                      " " (subvec lines 1 (dec (count lines))))]
-          (clojure.string/join " " [begstg midstg endstg]))))
-    "cursor not at sexpr end")
-
-  js/CodeMirror.keyNames
-  js/CodeMirror.keyMap
-  js/CodeMirror.keyMap.emacs
-  )
-
-
 (defn get-cm-sexpr [cm]
-  (when-let [bounds (.findMatchingBracket cm (.getCursor cm))]
-    (when (not bounds.forward)
-      (let [start bounds.to
-            end bounds.from
-            stgval (.getValue cm)
-            lines (subvec (clojure.string/split-lines stgval)
-                          start.line (inc end.line))
-            begstg (-> lines first (subs start.ch))
-            endstg (-> lines last (subs 0 (inc end.ch)))]
-        (if (= start.line end.line)
-          (subs begstg 0 end.ch)
-          (let [midstg (clojure.string/join
-                        " " (subvec lines 1 (dec (count lines))))]
-            (clojure.string/join " " [begstg midstg endstg])))))))
+  (let [end (.getCursor cm)
+        start (do (((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-B") cm)
+                  (.getCursor cm))
+        stgval (.getValue cm)
+        lines (subvec (clojure.string/split-lines stgval)
+                      start.line (inc end.line))
+        begstg (-> lines first (subs start.ch))
+        endstg (-> lines last (subs 0 (inc end.ch)))]
+    (.setCursor cm end)
+    (if (= start.line end.line)
+      (let [l (first lines)]
+        (subs l start.ch end.ch))
+      (let [midstg (clojure.string/join
+                    " " (subvec lines 1 (dec (count lines))))]
+        (clojure.string/join " " [begstg midstg endstg])))))
+
+;;#(reset! expr* %)
+(defn evalxe [cm]
+  (let [cb cm.CB]
+    (if-let [source (get-cm-sexpr cm)]
+      (evaluate source cb)
+      (cb {:value "not on sexpr"}))))
+
+(defn evalcc [cm] (printchan :EVALCC)
+  (let [cb cm.CB
+        pos (.getCursor cm)]
+    (((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-U") cm)
+    (((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-F") cm)
+    (evaluate (get-cm-sexpr @dbg-cm) cb)
+    (.setCursor @dbg-cm pos)))
+
+
+(defn xtra-keys-emacs []
+  (CodeMirror.normalizeKeyMap
+   (js->clj {"Ctrl-F" ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-F")
+             "Ctrl-B" ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-B")
+             "Alt-W"  ((js->clj CodeMirror.keyMap.emacs) "Ctrl-W")
+             "Alt-K"  ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-K")
+             "Ctrl-X Ctrl-E" evalxe
+             "Ctrl-X Ctrl-C" evalcc
+             })))
 
 
 (defn code-mirror
@@ -111,7 +111,7 @@
   options
   :js-cm-opts
     options passed into the CodeMirror constructor"
-  [input mode & {:keys [js-cm-opts]}]
+  [input mode & {:keys [js-cm-opts cb] :or {cb #(printchan %)}}]
   (printchan "CODE-MIRROR called")
   (let [cm (atom nil)]
     (rgt/create-class
@@ -127,6 +127,7 @@
                               :viewportMargin js/Infinity
                               :autofocus true
                               :keyMap "emacs"
+                              :extraKeys (xtra-keys-emacs)
                               :matchBrackets true
                               :autoCloseBrackets true
                               :value @input
@@ -135,6 +136,7 @@
               inst (.fromTextArea js/CodeMirror (rgt/dom-node comp) opts)]
 
           (.setValue inst @input)
+          (set! (.-CB inst) cb)
           (reset! cm inst)
           (reset! dbg-cm inst)
           (.on inst "change" #_#(reset! input (.getValue %))
@@ -160,3 +162,36 @@
         @input
         [:textarea {:rows "20",
                     #_:style #_"flex: 0 0 auto; padding-right: 12px;"}])})))
+
+
+
+
+(comment
+
+  (js/console.log (.setCursor @dbg-cm 2 42))
+  (js/console.log (.getCursor @dbg-cm))
+  (js/console.log (.findMatchingBracket @dbg-cm (.getCursor @dbg-cm)))
+
+  (if-let [bounds (.findMatchingBracket @dbg-cm (.getCursor @dbg-cm))]
+    (.setCursor @dbg-cm bounds.to))
+
+  (if-let [bounds (.findMatchingBracket @dbg-cm (.getCursor @dbg-cm))]
+    (let [start bounds.to
+          end bounds.from
+          stgval (.getValue @dbg-cm)
+          lines (subvec (clojure.string/split-lines stgval)
+                        start.line (inc end.line))
+          begstg (-> lines first (subs start.ch))
+          endstg (-> lines last (subs 0 (inc end.ch)))]
+      (if (= start.line end.line)
+        (subs begstg 0 end.ch)
+        (let [midstg (clojure.string/join
+                      " " (subvec lines 1 (dec (count lines))))]
+          (clojure.string/join " " [begstg midstg endstg]))))
+    "cursor not at sexpr end")
+
+  js/CodeMirror.keyNames
+  js/CodeMirror.keyMap
+  js/CodeMirror.keyMap.emacs
+
+  )
