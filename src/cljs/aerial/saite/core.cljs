@@ -127,7 +127,7 @@
          :md-icon-name "zmdi-circle-o"
          :tooltip "Clear"
          :on-click
-         #(do (reset! input ""))]]]
+         #(do (reset! output ""))]]]
       [v-box :gap "5px"
        :width (opts :width "500px")
        :height (+ ch oh 50)
@@ -140,39 +140,28 @@
            :height (opts :height "300px")
            :justify (opts :justify :start)
            :align (opts :justify :stretch)
-           :child [code-mirror input "clojure"]]]]
+           :child [code-mirror input "clojure"
+                   :cb (fn[m]
+                         (let [ostg (prn-str (or (m :value) (m :error)))]
+                           (reset! output (str @output
+                                               "\n=> " ostg))
+                           (printchan :output @output)))]]]]
         [input-textarea
          :model output
-         :on-change (fn[_])
+         :on-change #(do (printchan :TEXT %))
          :placeholder "results"
          :width (opts :width "500px")
          :height (opts :out-height "100px")
          :rows (opts :rows 5)]]]
       [gap :size "10px"]]]))
 
-(comment
-  (hmi/visualize
-   (get-vspec :scatter-1)
-   (js/document.getElementById "scatter-1"))
-
-  (hmi/visualize
-   (get-vspec :bc1)
-   (js/document.getElementById "scatter-1"))
-
-  (hmi/visualize
-   (get-vspec :sqrt)
-   (js/document.getElementById "scatter-1"))
-
-  (hmi/visualize
-   (get-vspec :scatter-1)
-   (js/document.getElementById "bc1")))
-
-(defn vis! [vid picid]
-  (hmi/visualize
-   (get-vspec vid)
-   (js/document.getElementById picid)))
 
 (comment
+  (defn vis! [vid picid]
+    (hmi/visualize
+     (get-vspec vid)
+     (js/document.getElementById picid)))
+
   (vis! :bc1 "scatter-1")
   (vis! :sqrt "scatter-1")
   (vis! :scatter-1 "scatter-1")
@@ -191,7 +180,7 @@
                              :height "300px", :out-height "100px"}))
             kwid (name (opts :id))]
         (printchan :CM kwid :called :OPTS opts)
-        (when-let [init (opts :init)] (reset! input init))
+        (when-let [init (opts :src)] (reset! input init))
         (update-adb [:editors kwid] {:in input, :ot output, :opts opts})
         (cm-hiccup opts input output)))))
 
