@@ -5,6 +5,9 @@
   (:require
    [clojure.string :as cljstr]
 
+   [goog.string :as gstring]
+   [goog.string.format]
+
    [cljs.tools.reader :refer [read-string]]
    [cljs.env :as env]
    [cljs.js :refer [empty-state eval js-eval eval-str require]]
@@ -25,7 +28,8 @@
 
    ))
 
-
+(defn format [s & params]
+  (apply gstring/format s params))
 
 (def state (cljs.js/empty-state))
 
