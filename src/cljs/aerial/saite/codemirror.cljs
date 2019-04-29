@@ -76,7 +76,7 @@
       (let [midstg (clojure.string/join
                     " " (subvec lines 1 (dec (count lines))))]
         (clojure.string/join " " [begstg midstg endstg])))))
-
+ 
 ;;#(reset! expr* %)
 (defn evalxe [cm]
   (let [cb cm.CB]
