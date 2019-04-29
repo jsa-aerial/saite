@@ -142,17 +142,23 @@
            :align (opts :justify :stretch)
            :child [code-mirror input "clojure"
                    :cb (fn[m]
-                         (let [ostg (prn-str (or (m :value) (m :error)))]
+                         (let [ostg (with-out-str
+                                      (cljs.pprint/pprint
+                                       (or (m :value) (m :error))))]
                            (reset! output (str @output
-                                               "\n=> " ostg))
+                                               "=> " ostg))
                            (printchan :output @output)))]]]]
-        [input-textarea
-         :model output
-         :on-change #(do (printchan :TEXT %))
-         :placeholder "results"
-         :width (opts :width "500px")
-         :height (opts :out-height "100px")
-         :rows (opts :rows 5)]]]
+        [v-box
+         :children
+         [[box
+           :size (opts :size "auto")
+           :width (opts :width "500px")
+           :height (opts :out-height "100px")
+           :justify (opts :justify :start)
+           :align (opts :justify :stretch)
+           :child [code-mirror output "clojure"
+                   :js-cm-opts {:lineNumbers false,
+                                :lineWrapping true}]]]]]]
       [gap :size "10px"]]]))
 
 
