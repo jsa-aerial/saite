@@ -76,7 +76,7 @@
       (let [midstg (clojure.string/join
                     " " (subvec lines 1 (dec (count lines))))]
         (clojure.string/join " " [begstg midstg endstg])))))
- 
+
 ;;#(reset! expr* %)
 (defn evalxe [cm]
   (let [cb cm.CB]
@@ -89,8 +89,8 @@
         pos (.getCursor cm)]
     (((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-U") cm)
     (((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-F") cm)
-    (evaluate (get-cm-sexpr @dbg-cm) cb)
-    (.setCursor @dbg-cm pos)))
+    (evaluate (get-cm-sexpr cm) cb)
+    (.setCursor cm pos)))
 
 
 (defn xtra-keys-emacs []
