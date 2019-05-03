@@ -228,7 +228,7 @@
   :VID :scatter-1
   :LEFT `[[gap :size "10px"]
           [cm :id "cm-scatter-1" :vid :VID
-           :width "550px"
+           :width "700px"
            :src
 "(hmi/visualize
  (get-vspec :scatter-1)
