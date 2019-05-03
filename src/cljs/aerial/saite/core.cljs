@@ -191,6 +191,35 @@
         (cm-hiccup opts input output)))))
 
 
+
+
+(defn saite-header []
+  [h-box :gap "10px" :max-height "30px"
+   :children [[gap :size "5px"]
+              [:img {:src (get-adb [:main :logo])}]
+              #_[title
+               :level :level3
+               :label [:span.bold (get-adb [:main :title])]]
+              #_[gap :size "5px"]
+              [hmi/session-input]
+              [gap :size "5px"]
+              [title
+               :level :level3
+               :label [:span.bold (get-adb [:main :uid :name])]]
+              [gap :size "30px"]
+              [h-box :gap "10px"
+               :children [[md-circle-icon-button
+                           :md-icon-name "zmdi-upload"
+                           :tooltip "Upload Document"
+                           :on-click
+                           #(do (js/console.log "upload clicked"))]
+                          [md-circle-icon-button
+                           :md-icon-name "zmdi-download"
+                           :tooltip "Save Document"
+                           :on-click
+                           #(do (js/console.log "download clicked"))]]]]])
+
+
 (defn bar-slider-fn [tid val]
   (let [tabval (get-tab-field tid)
         spec-frame-pairs (tabval :spec-frame-pairs)]
@@ -455,8 +484,11 @@
   (hc/add-defaults
    :HEIGHT 400 :WIDTH 450
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
+              :frame {:top :TOP, :bottom :BOTTOM, :left :LEFT, :right :RIGHT}
               :opts :OPTS
-              :vid :VID, :msgop :MSGOP, :session-name :SESSION-NAME}
+              :vid :VID,
+              :msgop :MSGOP,
+              :session-name :SESSION-NAME}
    :VID RMV, :MSGOP :tabs, :SESSION-NAME "Exploring"
    :TID :expl1, :TLBL #(-> :TID % name cljstr/capitalize)
    :OPTS (hc/default-opts :vgl)
@@ -475,8 +507,11 @@
     (hc/add-defaults
      :HEIGHT 400 :WIDTH 450
      :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
+                :frame {:top :TOP, :bottom :BOTTOM, :left :LEFT, :right :RIGHT}
                 :opts :OPTS
-                :vid :VID, :msgop :MSGOP, :session-name :SESSION-NAME}
+                :vid :VID,
+                :msgop :MSGOP,
+                :session-name :SESSION-NAME}
      :VID RMV, :MSGOP :tabs, :SESSION-NAME "Exploring"
      :TID :expl1, :TLBL #(-> :TID % name cljstr/capitalize)
      :OPTS (hc/default-opts :vgl)
@@ -485,6 +520,7 @@
            :port 3000
            :symxlate-cb symxlate-callback
            :frame-cb frame-callback
+           :header-fn saite-header
            :instrumentor-fn instrumentor))
 
 
