@@ -14,7 +14,7 @@
             update-adb get-adb
             get-vspec update-vspecs
             get-tab-field add-tab update-tab-field active-tabs
-            vgl app-stop]]
+            md vgl app-stop]]
    [aerial.hanami.common
     :as hc
     :refer [RMV]]
@@ -22,7 +22,6 @@
    [aerial.saite.codemirror
     :as cm
     :refer [code-mirror get-cm-sexpr dbg-cm]]
-   [aerial.saite.md2hiccup :as m2h]
    [aerial.saite.compiler
     :as comp
     :refer [evaluate expr*!]]
@@ -97,17 +96,7 @@
 
 ;;; Components ============================================================ ;;;
 
-(defn md [ & stg]
-  (let [base-style {:flex "none", :width "450px", :min-width "450px"}
-        x (first stg)
-        stg (cljstr/join "\n" (if (map? x) (rest stg) stg))
-        stg (cljstr/replace stg "\\(" "\\\\(")
-        stg (cljstr/replace stg "\\)" "\\\\)")
-        style (->> (if (map? x) (x :style) {}) (merge base-style))
-        attr (if (map? x) (assoc x :style style) {:style style})
-        hiccup (vec (concat [:div.md attr] (rest (m2h/parse stg))))]
-    (hmi/print-when [:md] :MD hiccup)
-    hiccup))
+
 
 
 (defn cm-hiccup [opts input output]
@@ -472,7 +461,7 @@
 
 (defn symxlate-callback [sym]
   (let [snm (name sym)]
-    (cond (= snm "md") md
+    (cond ;; (= snm "md") md
           (= snm "cm") (cm)
           :else sym)))
 
@@ -522,6 +511,14 @@
            :frame-cb frame-callback
            :header-fn saite-header
            :instrumentor-fn instrumentor))
+
+
+  (let[frame (js/document.getElementById "frame-64")]
+    (js/console.log (aget frame.childNodes 2)))
+
+  (let[frame (js/document.getElementById "frame-64")
+       bottom (aget frame.childNodes 4)]
+    (js/console.log bottom.childNodes))
 
 
 
