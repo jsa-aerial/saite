@@ -10,7 +10,7 @@
 
                  [com.rpl/specter "1.1.1"]
 
-                 [aerial.hanami "0.8.1"]
+                 [aerial.hanami "0.9.0"]
                  [cljsjs/codemirror "5.40.2-1"]
                  [cljsjs/highlight "9.12.0-2"]
                  [cljsjs/mathjax "2.7.5-0"]
@@ -25,7 +25,7 @@
 
   :source-paths ["src/cljc" "src/clj" "src/cljs"]
 
-  :prep-tasks ["compile" ["cljsbuild" "once" "min"]]
+  ;;:prep-tasks ["compile" ["cljsbuild" "once" "min"]]
 
   :cljsbuild {:builds
               [{:id "dev"
