@@ -84,10 +84,18 @@
       (evaluate source cb)
       (cb {:value "not on sexpr"}))))
 
-(defn evalcc [cm] (printchan :EVALCC)
+(defn find-outer-sexpr [cm]
+  (let [f ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-U")]
+    (loop [pos (do (f cm) (.getCursor cm))]
+      (if (= 0 pos.ch)
+        pos
+        (recur (do (f cm) (.getCursor cm)))))))
+
+(defn evalcc [cm] (reset! dbg-cm cm)
   (let [cb cm.CB
         pos (.getCursor cm)]
-    (((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-U") cm)
+    #_(js/console.log (find-outer-sexpr cm))
+    (find-outer-sexpr cm)
     (((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-F") cm)
     (evaluate (get-cm-sexpr cm) cb)
     (.setCursor cm pos)))
