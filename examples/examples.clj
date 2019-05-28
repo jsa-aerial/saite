@@ -302,7 +302,8 @@
                   [p {:style {:font-size "18px"}}
                    "\\(f(x) = \\sqrt x\\), 18px"]
                   [p {:style {:font-size "20px"}}
-                   "\\(ax^2 + bx + c = 0\\), 20px"]]]]]
+                   "\\(ax^2 + bx + c = 0\\), 20px"]
+                  #_[md {:style {:font-size "20px"}}"* P(x) = \\(\\frac{1}{\\sqrt{2\\pi \\sigma^2}} e^{- \\frac{(x - \\mu)^2}{2\\sigma ^2}}\\)"]]]]]
    (hc/xform ht/bar-chart
              :USERDATA
              (merge
@@ -352,9 +353,9 @@
         `[[gap :size "10px"]
           [v-box
            :children
-           [(md "#### The square root function")
-            (md "* \\(f(x) = \\sqrt x\\)")
-            (md "* _two_\n* **three**")]]]
+           [[md "#### The square root function"]
+            [md "* \\(f(x) = \\sqrt x\\)"]
+            [md "* _two_\n* **three**"]]]]
         :DATA data) hmi/sv!))
 
 
