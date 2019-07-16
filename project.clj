@@ -60,7 +60,7 @@
                 :compiler {:output-to
                            "resources/public/js/compiled/saite.js"
                            :main aerial.saite.core
-                           :optimizations :advanced
+                           :optimizations :simple
                            :pretty-print false}}]}
 
   :figwheel {;; :http-server-root "public" ;; default and assumes "resources"
