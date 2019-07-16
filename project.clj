@@ -1,4 +1,4 @@
-(defproject aerial.saite "0.4.0"
+(defproject aerial.saite "0.7.0"
   :description "Exploratory graphics and visualization system"
   :url "https://github.com/jsa-aerial/saite"
   :license {:name "MIT"
@@ -66,6 +66,8 @@
   :figwheel {;; :http-server-root "public" ;; default and assumes "resources"
               :server-port 3450 ;; default
              ;; :server-ip "127.0.0.1"
+
+             :repl-eval-timeout 30000
 
              :css-dirs ["resources/public/css"] ;; watch and update CSS
 
