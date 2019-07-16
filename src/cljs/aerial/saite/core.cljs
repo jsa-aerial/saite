@@ -990,19 +990,19 @@
 ;;; Startup ============================================================== ;;;
 
 
-#_(when-let [elem (js/document.querySelector "#app")]
+(when-let [elem (js/document.querySelector "#app")]
   (hc/update-defaults
-     :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
-                :frame {:top :TOP, :bottom :BOTTOM,
-                        :left :LEFT, :right :RIGHT
-                        :fid :FID}
-                :opts :OPTS
-                :vid :VID,
-                :msgop :MSGOP,
-                :session-name :SESSION-NAME}
-     :MSGOP :tabs, :SESSION-NAME "Exploring"
-     :TID :expl1, :TLBL #(-> :TID % name cljstr/capitalize)
-     :OPTS (hc/default-opts :vgl), :TOPTS (hc/default-opts :tab))
+   :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
+              :frame {:top :TOP, :bottom :BOTTOM,
+                      :left :LEFT, :right :RIGHT
+                      :fid :FID}
+              :opts :OPTS
+              :vid :VID,
+              :msgop :MSGOP,
+              :session-name :SESSION-NAME}
+   :MSGOP :tabs, :SESSION-NAME "Exploring"
+   :TID :expl1, :TLBL #(-> :TID % name cljstr/capitalize)
+   :OPTS (hc/default-opts :vgl), :TOPTS (hc/default-opts :tab))
   (start :elem elem
          :port js/location.port
          :symxlate-cb symxlate-callback
