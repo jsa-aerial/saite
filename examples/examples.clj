@@ -225,7 +225,7 @@
    :encoding {:x {:field "Horsepower", :type "quantitative"},
               :y {:field "Miles_per_Gallon", :type "quantitative"},
               :color {:field "Origin", :type "nominal"}}}
-  :VID :scatter-1
+  :VID :scatter-1 :FID :f1
   :LEFT `[[gap :size "10px"]
           [cm :id "cm-scatter-1" :vid :VID
            :width "700px"
@@ -241,6 +241,21 @@
 (hmi/visualize
  (get-vspec :sqrt)
  (js/document.getElementById \"scatter-1\"))
+
+
+(update-frame-element
+   :f1 :bottom [h-box
+                :children
+                [[gap :size \"800px\"]
+                 #_[md \"* title\"]
+                 #_[p \"some text\"]
+                 [md {:style {:font-size \"20px\" :color \"blue\"}}
+                  \"
+* P(x) = \\(\\frac{1}{\\sqrt{2\\pi \\sigma^2}} e^{- \\frac{(x - \\mu)^2}{2\\sigma ^2}}\\)
+
+* \\(f(x) = x^2\\)\"]]])
+
+
 
 (def obsdist
   (let [obs [[0 9] [1 78] [2 305] [3 752] [4 1150] [5 1166]
@@ -648,7 +663,7 @@
 (->>
  (hc/xform
   ht/contour-plot
-  :MODE "vega"
+  :MODE "vega" :TID :contours
   :HEIGHT 400, :WIDTH 500
   :X "Horsepower", :XTITLE "Engine Horsepower"
   :Y "Miles_per_Gallon" :YTITLE "Miles/Gallon"
