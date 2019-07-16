@@ -58,6 +58,56 @@
 
 
 
+(defn get-cm-block [cm]
+  (let [pos (.getCursor cm)
+        line pos.line
+        ch pos.ch
+        stgval (.getValue cm)
+        lines (cljstr/split-lines stgval)
+        find-hd (fn [l dir]
+                  (let [f (if (= dir :bkwd) dec inc)
+                        stop (if (= dir :bkwd) 0 (-> lines count dec))]
+                    (loop [l l]
+                      (let [line (lines l)]
+                        (if (or (= l stop) (cljstr/starts-with? line ";@@@"))
+                          [l line]
+                          (recur (f l)))))))
+        [start l1] (find-hd line :bkwd)
+        [end l2]   (find-hd line :fwd)
+        block      (->> (subvec lines start end)
+                        (filter #(not (cljstr/starts-with? % ";;"))))
+        hd (-> block first (cljstr/replace #";@@@[ ]*" ":")
+               (cljstr/split #" +"))
+        blockstg (cljstr/join "\n" (rest block))]
+    (println line ch start l1 end l2 hd)
+    [hd blockstg]))
+
+(defn get-hd-code [hd]
+  (let [v (atom [])]
+    (doseq [x hd]
+      (evaluate x #(swap! v (fn[v] (conj v (% :value))))))
+    @v))
+
+(defmulti gen-block-code
+  (fn[hd blines] (first hd)))
+
+(defmethod gen-block-code :MD
+  [hd blines]
+  (let [id (second hd)]))
+
+(defn get-body [hdr bodystg]
+  (let [[kind id] hdr
+        body-lines (cljstr/split-lines bodystg)]
+    ))
+
+
+
+(defn process-cm-block [cm]
+  (let [[hd blockstg] (get-cm-block cm)
+        hd-code (get-hd-code hd)
+        body (get-body hd-code blockstg)]))
+
+
 (def dbg-cm (atom nil))
 
 (defn get-cm-sexpr [cm]
@@ -74,8 +124,8 @@
       (let [l (first lines)]
         (subs l start.ch end.ch))
       (let [midstg (clojure.string/join
-                    " " (subvec lines 1 (dec (count lines))))]
-        (clojure.string/join " " [begstg midstg endstg])))))
+                    "\n" (subvec lines 1 (dec (count lines))))]
+        (clojure.string/join "\n" [begstg midstg endstg])))))
 
 ;;#(reset! expr* %)
 (defn evalxe [cm]
@@ -103,10 +153,11 @@
 
 (defn xtra-keys-emacs []
   (CodeMirror.normalizeKeyMap
-   (js->clj {"Ctrl-F" ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-F")
-             "Ctrl-B" ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-B")
-             "Alt-W"  ((js->clj CodeMirror.keyMap.emacs) "Ctrl-W")
-             "Alt-K"  ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-K")
+   (js->clj {"Ctrl-F"   ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-F")
+             "Ctrl-B"   ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-B")
+             "Alt-W"    ((js->clj CodeMirror.keyMap.emacs) "Ctrl-W")
+             "Alt-K"    ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-K")
+             "Ctrl-X R" ((js->clj CodeMirror.keyMap.emacs) "Shift-Alt-5")
              "Ctrl-X Ctrl-E" evalxe
              "Ctrl-X Ctrl-C" evalcc
              })))
@@ -150,7 +201,8 @@
           (.on inst "change" #_#(reset! input (.getValue %))
                (fn []
                  (let [value (.getValue inst)]
-                   (when true #_(not= value @input)
+                   #_(printchan :INPUTDM @input :CMDM value)
+                   (when #_true (not= value @input)
                      (reset! input value) #_(on-change value)))))
           ))
 
@@ -158,6 +210,7 @@
       (fn [comp old-argv]
         (printchan "CM did-update called")
         (when (not= @input (.getValue @cm))
+          #_(printchan :INPUT @input :CM (.getValue @cm))
           (.setValue @cm @input)
           ;; reset the cursor to the end of the text, if the text was
           ;; changed externally
