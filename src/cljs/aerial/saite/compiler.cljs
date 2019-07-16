@@ -19,14 +19,36 @@
             default-header-fn start
             update-adb get-adb
             get-vspec update-vspecs
-            get-tab-field add-tab update-tab-field active-tabs
-            vgl app-stop]]
+            get-tab-field add-tab update-tab-field
+            add-to-tab-body remove-from-tab-body
+            active-tabs
+            md vgl app-stop]]
    [aerial.hanami.common
     :as hc
     :refer [RMV]]
    [aerial.hanami.templates :as ht]
 
+   [reagent.core :as rgt]
+
+   [re-com.core
+    :as rcm
+    :refer [h-box v-box box gap line h-split v-split scroller
+            button row-button md-icon-button md-circle-icon-button info-button
+            input-text input-password input-textarea
+            label title p
+            single-dropdown
+            checkbox radio-button slider progress-bar throbber
+            horizontal-bar-tabs vertical-bar-tabs
+            modal-panel popover-content-wrapper popover-anchor-wrapper]
+    :refer-macros [handler-fn]]
+   [re-com.box
+    :refer [flex-child-style]]
+   [re-com.dropdown
+    :refer [filter-choices-by-keyword single-dropdown-args-desc]]
    ))
+
+
+
 
 (defn format [s & params]
   (apply gstring/format s params))
@@ -49,6 +71,9 @@
   (cljs.js/load-analysis-cache!
    state 'aerial.saite.compiler
    (analyzer-state 'aerial.saite.compiler))
+  (cljs.js/load-analysis-cache!
+   state 'aerial.saite.core
+   (analyzer-state 'aerial.saite.core))
   (cljs.js/load-analysis-cache!
    state 'aerial.hanami.core
    (analyzer-state 'aerial.hanami.core))
