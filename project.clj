@@ -25,7 +25,7 @@
 
   :source-paths ["src/cljc" "src/clj" "src/cljs"]
 
-  ;;:prep-tasks ["compile" ["cljsbuild" "once" "min"]]
+  :prep-tasks ["compile" ["cljsbuild" "once" "min"]]
 
   :cljsbuild {:builds
               [{:id "dev"
