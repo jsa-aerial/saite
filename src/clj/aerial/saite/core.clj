@@ -93,17 +93,40 @@
     (hmi/send-msg session-name :clj-read (assoc clj :render? render?))))
 
 
+(defmethod hmi/user-msg :save-data [msg]
+  (let [{:keys [loc info]} (msg :data)
+        [_ & data] info
+        {:keys [session file]} loc
+        dir (fs/join (fs/fullpath "~/.saite") session)
+        filespec (fs/join dir file)]
+    (hmi/printchan :Saving filespec)
+    (fs/mkdirs dir)
+    (binding [*print-length* nil]
+      (io/with-out-writer filespec
+        (prn (vec data))))))
+
+(defmethod hmi/user-msg :load-data [msg]
+  (let [{:keys [session file]} (msg :data)
+        dir (fs/join (fs/fullpath "~/.saite") session)
+        file (fs/join dir file)
+        data (->> file slurp read-string)
+        msg {:op :load-data :data data}]
+    (hmi/printchan :Loading file)
+    (hmi/send-msg session msg)))
+
+
 (defn init []
   (hc/add-defaults
    :HEIGHT 400 :WIDTH 450
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
-              :frame {:top :TOP, :bottom :BOTTOM, :left :LEFT, :right :RIGHT}
+              :frame {:top :TOP, :bottom :BOTTOM,
+                      :left :LEFT, :right :RIGHT
+                      :fid :FID}
               :opts :OPTS
               :vid :VID,
               :msgop :MSGOP,
               :session-name :SESSION-NAME}
-   :TOP RMV, :BOTTOM RMV, :LEFT RMV, :RIGHT RMV
-   :VID RMV, :MSGOP :tabs, :SESSION-NAME "Exploring"
+   :MSGOP :tabs, :SESSION-NAME "Exploring"
    :TID :expl1, :TLBL #(-> :TID % name cljstr/capitalize)
    :OPTS (hc/default-opts :vgl)
    :TOPTS {:order :row, :eltsper 2 :size "auto"}))
