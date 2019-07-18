@@ -19,9 +19,7 @@
             [aerial.hanami.templates :as ht]
             [aerial.hanami.core :as hmi]
 
-            [aerial.saite.core :as saite]
-            [aerial.saite.common :as ac]
-            [aerial.saite.templates :as at]))
+            [aerial.saite.core :as saite]))
 
 
 ;;; Background colors
@@ -67,6 +65,14 @@
  :LINKSHAPE "diagonal" :LAYOUT "cluster"
  :CFIELD "depth"]
 
+
+(defn log2 [x]
+  (let [ln2 (Math/log 2)]
+    (/ (Math/log x) ln2)))
+
+(defn roundit [r & {:keys [places] :or {places 4}}]
+  (let [n (Math/pow 10.0 places)]
+    (-> r (* n) Math/round (/ n))))
 
 
 
