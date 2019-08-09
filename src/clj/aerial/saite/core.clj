@@ -94,7 +94,9 @@
   (let [{:keys [loc info]} (msg :data)
         [_ & data] info
         {:keys [session file]} loc
-        dir (fs/join (fs/fullpath "~/.saite") session)
+        config (hmi/get-adb [:saite :cfg])
+        saveloc (config :saveloc)
+        dir (fs/join (fs/fullpath saveloc) session)
         filespec (fs/join dir file)]
     (hmi/printchan :Saving filespec)
     (fs/mkdirs dir)
@@ -103,16 +105,39 @@
         (prn (vec data))))))
 
 (defmethod hmi/user-msg :load-data [msg]
-  (let [{:keys [session file]} (msg :data)
-        dir (fs/join (fs/fullpath "~/.saite") session)
+  (let [config (hmi/get-adb [:saite :cfg])
+        saveloc (config :saveloc)
+        {:keys [uid location]} (msg :data)
+        {:keys [session file]} location
+        dir (fs/join (fs/fullpath saveloc) session)
         file (fs/join dir file)
         data (->> file slurp read-string)
         msg {:op :load-data :data data}]
     (hmi/printchan :Loading file)
-    (hmi/send-msg session msg)))
+    (hmi/send-msg (uid :name) msg)))
+
+
+
+
+(defonce default-cfg
+  {:editor
+   {:name "emacs",
+    :key-bindings {:fwdsexp "Ctrl-F",
+                   :bkwdsexp "Ctrl-B",
+                   :killsexp "Alt-K",
+                   :evalsexp "Ctrl-X Ctrl-E",
+                   :evalosexp "Ctrl-X Ctrl-C",
+                   :repregex "Ctrl-X R"}},
+   :saveloc "~.saite/Docs"})
 
 
 (defn init []
+  (let [cfgfile (-> "~/.saite" fs/fullpath (fs/join "config.edn"))
+        cfg (if (fs/exists? cfgfile)
+              (-> cfgfile slurp read-string)
+              default-cfg)]
+    (hmi/update-adb [:saite :cfg] cfg))
+
   (hc/add-defaults
    :HEIGHT 400 :WIDTH 450
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
@@ -129,9 +154,24 @@
    :TOPTS {:order :row, :eltsper 2 :size "auto"}))
 
 
+(defn config-info [data-map]
+  (let [config (hmi/get-adb [:saite :cfg])
+        saveloc (config :saveloc)
+        sessions (-> saveloc fs/fullpath (fs/join "*") fs/glob)]
+    (assoc
+     data-map
+     :save-info (mapv #(vector (fs/basename %)
+                               (->> (fs/join % "*") fs/glob
+                                    sort
+                                    (mapv (fn[f] (-> f fs/basename
+                                                    (fs/replace-type ""))))))
+                      sessions)
+     :editor (config :editor))))
+
 
 (defn start [port]
   (hmi/start-server port
+                    :connfn config-info
                     :idfn (constantly "Exploring")
                     :title "咲いて"
                     :logo "images/small-in-bloom.png"
