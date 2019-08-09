@@ -160,7 +160,7 @@
 (defn config-info [data-map]
   (let [config (hmi/get-adb [:saite :cfg])
         saveloc (config :saveloc)
-        sessions (-> saveloc fs/fullpath (fs/directory-files "")]
+        sessions (-> saveloc fs/fullpath (fs/directory-files ""))]
     (assoc
      data-map
      :save-info (mapv #(vector (fs/basename %)
