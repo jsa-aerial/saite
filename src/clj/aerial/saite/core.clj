@@ -131,8 +131,15 @@
    :saveloc "~.saite/Docs"})
 
 
+(defn fullpath-hack [s]
+  (let [os (System/getProperty "os.name")
+        win? (cljstr/starts-with? os "Win")]
+    (if (not win?)
+      (fs/fullpath s)
+      (System/getenv "homepath"))))
+
 (defn init []
-  (let [cfgfile (-> "~/.saite" fs/fullpath (fs/join "config.edn"))
+  (let [cfgfile (-> "~/.saite" fullpath-hack (fs/join "config.edn"))
         cfg (if (fs/exists? cfgfile)
               (-> cfgfile slurp read-string)
               default-cfg)]
