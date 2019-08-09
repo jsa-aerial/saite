@@ -91,14 +91,6 @@
 
 
 
-(defn fullpath-hack [s]
-  (let [os (System/getProperty "os.name")
-        win? (cljstr/starts-with? os "Win")]
-    (if (not win?)
-      (fs/fullpath s)
-      (System/getenv "homepath"))))
-
-
 
 (defmethod hmi/user-msg :save-data [msg]
   (let [{:keys [loc info]} (msg :data)
@@ -106,7 +98,7 @@
         {:keys [session file]} loc
         config (hmi/get-adb [:saite :cfg])
         saveloc (config :saveloc)
-        dir (fs/join (fullpath-hack saveloc) session)
+        dir (fs/join (fs/fullpath saveloc) session)
         filespec (fs/join dir file)]
     (hmi/printchan :Saving filespec)
     (fs/mkdirs dir)
@@ -119,7 +111,7 @@
         saveloc (config :saveloc)
         {:keys [uid location]} (msg :data)
         {:keys [session file]} location
-        dir (fs/join (fullpath-hack saveloc) session)
+        dir (fs/join (fs/fullpath saveloc) session)
         file (fs/join dir file)
         data (->> file slurp read-string)
         msg {:op :load-data :data data}]
@@ -128,6 +120,7 @@
 
 
 
+(def home-path (fs/join "~" ".saite"))
 
 (defonce default-cfg
   {:editor
@@ -138,11 +131,11 @@
                    :evalsexp "Ctrl-X Ctrl-E",
                    :evalosexp "Ctrl-X Ctrl-C",
                    :repregex "Ctrl-X R"}},
-   :saveloc "~.saite/Docs"})
+   :saveloc (fs/join home-path "Doc")})
 
 
 (defn init []
-  (let [cfgfile (-> "~/.saite" fullpath-hack (fs/join "config.edn"))
+  (let [cfgfile (-> home-path fs/fullpath (fs/join "config.edn"))
         cfg (if (fs/exists? cfgfile)
               (-> cfgfile slurp read-string)
               default-cfg)]
@@ -167,11 +160,11 @@
 (defn config-info [data-map]
   (let [config (hmi/get-adb [:saite :cfg])
         saveloc (config :saveloc)
-        sessions (-> saveloc fullpath-hack (fs/join "*") fs/glob)]
+        sessions (-> saveloc fs/fullpath (fs/directory-files "")]
     (assoc
      data-map
      :save-info (mapv #(vector (fs/basename %)
-                               (->> (fs/join % "*") fs/glob
+                               (->> (fs/directory-files % "")
                                     sort
                                     (mapv (fn[f] (-> f fs/basename
                                                     (fs/replace-type ""))))))
