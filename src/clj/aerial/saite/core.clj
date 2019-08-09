@@ -180,13 +180,13 @@
 
 
 (defn start [port]
+  (init)
   (hmi/start-server port
                     :connfn config-info
                     :idfn (constantly "Exploring")
                     :title "咲いて"
                     :logo "images/small-in-bloom.png"
-                    :img "images/in-bloom.png")
-  (init))
+                    :img "images/in-bloom.png"))
 
 (defn stop []
   (hmi/stop-server))
