@@ -31,6 +31,7 @@
 ;;; :BACKGROUND "mintcream"
 ;;; :BACKGROUND "oldlace"
 
+![img](http://localhost:3000/Himeji_sakura.jpg \"TXT\")
 
 (saite/start 3000)
 (saite/stop)
