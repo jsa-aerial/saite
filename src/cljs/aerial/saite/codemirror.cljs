@@ -6,9 +6,14 @@
     :refer-macros [go go-loop]]
    [clojure.string :as cljstr]
 
-   [aerial.hanami.core :as hmi :refer [printchan]]
-   [aerial.hanami.common :as hc :refer [RMV]]
-   [aerial.saite.compiler :refer [evaluate]]
+   [aerial.hanami.core :as hmi
+    :refer [printchan md update-adb get-adb]]
+   [aerial.hanami.common :as hc
+    :refer [RMV]]
+   [aerial.hanami.templates :as ht]
+
+   [aerial.saite.compiler
+    :refer [format evaluate load-analysis-cache!]]
 
    [com.rpl.specter :as sp]
 
@@ -40,7 +45,7 @@
 
    [re-com.core
     :as rcm
-    :refer [h-box v-box box gap line h-split v-split
+    :refer [h-box v-box box border gap line h-split v-split scroller
             button row-button md-icon-button md-circle-icon-button info-button
             input-text input-password input-textarea
             label title p
@@ -56,6 +61,10 @@
 
    ))
 
+
+
+(defn init []
+  (load-analysis-cache!))
 
 
 (defn get-cm-block [cm]
@@ -79,33 +88,46 @@
         hd (-> block first (cljstr/replace #";@@@[ ]*" ":")
                (cljstr/split #" +"))
         blockstg (cljstr/join "\n" (rest block))]
-    (println line ch start l1 end l2 hd)
+    #_(println line ch start l1 end l2 hd)
     [hd blockstg]))
 
-(defn get-hd-code [hd]
+(defn get-chunk-code [lines]
   (let [v (atom [])]
-    (doseq [x hd]
-      (evaluate x #(swap! v (fn[v] (conj v (% :value))))))
+    (doseq [l lines]
+      (evaluate
+       l #(swap! v (fn[v] (conj v (if (% :value) (% :value) %))))))
     @v))
+
 
 (defmulti gen-block-code
   (fn[hd blines] (first hd)))
 
 (defmethod gen-block-code :MD
   [hd blines]
-  (let [id (second hd)]))
+  (let [id (second hd)
+        margin? (cljstr/starts-with? (first blines) ":margin")
+        margin (if margin?
+                 (-> blines first (cljstr/split #" " ) second)
+                 "20px")
+        blines (if margin? (rest blines) blines)
+        body (cljstr/join "\n" blines)]
+    (format "(hmi/add-to-tab-body
+              (hmi/get-cur-tab :id)
+              (hc/xform
+               ht/empty-chart :FID %s
+               :TOP '[[gap :size %s]
+                      [md %s]]))" id margin body)))
 
 (defn get-body [hdr bodystg]
   (let [[kind id] hdr
         body-lines (cljstr/split-lines bodystg)]
-    ))
-
-
+    (gen-block-code hdr body-lines)))
 
 (defn process-cm-block [cm]
   (let [[hd blockstg] (get-cm-block cm)
-        hd-code (get-hd-code hd)
-        body (get-body hd-code blockstg)]))
+        hd-code (get-chunk-code hd)
+        body (get-body hd-code blockstg)]
+    body))
 
 
 (def dbg-cm (atom nil))
@@ -227,11 +249,121 @@
 
 
 
+(defn cm-hiccup [opts input output]
+  (let [id (opts :id)
+        kwid (-> id name keyword)
+        layout (if (= (opts :layout) :up-down) v-box h-box)
+        ch (opts :height "400px")
+        oh (opts :out-height "100px")]
+    [h-box :gap "5px" :attr {:id id}
+     :children
+     [[v-box :gap "5px"
+       :children
+       [[md-circle-icon-button
+         :md-icon-name "zmdi-caret-right-circle"
+         :tooltip "Eval Code"
+         :on-click #(printchan :ID id :VID (opts :vid) :eval @input)]
+        [md-circle-icon-button
+         :md-icon-name "zmdi-circle-o"
+         :tooltip "Clear"
+         :on-click
+         #(do (reset! output ""))]]]
+      [layout :gap "5px"
+       :width (opts :width "500px")
+       :height (+ ch oh 50)
+       :children
+       [[v-box
+         :children
+         [[box
+           :size (opts :size "auto")
+           :width (opts :width "500px")
+           :height (opts :height "300px")
+           :justify (opts :justify :start)
+           :align (opts :justify :stretch)
+           :child [code-mirror input "clojure"
+                   :cb (fn[m]
+                         (let [ostg (with-out-str
+                                      (cljs.pprint/pprint
+                                       (or (m :value) (m :error))))]
+                           (reset! output (str @output
+                                               "=> " ostg))
+                           (printchan :output @output)))]]]]
+        [v-box
+         :children
+         [[box
+           :size (opts :size "auto")
+           :width (opts :width "500px")
+           :height oh
+           :justify (opts :justify :start)
+           :align (opts :justify :stretch)
+           :child [code-mirror output "clojure"
+                   :js-cm-opts {:lineNumbers false,
+                                :lineWrapping true}]]]]]]
+      [gap :size "10px"]]]))
+
+
+(defn cm []
+  (let [input (rgt/atom "")
+        output (rgt/atom "")]
+    (fn [& opts]
+      (let [opts (->> opts (partition-all 2) (mapv vec) (into {}))
+            kwid (name (opts :id (gensym "cm-")))
+            opts (or (get-adb [:editors kwid :opts])
+                     (merge {:id kwid, :size "auto" :layout :up-down
+                             :height "300px", :out-height "100px"}
+                            opts))
+            _ (if (and (opts :src) (= @input "")) (reset! input (opts :src)))
+            input (or (get-adb [:editors kwid :in]) input)
+            output (or (get-adb [:editors kwid :ot]) output)]
+        (when-not (get-adb [:editors kwid])
+          (update-adb [:editors kwid] {:in input, :ot output, :opts opts})
+          (printchan :CM kwid :called :OPTS opts))
+        [cm-hiccup opts input output]))))
+
+
+
+
 (comment
+
+  (defn vis! [vid picid]
+    (hmi/visualize
+     (get-vspec vid)
+     (js/document.getElementById picid)))
+
+  (vis! :bc1 "scatter-1")
+  (vis! :sqrt "scatter-1")
+  (vis! :scatter-1 "scatter-1")
+
+  (when-let [source (get-cm-sexpr @dbg-cm)]
+    (evaluate source #(printchan (expr*! %))))
 
   (js/console.log (.setCursor @dbg-cm 2 42))
   (js/console.log (.getCursor @dbg-cm))
   (js/console.log (.findMatchingBracket @dbg-cm (.getCursor @dbg-cm)))
+
+
+
+
+
+  (let [cm @dbg-cm
+        cb cm.CB]
+    (evaluate (process-cm-block cm) cb))
+
+  (let [src (prn-str (xform-tab-data (get-tab-data)))
+        res (atom {})]
+    (evaluate src (fn[x] (reset! res x)))
+    (if-let [v (:value @res)]
+      v
+      @res))
+
+  (let [src (prn-str (get-tab-data))
+        res (atom {})]
+    (evaluate src (fn[x] (reset! res  (x :value))))
+    (get-in @res [0 :chap1 :opts :wrapfn :fn]))
+
+
+
+
 
   (if-let [bounds (.findMatchingBracket @dbg-cm (.getCursor @dbg-cm))]
     (.setCursor @dbg-cm bounds.to))
