@@ -55,19 +55,22 @@
 
 (def state (cljs.js/empty-state))
 
-(defn evaluate [source cb]
-  (let [source (cljstr/replace source #"hmi/" "aerial.hanami.core/")
-        source (cljstr/replace source #"hcm/" "aerial.hanami.common/")
-        source (cljstr/replace source #"htm/" "aerial.hanami.templates/")]
-    (cljs.js/eval-str state source nil
-                      {:eval cljs.js/js-eval
-                       :ns 'aerial.saite.compiler
-                       :context :expr}
-                      cb)))
+(defn evaluate
+  ([nssym source cb]
+   (let [source (cljstr/replace source #"hmi/" "aerial.hanami.core/")
+         source (cljstr/replace source #"hcm/" "aerial.hanami.common/")
+         source (cljstr/replace source #"htm/" "aerial.hanami.templates/")]
+     (cljs.js/eval-str state source nil
+                       {:eval cljs.js/js-eval
+                        :ns nssym
+                        :context :expr}
+                       cb)))
+  ([source cb]
+   (evaluate 'aerial.saite.compiler source cb)))
 
 
 #_(ambient.main.core/analyzer-state 'aerial.hanami.core)
-(defn load-hanami-analysis-cache! []
+(defn load-analysis-cache! []
   (cljs.js/load-analysis-cache!
    state 'aerial.saite.compiler
    (analyzer-state 'aerial.saite.compiler))
@@ -89,4 +92,4 @@
 (def expr* (atom nil))
 (defn expr*! [x] (reset! expr* x))
 
-(load-hanami-analysis-cache!)
+(load-analysis-cache!)
