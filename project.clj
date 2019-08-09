@@ -1,4 +1,4 @@
-(defproject aerial.saite "0.7.0"
+(defproject aerial.saite "0.9.0"
   :description "Exploratory graphics and visualization system"
   :url "https://github.com/jsa-aerial/saite"
   :license {:name "MIT"
