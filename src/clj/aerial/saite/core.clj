@@ -90,13 +90,23 @@
     (hmi/send-msg session-name :clj-read (assoc clj :render? render?))))
 
 
+
+(defn fullpath-hack [s]
+  (let [os (System/getProperty "os.name")
+        win? (cljstr/starts-with? os "Win")]
+    (if (not win?)
+      (fs/fullpath s)
+      (System/getenv "homepath"))))
+
+
+
 (defmethod hmi/user-msg :save-data [msg]
   (let [{:keys [loc info]} (msg :data)
         [_ & data] info
         {:keys [session file]} loc
         config (hmi/get-adb [:saite :cfg])
         saveloc (config :saveloc)
-        dir (fs/join (fs/fullpath saveloc) session)
+        dir (fs/join (fullpath-hack saveloc) session)
         filespec (fs/join dir file)]
     (hmi/printchan :Saving filespec)
     (fs/mkdirs dir)
@@ -109,7 +119,7 @@
         saveloc (config :saveloc)
         {:keys [uid location]} (msg :data)
         {:keys [session file]} location
-        dir (fs/join (fs/fullpath saveloc) session)
+        dir (fs/join (fullpath-hack saveloc) session)
         file (fs/join dir file)
         data (->> file slurp read-string)
         msg {:op :load-data :data data}]
@@ -130,13 +140,6 @@
                    :repregex "Ctrl-X R"}},
    :saveloc "~.saite/Docs"})
 
-
-(defn fullpath-hack [s]
-  (let [os (System/getProperty "os.name")
-        win? (cljstr/starts-with? os "Win")]
-    (if (not win?)
-      (fs/fullpath s)
-      (System/getenv "homepath"))))
 
 (defn init []
   (let [cfgfile (-> "~/.saite" fullpath-hack (fs/join "config.edn"))
@@ -164,7 +167,7 @@
 (defn config-info [data-map]
   (let [config (hmi/get-adb [:saite :cfg])
         saveloc (config :saveloc)
-        sessions (-> saveloc fs/fullpath (fs/join "*") fs/glob)]
+        sessions (-> saveloc fullpath-hack (fs/join "*") fs/glob)]
     (assoc
      data-map
      :save-info (mapv #(vector (fs/basename %)
