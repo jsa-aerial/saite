@@ -219,14 +219,18 @@
 
 
 (defmethod user-msg :app-init [msg]
-  (let [{:keys [save-info editor]} (msg :data)]
+  (let [{:keys [save-info editor]} (msg :data)
+        choices (into {} save-info)
+        dirs (-> choices keys sort)]
     (printchan :APP-INIT save-info editor)
+    (printchan :CHOICES choices :DIRS dirs)
     (update-adb [:main :convert-chan] (async/chan)
                 [:main :com-chan] (async/chan)
 
-                [:main :files :choices] (into {} save-info)
-                [:main :files :save] "session.clj"
-                [:main :files :load] "session.clj"
+                [:main :files :choices] choices
+                [:main :files :dirs] dirs
+                [:main :files :save] (-> dirs first choices sort first)
+                [:main :files :load] (-> dirs first choices sort first)
 
                 [:main :editor] editor
                 [:editors] {})
@@ -345,16 +349,17 @@
 ;;; Startup ============================================================== ;;;
 
 
-(when-let [elem (js/document.querySelector "#app")]
+#_(when-let [elem (js/document.querySelector "#app")]
   (hc/update-defaults
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
               :frame {:top :TOP, :bottom :BOTTOM,
                       :left :LEFT, :right :RIGHT
-                      :fid :FID}
+                      :fid :FID :at :AT :pos :POS}
               :opts :OPTS
               :vid :VID,
               :msgop :MSGOP,
               :session-name :SESSION-NAME}
+   :AT :end :POS :after
    :MSGOP :tabs, :SESSION-NAME "Exploring"
    :TID :expl1, :TLBL #(-> :TID % name cljstr/capitalize)
    :OPTS (hc/default-opts :vgl), :TOPTS (hc/default-opts :tab))
@@ -374,11 +379,12 @@
      :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
                 :frame {:top :TOP, :bottom :BOTTOM,
                         :left :LEFT, :right :RIGHT
-                        :fid :FID}
+                        :fid :FID :at :AT :pos :POS}
                 :opts :OPTS
                 :vid :VID,
                 :msgop :MSGOP,
                 :session-name :SESSION-NAME}
+     :AT :end :POS :after
      :MSGOP :tabs, :SESSION-NAME "Exploring"
      :TID :expl1, :TLBL #(-> :TID % name cljstr/capitalize)
      :OPTS (hc/default-opts :vgl), :TOPTS (hc/default-opts :tab))
