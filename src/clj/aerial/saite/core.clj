@@ -146,11 +146,12 @@
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
               :frame {:top :TOP, :bottom :BOTTOM,
                       :left :LEFT, :right :RIGHT
-                      :fid :FID}
+                      :fid :FID :at :AT :pos :POS}
               :opts :OPTS
               :vid :VID,
               :msgop :MSGOP,
               :session-name :SESSION-NAME}
+   :AT :end :POS :after
    :MSGOP :tabs, :SESSION-NAME "Exploring"
    :TID :expl1, :TLBL #(-> :TID % name cljstr/capitalize)
    :OPTS (hc/default-opts :vgl)
