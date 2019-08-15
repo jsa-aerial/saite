@@ -10,7 +10,7 @@
 
                  [com.rpl/specter "1.1.1"]
 
-                 [aerial.hanami "0.9.0"]
+                 [aerial.hanami "0.9.1"]
                  [cljsjs/codemirror "5.40.2-1"]
                  [cljsjs/highlight "9.12.0-2"]
                  [cljsjs/mathjax "2.7.5-0"]
