@@ -6,6 +6,8 @@
     :refer-macros [go go-loop]]
    [clojure.string :as cljstr]
 
+   [cljs.tools.reader :refer [read-string]]
+
    [aerial.hanami.core :as hmi
     :refer [printchan md update-adb get-adb]]
    [aerial.hanami.common :as hc
@@ -14,6 +16,8 @@
 
    [aerial.saite.compiler
     :refer [format evaluate load-analysis-cache!]]
+   [aerial.saite.tabops :as tops
+    :refer [push-undo undo redo]]
 
    [com.rpl.specter :as sp]
 
@@ -65,6 +69,100 @@
 
 (defn init []
   (load-analysis-cache!))
+
+
+
+(defn get-cm-sexpr [cm]
+  (let [end (.getCursor cm)
+        start (do (((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-B") cm)
+                  (.getCursor cm))
+        stgval (.getValue cm)
+        lines (subvec (clojure.string/split-lines stgval)
+                      start.line (inc end.line))
+        begstg (-> lines first (subs start.ch))
+        endstg (-> lines last (subs 0 end.ch))]
+    (.setCursor cm end)
+    (if (= start.line end.line)
+      (let [l (first lines)]
+        (subs l start.ch end.ch))
+      (let [midstg (clojure.string/join
+                    "\n" (subvec lines 1 (dec (count lines))))]
+        (clojure.string/join "\n" [begstg midstg endstg])))))
+
+(defn find-outer-sexpr [cm]
+  (let [f ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-U")]
+    (loop [pos (do (f cm) (.getCursor cm))]
+      (if (= 0 pos.ch)
+        pos
+        (recur (do (f cm) (.getCursor cm)))))))
+
+(defn get-outer-sexpr-src [cm]
+  (let [pos (.getCursor cm)
+        _ (find-outer-sexpr cm)
+        _ (((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-F") cm)
+        s (get-cm-sexpr cm)]
+    (.setCursor cm pos)
+    s))
+
+
+(def LIST-NODES
+  (sp/recursive-path
+   [] p
+   (sp/if-path
+    list? (sp/continue-then-stay sp/ALL p))))
+
+
+#_(let [cm @dbg-cm] (read-string (str \( (.getValue cm) "\n" \))))
+(defn get-all-cm-as-code [cm]
+  (read-string (str \( (.getValue cm) "\n" \))))
+
+(defn get-cm-frame-ids [cm]
+  (let [l (get-all-cm-as-code cm)]
+    (->> l (sp/select [LIST-NODES #(= (first %) 'hc/xform)])
+         (mapv (fn[fm] (->> fm (drop-while #(not= % :FID)) second))))))
+
+(defn get-tab-specs [tid]
+  (sp/select-one [sp/ATOM :tabs :active sp/ATOM sp/ALL
+                  #(= (% :id) tid) :specs]
+                 hmi/app-db))
+
+
+(defn get-tab-frame-ids [tid]
+  (mapv #(-> % :usermeta :frame :fid) (get-tab-specs tid)))
+
+(defn frame-exists? [fid]
+  (let [tid (hmi/get-cur-tab :id)]
+    (some #{fid} (get-tab-frame-ids tid))))
+
+(defn get-frame-index [cm]
+  (->> cm get-outer-sexpr-src read-string
+       (sp/select-first [LIST-NODES #(= (first %) 'hc/xform)])
+       (drop-while #(not= % :FID)) second))
+
+(defn get-frame-index-positions [cm]
+  (let [fid (get-frame-index cm)
+        tab-fids (get-tab-frame-ids :chap1)
+        cm-fids (get-cm-frame-ids cm)]
+    {:fid fid
+     :tab-pos (keep-indexed #(when (= fid %2) %1) tab-fids)
+     :cm-pos  (keep-indexed #(when (= fid %2) %1) cm-fids)
+     :tab-fids tab-fids
+     :cm-fids cm-fids}))
+
+(defn current-cm-frame-info [cm]
+  (let [fidinfo (get-frame-index-positions cm)
+        fid (fidinfo :fid)
+        cm-fids (fidinfo :cm-fids)
+        tab-fids (fidinfo :tab-fids)
+        b4ids (->> cm-fids (take-while #(not= % fid)) (into #{}))
+        tb4ids (keep #(b4ids %) tab-fids)
+        locid (cond (not (seq b4ids)) :beg
+                    (seq tb4ids) (last tb4ids)
+                    :else :end)]
+    {:fid fid :locid locid
+     :tabfid (if (seq tab-fids) (frame-exists? fid) nil)
+     :b4ids b4ids :tb4ids tb4ids}))
+
 
 
 (defn get-cm-block [cm]
@@ -130,38 +228,37 @@
     body))
 
 
+
+
 (def dbg-cm (atom nil))
 
-(defn get-cm-sexpr [cm]
-  (let [end (.getCursor cm)
-        start (do (((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-B") cm)
-                  (.getCursor cm))
-        stgval (.getValue cm)
-        lines (subvec (clojure.string/split-lines stgval)
-                      start.line (inc end.line))
-        begstg (-> lines first (subs start.ch))
-        endstg (-> lines last (subs 0 (inc end.ch)))]
-    (.setCursor cm end)
-    (if (= start.line end.line)
-      (let [l (first lines)]
-        (subs l start.ch end.ch))
-      (let [midstg (clojure.string/join
-                    "\n" (subvec lines 1 (dec (count lines))))]
-        (clojure.string/join "\n" [begstg midstg endstg])))))
+
+(defn insert-frame [cm]
+  (let [{:keys [fid locid tabfid]} (current-cm-frame-info @dbg-cm)
+        src (get-outer-sexpr-src cm)
+        pos (if (= locid :beg) :same :after)
+        res (volatile! nil)
+        _ (evaluate src (fn[v] (vswap! res #(do v))))
+        picframe (or (@res :value)
+                     (let [e (js->clj(@res :error))]
+                       {:usermeta
+                        {:frame {:fid fid
+                                 :top "<p>" e.cause.message "</p>"}}}))]
+    (when (and fid (not tabfid))
+      (tops/add-frame picframe locid pos))))
+
+(defn delete-frame [cm]
+  (let [{:keys [fid locid tabfid]} (current-cm-frame-info @dbg-cm)]
+    (when (and fid tabfid)
+      (tops/remove-frame tabfid))))
+
 
 ;;#(reset! expr* %)
-(defn evalxe [cm]
+(defn evalxe [cm] (reset! dbg-cm cm)
   (let [cb cm.CB]
     (if-let [source (get-cm-sexpr cm)]
       (evaluate source cb)
       (cb {:value "not on sexpr"}))))
-
-(defn find-outer-sexpr [cm]
-  (let [f ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-U")]
-    (loop [pos (do (f cm) (.getCursor cm))]
-      (if (= 0 pos.ch)
-        pos
-        (recur (do (f cm) (.getCursor cm)))))))
 
 (defn evalcc [cm] (reset! dbg-cm cm)
   (let [cb cm.CB
@@ -175,11 +272,15 @@
 
 (defn xtra-keys-emacs []
   (CodeMirror.normalizeKeyMap
-   (js->clj {"Ctrl-F"   ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-F")
-             "Ctrl-B"   ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-B")
-             "Alt-W"    ((js->clj CodeMirror.keyMap.emacs) "Ctrl-W")
-             "Alt-K"    ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-K")
-             "Ctrl-X R" ((js->clj CodeMirror.keyMap.emacs) "Shift-Alt-5")
+   (js->clj {"Ctrl-F"    ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-F")
+             "Ctrl-B"    ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-B")
+             "Ctrl-Home" ((js->clj CodeMirror.keyMap.emacs) "Shift-Alt-,")
+             "Ctrl-End"  ((js->clj CodeMirror.keyMap.emacs) "Shift-Alt-.")
+             "Alt-W"     ((js->clj CodeMirror.keyMap.emacs) "Ctrl-W")
+             "Alt-K"     ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-K")
+             "Ctrl-X R"  ((js->clj CodeMirror.keyMap.emacs) "Shift-Alt-5")
+             "Insert"    insert-frame
+             "Delete"    delete-frame
              "Ctrl-X Ctrl-E" evalxe
              "Ctrl-X Ctrl-C" evalcc
              })))
