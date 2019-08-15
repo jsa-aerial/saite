@@ -24,6 +24,9 @@
    [aerial.saite.codemirror
     :as cm
     :refer [code-mirror cm]]
+   [aerial.saite.tabops
+    :as tops
+    :refer [push-undo undo redo get-tab-frames remove-frame]]
 
    [com.rpl.specter :as sp]
 
@@ -35,7 +38,7 @@
             button row-button md-icon-button md-circle-icon-button info-button
             input-text input-password input-textarea
             label title p
-            single-dropdown
+            single-dropdown selection-list
             checkbox radio-button slider progress-bar throbber
             horizontal-bar-tabs vertical-bar-tabs
             modal-panel popover-content-wrapper popover-anchor-wrapper]
@@ -46,64 +49,6 @@
     :refer [filter-choices-by-keyword single-dropdown-args-desc]]
 
    ))
-
-
-
-
-(defn insert-val [x v &{:keys [at pos] :or {pos :before}}]
-  (let [index (sp/select-one [sp/INDEXED-VALS #(-> % second (= at)) sp/FIRST] v)
-        index (if (= pos :before) index (inc index))]
-    (sp/setval (sp/before-index index) x v)))
-
-;;;com.rpl.specter.zipper
-;;;
-;;; (setval [z/VECTOR-ZIP (z/find-first #(= "b" %)) z/INNER-LEFT]
-;;;         [77] ["a" "b" "c"])
-;;; => ["a" 77 "b" "c"]
-
-
-
-
-(def undo-redo-stacks (atom {:undo [] :redo []}))
-
-(defn get-undo [] (@undo-redo-stacks :undo))
-(defn get-redo [] (@undo-redo-stacks :redo))
-
-(defn push-undo [x]
-  (swap! undo-redo-stacks (fn[m] (assoc m :undo (conj (m :undo) x)))))
-
-(defn pop-undo []
-  (let [x (peek (@undo-redo-stacks :undo))]
-    (when x
-      (swap! undo-redo-stacks (fn[m] (assoc m :undo (pop (m :undo))))))
-    x))
-
-(defn push-redo [x]
-  (swap! undo-redo-stacks (fn[m] (assoc m :redo (conj (m :redo) x)))))
-
-(defn pop-redo []
-  (let [x (peek (@undo-redo-stacks :redo))]
-    (when x
-      (swap! undo-redo-stacks (fn[m] (assoc m :redo (pop (m :redo))))))
-    x))
-
-(defn undo []
-  (let [x (pop-undo)]
-    (if x
-      (let [cur (sp/select-one [sp/ATOM :tabs :active sp/ATOM] hmi/app-db)]
-        (sp/setval [sp/ATOM :tabs :active sp/ATOM] x hmi/app-db)
-        (hmi/set-cur-tab (-> x last :id))
-        (push-redo cur))
-      (js/alert "Nothing more to undo"))))
-
-(defn redo []
-  (let [x (pop-redo)]
-    (if x
-      (let [cur (sp/select-one [sp/ATOM :tabs :active sp/ATOM] hmi/app-db)]
-        (sp/setval [sp/ATOM :tabs :active sp/ATOM] x hmi/app-db)
-        (hmi/set-cur-tab (-> x last :id))
-        (push-undo cur))
-      (js/alert "Nothing more to redo"))))
 
 
 
@@ -505,6 +450,31 @@
                 [ok-cancel donefn cancelfn]]]])))
 
 
+(defn del-frame-modal [show? info]
+  (let [donefn (fn[]
+                 (go (async/>! (get-adb [:main :com-chan]) :ok))
+                 (reset! show? false))
+        cancelfn (fn[]
+                   (go (async/>! (get-adb [:main :com-chan]) :cancel))
+                   (reset! show? false))]
+    (fn [show? info]
+      (printchan :DEL-FRAME :INFO (info :items) (info :selections))
+      [modal-panel
+       :backdrop-color   "grey"
+       :backdrop-opacity 0.4
+       :child [v-box
+               :gap "10px"
+               :children
+               [[selection-list
+                 :width "391px"
+                 :max-height "95px"
+                 :model (info :selections)
+                 :choices (info :items)
+                 :multi-select? true
+                 :on-change #(reset! (info :selections) %)]
+                [ok-cancel donefn cancelfn]]]])))
+
+
 (defn ctrl-modal [show?]
   (let [edtype (rgt/atom :none)
         tid (rgt/atom (name (gensym "tab-")))
@@ -534,6 +504,11 @@
   (let [add-show? (rgt/atom false)
         del-show? (rgt/atom false)
         del-closefn #(do (reset! del-show? false))
+
+        del-frame-show? (rgt/atom false)
+        selections (rgt/atom #{})
+        del-frame-closefn #(do (reset! del-frame-show? false))
+
         ctrl-show? (rgt/atom false)
         ctrl-donefn (fn[event]
                       #_(go (async/>! (get-adb [:main :com-chan])
@@ -580,6 +555,19 @@
                             (del-tab tid)))))]
 
                 [md-circle-icon-button
+                 :md-icon-name "zmdi-minus-square" :size :smaller
+                 :tooltip "Delete Frames"
+                 :on-click
+                 #(go (reset! del-frame-show? true)
+                     (let [ch (get-adb [:main :com-chan])
+                           answer (async/<! ch)]
+                       (when (not= :cancel answer)
+                         (printchan @selections)
+                         (doseq [id @selections]
+                           (remove-frame id))
+                         (reset! selections #{}))))]
+
+                [md-circle-icon-button
                  :md-icon-name "zmdi-undo" :size :smaller
                  :tooltip "Undo last tab operation"
                  :on-click
@@ -598,6 +586,12 @@
 
                 (when @add-show? [add-modal add-show?])
                 (when @del-show? [del-modal del-show? del-closefn])
+
+                (when @del-frame-show?
+                  (let [items (rgt/atom (get-tab-frames))
+                        info {:items items :selections selections}]
+                    [del-frame-modal del-frame-show? info]))
+
                 #_(when ctrl-show? [ctrl-modal ctrl-show?])]]])))
 
 
