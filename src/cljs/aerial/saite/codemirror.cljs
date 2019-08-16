@@ -240,10 +240,13 @@
         res (volatile! nil)
         _ (evaluate src (fn[v] (vswap! res #(do v))))
         picframe (or (@res :value)
-                     (let [e (js->clj(@res :error))]
+                     (let [err (@res :error)
+                           e (if (string? err) err (js->clj(@res :error)))]
                        {:usermeta
                         {:frame {:fid fid
-                                 :top "<p>" e.cause.message "</p>"}}}))]
+                                 :top (str "<p>"
+                                           (if (string? e) e e.cause.message)
+                                           "</p>")}}}))]
     (when (and fid (not tabfid))
       (tops/add-frame picframe locid pos))))
 
@@ -262,12 +265,8 @@
 
 (defn evalcc [cm] (reset! dbg-cm cm)
   (let [cb cm.CB
-        pos (.getCursor cm)]
-    #_(js/console.log (find-outer-sexpr cm))
-    (find-outer-sexpr cm)
-    (((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-F") cm)
-    (evaluate (get-cm-sexpr cm) cb)
-    (.setCursor cm pos)))
+        src (get-outer-sexpr-src cm)]
+    (evaluate src cb)))
 
 
 (defn xtra-keys-emacs []
