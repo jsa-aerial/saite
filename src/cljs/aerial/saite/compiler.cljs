@@ -57,14 +57,23 @@
 
 (defn evaluate
   ([nssym source cb]
-   (let [source (cljstr/replace source #"hmi/" "aerial.hanami.core/")
-         source (cljstr/replace source #"hcm/" "aerial.hanami.common/")
-         source (cljstr/replace source #"htm/" "aerial.hanami.templates/")]
-     (cljs.js/eval-str state source nil
-                       {:eval cljs.js/js-eval
-                        :ns nssym
-                        :context :expr}
-                       cb)))
+   (if (string? source)
+     (let [source (cljstr/replace source #"hmi/" "aerial.hanami.core/")
+           source (cljstr/replace source #"hcm/" "aerial.hanami.common/")
+           source (cljstr/replace source #"htm/" "aerial.hanami.templates/")]
+       (cljs.js/eval-str state source nil
+                         {:eval cljs.js/js-eval
+                          :ns nssym
+                          :context :expr}
+                         cb))
+     (try
+       (cljs.js/eval state source
+                     {:eval cljs.js/js-eval
+                      :ns nssym
+                      :context :expr}
+                     cb)
+       (catch :default cause
+         (cb {:error (prn-str cause)})))))
   ([source cb]
    (evaluate 'aerial.saite.compiler source cb)))
 
