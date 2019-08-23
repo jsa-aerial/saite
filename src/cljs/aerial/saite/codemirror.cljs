@@ -140,8 +140,9 @@
        (drop-while #(not= % :FID)) second))
 
 (defn get-frame-index-positions [cm]
-  (let [fid (get-frame-index cm)
-        tab-fids (get-tab-frame-ids :chap1)
+  (let [tid (hmi/get-cur-tab :id)
+        fid (get-frame-index cm)
+        tab-fids (get-tab-frame-ids tid)
         cm-fids (get-cm-frame-ids cm)]
     {:fid fid
      :tab-pos (keep-indexed #(when (= fid %2) %1) tab-fids)
@@ -234,11 +235,13 @@
 
 
 (defn insert-frame [cm]
-  (let [{:keys [fid locid tabfid]} (current-cm-frame-info @dbg-cm)
+  (let [tid (hmi/get-cur-tab :id)
+        nssym (get (get-adb [:tabs :extns tid]) :ns 'aerial.saite.compiler')
+        {:keys [fid locid tabfid]} (current-cm-frame-info cm)
         src (get-outer-sexpr-src cm)
         pos (if (= locid :beg) :same :after)
         res (volatile! nil)
-        _ (evaluate src (fn[v] (vswap! res #(do v))))
+        _ (evaluate nssym src (fn[v] (vswap! res #(do v))))
         picframe (or (@res :value)
                      (let [err (@res :error)
                            e (if (string? err) err (js->clj(@res :error)))]
@@ -251,22 +254,26 @@
       (tops/add-frame picframe locid pos))))
 
 (defn delete-frame [cm]
-  (let [{:keys [fid locid tabfid]} (current-cm-frame-info @dbg-cm)]
+  (let [{:keys [fid locid tabfid]} (current-cm-frame-info cm)]
     (when (and fid tabfid)
       (tops/remove-frame tabfid))))
 
 
 ;;#(reset! expr* %)
 (defn evalxe [cm] (reset! dbg-cm cm)
-  (let [cb cm.CB]
+  (let [cb cm.CB
+        tid (hmi/get-cur-tab :id)
+        nssym (get (get-adb [:tabs :extns tid]) :ns 'aerial.saite.compiler')]
     (if-let [source (get-cm-sexpr cm)]
-      (evaluate source cb)
+      (evaluate nssym source cb)
       (cb {:value "not on sexpr"}))))
 
 (defn evalcc [cm] (reset! dbg-cm cm)
   (let [cb cm.CB
+        tid (hmi/get-cur-tab :id)
+        nssym (get (get-adb [:tabs :extns tid]) :ns 'aerial.saite.compiler')
         src (get-outer-sexpr-src cm)]
-    (evaluate src cb)))
+    (evaluate nssym src cb)))
 
 
 (defn xtra-keys-emacs []
