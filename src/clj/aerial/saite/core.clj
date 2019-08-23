@@ -15,7 +15,8 @@
 
             [aerial.hanami.common :as hc :refer [RMV]]
             [aerial.hanami.templates :as ht]
-            [aerial.hanami.core :as hmi]))
+            [aerial.hanami.core :as hmi]
+            [aerial.hanami.data :as hd]))
 
 
 
@@ -92,7 +93,7 @@
 
 
 
-(defmethod hmi/user-msg :save-data [msg]
+(defmethod hmi/user-msg :save-doc [msg]
   (let [{:keys [loc info]} (msg :data)
         [_ & data] info
         {:keys [session file]} loc
@@ -106,7 +107,7 @@
       (io/with-out-writer filespec
         (prn (vec data))))))
 
-(defmethod hmi/user-msg :load-data [msg]
+(defmethod hmi/user-msg :load-doc [msg]
   (let [config (hmi/get-adb [:saite :cfg])
         saveloc (config :saveloc)
         {:keys [uid location]} (msg :data)
@@ -114,8 +115,23 @@
         dir (fs/join (fs/fullpath saveloc) session)
         file (fs/join dir file)
         data (->> file slurp read-string)
-        msg {:op :load-data :data data}]
+        msg {:op :load-doc :data data}]
     (hmi/printchan :Loading file)
+    (hmi/send-msg (uid :name) msg)))
+
+
+#_{:op :read-data
+   :data {:uid uid
+          :from <:url or :file
+          :path the-full-path}}
+(defmethod hmi/user-msg :read-data [msg]
+  (let [{:keys [uid from path]} (msg :data)
+        ftype (fs/ftype path)
+        data (cond (= from :file) (hd/get-data path)
+                   (= ftype "json") (-> path slurp json/read-str)
+                   (= ftype "csv") (-> path slurp csv/read-csv)
+                   :else (slurp path))
+        msg {:op :data :data data}]
     (hmi/send-msg (uid :name) msg)))
 
 
