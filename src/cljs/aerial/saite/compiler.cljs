@@ -68,7 +68,7 @@
        (cljs.js/eval-str state source nil
                          {:eval cljs.js/js-eval
                           :ns nssym
-                          :load loader-fn 
+                          :load loader-fn
                           :context :expr}
                          cb))
      (try
@@ -81,6 +81,32 @@
          (cb {:error (prn-str cause)})))))
   ([source cb]
    (evaluate 'aerial.saite.compiler source cb)))
+
+
+(def base-requires
+  "[clojure.string :as str]
+         [aerial.hanami.core :as hmi]
+         [aerial.hanami.common :as hc]
+         [aerial.hanami.templates :as ht]
+         [aerial.saite.core :as sc]
+         [com.rpl.specter :as sp]")
+
+(defn add-requires [base requires]
+  (reduce (fn[R r]
+            (format (str R "\n         %s") r))
+          base-requires requires))
+
+(defn set-namespace
+  [nssym & {:keys [base requires]
+            :or {base base-requires}}]
+  (evaluate
+   (format
+    "(ns %s
+       (:require
+         %s))"
+    (name nssym)
+    (add-requires base requires))
+   println))
 
 
 #_(ambient.main.core/analyzer-state 'aerial.hanami.core)
