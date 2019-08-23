@@ -87,7 +87,9 @@
 
 
 (defn get-tab-frames []
-  (->> (hmi/get-cur-tab :specs) (mapv #(-> % :usermeta :frame :fid))
+  (->> (hmi/get-cur-tab :specs)
+       (mapv #(-> % :usermeta :frame :fid))
+       (filter identity)
        (mapv #(do {:id % :label (-> % name cljstr/capitalize)}))))
 
 (defn remove-frame [fid]
