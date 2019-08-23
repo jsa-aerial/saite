@@ -55,12 +55,22 @@
 
 ;;; Interactive Editor Tab Constructors =================================== ;;;
 
+#_(evaluate "(ns mycode.test
+ (:require [clojure.string :as str]
+           [aerial.hanami.core :as hmi]
+           [aerial.hanami.common :as hc]
+           [aerial.hanami.templates :as ht]
+           [aerial.saite.core :as asc]
+           [com.rpl.specter :as sp]))" println)
+
+
 (defn ^:export editor-repl-tab
-  [tid label src & {:keys [width height out-height layout]
+  [tid label src & {:keys [width height out-height layout ns]
                     :or {width "730px"
                          height "700px"
                          out-height "700px"
-                         layout :left-right}}]
+                         layout :left-right
+                         ns 'aerial.saite.usercode}}]
   (let [cmfn (cm)
         eid (str "ed-" (name tid))
         uinfo {:fn ''editor-repl-tab
@@ -70,6 +80,7 @@
                :height height
                :out-height out-height
                :layout layout
+               :ns ns
                :src src}]
     (update-adb [:tabs :extns tid] uinfo)
     (add-tab
@@ -89,10 +100,11 @@
 
 
 (defn ^:export interactive-doc-tab
-  [tid label src & {:keys [width height out-height specs order eltsper size]
+  [tid label src & {:keys [width height out-height ns specs order eltsper size]
                     :or {width "730px"
                          height "700px"
                          out-height "100px"
+                         ns 'aerial.saite.usercode
                          specs []
                          order :row eltsper 1 size "auto"}}]
   (let [cmfn (cm)
@@ -103,6 +115,7 @@
                :width width
                :height height
                :out-height out-height
+               :ns ns
                :src src}]
     (update-adb [:tabs :extns tid] uinfo)
     (add-tab
@@ -177,8 +190,11 @@
 ;;; Header Tab Mgt Components ============================================= ;;;
 
 (defn del-tab [tid]
-  (let [x (sp/select-one [sp/ATOM :tabs :active sp/ATOM] hmi/app-db)]
+  (let [x (sp/select-one [sp/ATOM :tabs :active sp/ATOM] hmi/app-db)
+        eid (get-adb [:tabs :extns tid :eid])]
     (push-undo x)
+    (update-adb [:tabs :extns tid] :rm
+                [:editors eid] :rm)
     (hmi/del-tab tid)))
 
 (defn add-interactive-tab [info-map]
@@ -205,6 +221,35 @@
        :order order :eltsper eltsper :size size))
 
     (printchan info-map)))
+
+
+(defn duplicate-cur-tab [tid label nssym]
+  (let [ctid (hmi/get-cur-tab :id)
+        uinfo (or (hmi/get-adb [:tabs :extns ctid]) {:fn [:_ :NA]})
+        eid (str "ed-" (name tid))
+        {:keys [width height out-height layout src]} uinfo
+        tabval (hmi/get-tab-field ctid)
+        {:keys [specs opts]} tabval
+        {:keys [order eltsper size]} opts
+        edtype (second (uinfo :fn))]
+    (case edtype
+      :NA
+      (add-tab
+       {:id tid :label label :specs specs :opts opts})
+
+      editor-repl-tab
+      (editor-repl-tab
+       tid label src :ns nssym
+       :width width :height height
+       :out-height out-height :layout layout)
+
+      interactive-doc-tab
+      (interactive-doc-tab
+       tid label src :ns nssym
+       :width width :height height :out-height out-height
+       :specs specs :order order :eltsper eltsper :size size))))
+
+
 
 
 (defn file-new [session-name file-name donefn cancelfn]
@@ -289,14 +334,28 @@
                     [ok-cancel donefn cancelfn]]])]]])))
 
 
+
+
 (defn px [x] (str x "px"))
+
+
+(defn next-tid-label [edtype]
+  (let [i (inc (count (get-adb [:tabs :extns])))
+        [tx lx] (if (= edtype :editor)
+                  ["ed" "Editor "]
+                  ["chap" "Chapter "])
+        tid (str tx i)
+        label (str lx i)]
+    [tid label]))
 
 (defn add-modal [show?]
   (let [edtype (rgt/atom :interactive-doc)
         order (rgt/atom :row)
         eltsper (rgt/atom "1")
-        tid (rgt/atom (-> (get-adb [:main :uid :name]) (str "-") gensym name))
-        tlabel (rgt/atom (cljstr/capitalize @tid))
+        [tx lx] (next-tid-label @edtype)
+        tid (rgt/atom tx)
+        tlabel (rgt/atom lx)
+        nssym (rgt/atom 'doc.code)
         advance? (rgt/atom false)
         width (rgt/atom "730")
         height (rgt/atom "700")
@@ -333,18 +392,24 @@
                      :model edtype
                      :label-style (when (= :interactive-doc @edtype)
                                     {:font-weight "bold"})
-                     :on-change #(do (reset! layout :up-down)
-                                     (reset! out-height "100")
-                                     (reset! edtype %))]
+                     :on-change #(let [[tx lx] (next-tid-label :doc)]
+                                   (reset! layout :up-down)
+                                   (reset! out-height "100")
+                                   (reset! tid tx)
+                                   (reset! tlabel lx)
+                                   (reset! edtype %))]
                     [radio-button
                      :label "Editor and Output"
                      :value :editor
                      :model edtype
                      :label-style (when (= :editor @edtype)
                                     {:font-weight "bold"})
-                     :on-change #(do (reset! layout :left-right)
-                                     (reset! out-height "700")
-                                     (reset! edtype %))]
+                     :on-change #(let [[tx lx] (next-tid-label :editor)]
+                                   (reset! layout :left-right)
+                                   (reset! out-height "700")
+                                   (reset! tid tx)
+                                   (reset! tlabel lx)
+                                   (reset! edtype %))]
                     [radio-button
                      :label "<-> Converter"
                      :value :converter
@@ -416,7 +481,9 @@
                             [input-text
                              :model tid
                              :width "200px" :height "26px"
-                             :on-change #(reset! tid %)]
+                             :on-change
+                             #(do (reset! tid %)
+                                  (reset! tlabel (cljstr/capitalize %)))]
                             [gap :size "10px"]
                             [label
                              :style {:font-size "18px"}
@@ -475,31 +542,6 @@
                 [ok-cancel donefn cancelfn]]]])))
 
 
-(defn ctrl-modal [show?]
-  (let [edtype (rgt/atom :none)
-        tid (rgt/atom (name (gensym "tab-")))
-        tlabel (rgt/atom (cljstr/capitalize @tid))
-        donefn (fn[]
-                 (go (async/>! (get-adb [:main :com-chan])
-                               {:edtype @edtype :id @tid :label @tlabel}))
-                 (reset! show? false) nil)
-        cancelfn (fn[]
-                   (go (async/>! (get-adb [:main :com-chan]) :cancel))
-                   (reset! show? false) nil)]
-    (fn [show?]
-      [modal-panel
-       :backdrop-color   "grey"
-       :backdrop-opacity 0.4
-       :child [v-box
-               :gap "10px"
-               :children
-               [[label :style {:font-size "18px"} :label "Tab List"]
-                [scroller
-                 :max-height "700px"
-                 :max-width "1000px"
-                 :child [v-box :gap "10px"
-                         :children []]]]]])))
-
 (defn tab-box []
   (let [add-show? (rgt/atom false)
         del-show? (rgt/atom false)
@@ -507,16 +549,8 @@
 
         del-frame-show? (rgt/atom false)
         selections (rgt/atom #{})
-        del-frame-closefn #(do (reset! del-frame-show? false))
+        del-frame-closefn #(do (reset! del-frame-show? false))]
 
-        ctrl-show? (rgt/atom false)
-        ctrl-donefn (fn[event]
-                      #_(go (async/>! (get-adb [:main :com-chan])
-                                      {:? :XXX :?? :YYY}))
-                      (reset! ctrl-show? false))
-        ctrl-cancelfn (fn[event]
-                        #_(go (async/>! (get-adb [:main :com-chan]) :cancel))
-                        (reset! ctrl-show? false))]
     (fn []
       [border :padding "2px" :radius "2px"
        :l-border "1px solid lightgrey"
@@ -542,19 +576,6 @@
                  #(go (printchan :DUPLICATE (hmi/get-cur-tab :id)))]
 
                 [md-circle-icon-button
-                 :md-icon-name "zmdi-minus-circle-outline" :size :smaller
-                 :tooltip "Delete Current Tab"
-                 :on-click
-                 #(go (reset! del-show? true)
-                      (let [ch (get-adb [:main :com-chan])
-                            info (async/<! ch)]
-                        (when (not= :cancel info)
-                          (let [{:keys [tab2del]} info
-                                tid (tab2del :id)]
-                            (printchan :TID tid)
-                            (del-tab tid)))))]
-
-                [md-circle-icon-button
                  :md-icon-name "zmdi-minus-square" :size :smaller
                  :tooltip "Delete Frames"
                  :on-click
@@ -578,11 +599,34 @@
                  :on-click
                  #(do (printchan "Redo") (redo))]
 
-                [button
-                 :label "Tab Control"
-                 :tooltip "Change / Remove Tabs"
-                 :on-click #(go)
-                 :class "btn-default btn-xs"]
+                [md-circle-icon-button
+                 :md-icon-name "zmdi-long-arrow-left" :size :smaller
+                 :tooltip "Move current tab left"
+                 :on-click
+                 #(hmi/move-tab (hmi/get-cur-tab :id) :left)]
+                [md-circle-icon-button
+                 :md-icon-name "zmdi-long-arrow-right" :size :smaller
+                 :tooltip "Move current tab right"
+                 :on-click
+                 #(hmi/move-tab (hmi/get-cur-tab :id) :right)]
+                [md-circle-icon-button
+                 :md-icon-name "zmdi-edit" :size :smaller
+                 :tooltip "Edit current tab"
+                 :on-click
+                 #(do (printchan "edit curtab"))]
+
+                [md-circle-icon-button
+                 :md-icon-name "zmdi-delete" :size :smaller
+                 :tooltip "Delete Current Tab"
+                 :on-click
+                 #(go (reset! del-show? true)
+                      (let [ch (get-adb [:main :com-chan])
+                            info (async/<! ch)]
+                        (when (not= :cancel info)
+                          (let [{:keys [tab2del]} info
+                                tid (tab2del :id)]
+                            (printchan :TID tid)
+                            (del-tab tid)))))]
 
                 (when @add-show? [add-modal add-show?])
                 (when @del-show? [del-modal del-show? del-closefn])
@@ -590,9 +634,7 @@
                 (when @del-frame-show?
                   (let [items (rgt/atom (get-tab-frames))
                         info {:items items :selections selections}]
-                    [del-frame-modal del-frame-show? info]))
-
-                #_(when ctrl-show? [ctrl-modal ctrl-show?])]]])))
+                    [del-frame-modal del-frame-show? info]))]]])))
 
 
 
