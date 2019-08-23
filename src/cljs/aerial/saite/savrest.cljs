@@ -1,8 +1,8 @@
 (ns aerial.saite.savrest
   (:require
-   
+
    [clojure.set :refer [map-invert]]
-   
+
    [aerial.hanami.core
     :as hmi
     :refer [printchan get-adb update-adb]]
@@ -22,8 +22,10 @@
 (defn get-extn-info [tid]
   (let [m (get-adb [:tabs :extns tid])
         eid (m :eid)
-        src (get-adb [:editors eid :in])] (printchan :TID tid :EID eid)
-    (assoc m :src (deref src))))
+        src (get-adb [:editors eid :in])
+        src (if src (deref src) (m :src))]
+    (printchan :TID tid :EID eid)
+    (assoc m :src src)))
 
 (defn get-tab-data []
   (->> (tab-data)
@@ -75,9 +77,8 @@
                            args (->> (dissoc info :fn :tid :src)
                                      seq (cons [:specs specs])
                                      (apply concat))]
+                       (printchan :ARGS args)
                        (apply f tid label src args)
                        [tid :done])
                      (do (->> m vals first :specs hmi/update-tabs)
                          [(-> m keys first) :done]))))))))
-
-
