@@ -24,6 +24,7 @@
    [aerial.saite.codemirror
     :as cm
     :refer [code-mirror cm]]
+   [aerial.saite.compiler :refer [set-namespace]]
    [aerial.saite.tabops
     :as tops
     :refer [push-undo undo redo get-tab-frames remove-frame]]
@@ -82,6 +83,7 @@
                :layout layout
                :ns ns
                :src src}]
+    (set-namespace ns)
     (update-adb [:tabs :extns tid] uinfo)
     (add-tab
      {:id tid
@@ -117,6 +119,7 @@
                :out-height out-height
                :ns ns
                :src src}]
+    (set-namespace ns)
     (update-adb [:tabs :extns tid] uinfo)
     (add-tab
      {:id tid
@@ -363,7 +366,7 @@
         size (rgt/atom "auto")
         layout (rgt/atom :up-down)
         donefn (fn[]
-                 (go (async/>! (get-adb [:main :com-chan])
+                 (go (async/>! (get-adb [:main :chans :com])
                                {:edtype @edtype
                                 :id (keyword @tid) :label @tlabel
                                 :order @order :eltsper (js/parseInt @eltsper)
@@ -372,7 +375,7 @@
                                 :layout @layout}))
                  (reset! show? false) nil)
         cancelfn (fn[]
-                   (go (async/>! (get-adb [:main :com-chan]) :cancel))
+                   (go (async/>! (get-adb [:main :chans :com]) :cancel))
                    (reset! show? false) nil)]
     (fn [show?]
       [modal-panel
@@ -497,11 +500,11 @@
 
 (defn del-modal [show?]
   (let [donefn (fn[]
-                 (go (async/>! (get-adb [:main :com-chan])
+                 (go (async/>! (get-adb [:main :chans :com])
                                {:tab2del (hmi/get-cur-tab)}))
                  (reset! show? false))
         cancelfn (fn[]
-                   (go (async/>! (get-adb [:main :com-chan]) :cancel))
+                   (go (async/>! (get-adb [:main :chans :com]) :cancel))
                    (reset! show? false))]
     (fn [show?]
       [modal-panel
@@ -519,10 +522,10 @@
 
 (defn del-frame-modal [show? info]
   (let [donefn (fn[]
-                 (go (async/>! (get-adb [:main :com-chan]) :ok))
+                 (go (async/>! (get-adb [:main :chans :com]) :ok))
                  (reset! show? false))
         cancelfn (fn[]
-                   (go (async/>! (get-adb [:main :com-chan]) :cancel))
+                   (go (async/>! (get-adb [:main :chans :com]) :cancel))
                    (reset! show? false))]
     (fn [show? info]
       (printchan :DEL-FRAME :INFO (info :items) (info :selections))
@@ -564,7 +567,7 @@
                  :tooltip "Add Interactive Tab"
                  :on-click
                  #(go (reset! add-show? true)
-                      (let [ch (get-adb [:main :com-chan])
+                      (let [ch (get-adb [:main :chans :com])
                             info (async/<! ch)]
                         (when (not= :cancel info)
                           (add-interactive-tab info))))]
@@ -580,7 +583,7 @@
                  :tooltip "Delete Frames"
                  :on-click
                  #(go (reset! del-frame-show? true)
-                     (let [ch (get-adb [:main :com-chan])
+                     (let [ch (get-adb [:main :chans :com])
                            answer (async/<! ch)]
                        (when (not= :cancel answer)
                          (printchan @selections)
@@ -620,7 +623,7 @@
                  :tooltip "Delete Current Tab"
                  :on-click
                  #(go (reset! del-show? true)
-                      (let [ch (get-adb [:main :com-chan])
+                      (let [ch (get-adb [:main :chans :com])
                             info (async/<! ch)]
                         (when (not= :cancel info)
                           (let [{:keys [tab2del]} info
@@ -651,7 +654,7 @@
                         :render? true
                         :cljstg inspec}}
             _ (hmi/send-msg msg)
-            otspec (async/<! (get-adb [:main :convert-chan]))
+            otspec (async/<! (get-adb [:main :chans :convert]))
             otchart (modal-panel
                      :backdrop-color   "grey"
                      :backdrop-opacity 0.4
@@ -742,7 +745,7 @@
                                               :render? false
                                               :cljstg @output}}]
                               (hmi/send-msg msg)
-                              (async/<! (get-adb [:main :convert-chan]))))))]
+                              (async/<! (get-adb [:main :chans :convert]))))))]
             [md-circle-icon-button
              :md-icon-name "zmdi-caret-up-circle"
              :tooltip "Render in Popup"
