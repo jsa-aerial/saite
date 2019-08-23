@@ -108,11 +108,11 @@
        choices (rgt/atom nil)
        mode (rgt/atom nil)
        donefn (fn[event]
-                (go (async/>! (get-adb [:main :com-chan])
+                (go (async/>! (get-adb [:main :chans :com])
                               {:session @session-name :file @file-name}))
                 (reset! show? false))
        cancelfn (fn[event]
-                  (go (async/>! (get-adb [:main :com-chan]) :cancel))
+                  (go (async/>! (get-adb [:main :chans :com]) :cancel))
                   (reset! show? false))]
     (fn []
       [h-box :gap "10px" :max-height "30px"
@@ -135,7 +135,7 @@
                       :md-icon-name "zmdi-upload" :size :smaller
                       :tooltip "Upload Document"
                       :on-click
-                      #(go (let [ch (get-adb [:main :com-chan])]
+                      #(go (let [ch (get-adb [:main :chans :com])]
                              (js/console.log "upload clicked")
                              (reset! session-name (get-adb [:main :uid :name]))
                              (reset! file-name (get-adb [:main :files :load]))
@@ -158,7 +158,7 @@
                       :md-icon-name "zmdi-download" :size :smaller
                       :tooltip "Save Document"
                       :on-click
-                      #(go (let [ch (get-adb [:main :com-chan])]
+                      #(go (let [ch (get-adb [:main :chans :com])]
                              (js/console.log "download clicked")
                              (reset! session-name (get-adb [:main :uid :name]))
                              (reset! file-name (get-adb [:main :files :save]))
@@ -213,7 +213,7 @@
                  clj
                  (try (-> clj clj->js (js/JSON.stringify nil, 2))
                       (catch js/Error e (str e))))
-        ch (get-adb [:main :convert-chan])]
+        ch (get-adb [:main :chans :convert])]
     #_(printchan render? result)
     (go (async/>! ch result))))
 
@@ -224,8 +224,9 @@
         dirs (-> choices keys sort)]
     (printchan :APP-INIT save-info editor)
     (printchan :CHOICES choices :DIRS dirs)
-    (update-adb [:main :convert-chan] (async/chan)
-                [:main :com-chan] (async/chan)
+    (update-adb [:main :chans :convert] (async/chan)
+                [:main :chans :com] (async/chan)
+                [:main :chans :data] (async/chan)
 
                 [:main :files :choices] choices
                 [:main :files :dirs] dirs
