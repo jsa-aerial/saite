@@ -150,7 +150,7 @@
                                        uid (get-adb [:main :uid])]
                                    (update-adb [:main :files :load] fname)
                                    (hmi/send-msg
-                                    {:op :load-data
+                                    {:op :load-doc
                                      :data {:uid uid
                                             :location location}}))))))]
 
@@ -174,7 +174,7 @@
                                    (let [spec-info (xform-tab-data
                                                     (get-tab-data))]
                                      (hmi/send-msg
-                                      {:op :save-data
+                                      {:op :save-doc
                                        :data {:loc location
                                               :info spec-info}})))))))]
 
@@ -199,7 +199,7 @@
 
 (def newdoc-data (atom []))
 
-(defmethod user-msg :load-data [msg]
+(defmethod user-msg :load-doc [msg]
   (let [data (msg :data)]
     (reset! newdoc-data data)
     (load-doc data extns-xref)))
@@ -397,7 +397,8 @@
 
 
 
-
+  "compile aerial.saite.usercode; (in-ns 'aerial.saite.usercode);
+   execute when-let; now should be able to user usercode"
 
 
 
