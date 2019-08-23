@@ -37,6 +37,7 @@
 (saite/stop)
 
 
+
 ;;; Examples for browser popup renderings. Cut and paste into Clj panel
 
 [ht/point-chart
@@ -80,7 +81,7 @@
 
 ;;; Simple scatter with template
 (->> (hc/xform ht/point-chart
-       ;;:DATA (->> "http://localhost:3003/data/cars.json" slurp json/read-str)
+       ;;:DATA (->> "http://localhost:3000/data/cars.json" slurp json/read-str)
        :UDATA "data/cars.json"
        :X "Horsepower" :Y "Miles_per_Gallon" :COLOR "Origin")
      hmi/sv!)
