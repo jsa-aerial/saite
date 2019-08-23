@@ -30,6 +30,7 @@
     :refer [RMV]]
    [aerial.hanami.templates :as ht]
 
+   [com.rpl.specter :as sp]
    [reagent.core :as rgt]
 
    [re-com.core
@@ -48,10 +49,15 @@
    [re-com.dropdown
     :refer [filter-choices-by-keyword single-dropdown-args-desc]]))
 
+#_(load-analysis-cache!)
 
 (cljs.js/load-analysis-cache!
  state 'aerial.saite.core
  (analyzer-state 'aerial.saite.core))
+
+(cljs.js/load-analysis-cache!
+ state 'com.rpl.specter
+ (analyzer-state 'com.rpl.specter))
 
 (cljs.js/load-analysis-cache!
  state 'aerial.saite.usercode
