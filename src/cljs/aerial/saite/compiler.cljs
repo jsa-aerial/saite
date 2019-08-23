@@ -55,6 +55,10 @@
 
 (def state (cljs.js/empty-state))
 
+(defn loader-fn [info-map cb]
+  (printchan info-map)
+  (cb  {:lang :js :source ""}))
+
 (defn evaluate
   ([nssym source cb]
    (if (string? source)
@@ -64,6 +68,7 @@
        (cljs.js/eval-str state source nil
                          {:eval cljs.js/js-eval
                           :ns nssym
+                          :load loader-fn 
                           :context :expr}
                          cb))
      (try
