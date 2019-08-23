@@ -287,6 +287,9 @@
              "Ctrl-X R"  ((js->clj CodeMirror.keyMap.emacs) "Shift-Alt-5")
              "Insert"    insert-frame
              "Delete"    delete-frame
+
+             "Ctrl-X Ctrl-I" insert-frame
+             "Ctrl-X Ctrl-D" delete-frame
              "Ctrl-X Ctrl-E" evalxe
              "Ctrl-X Ctrl-C" evalcc
              })))
