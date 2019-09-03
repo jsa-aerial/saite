@@ -17,7 +17,6 @@
     :refer [printchan user-msg
             re-com-xref xform-recom
             default-header-fn start
-            update-adb get-adb
             get-vspec update-vspecs
             get-tab-field add-tab update-tab-field
             add-to-tab-body remove-from-tab-body
@@ -85,10 +84,10 @@
 
 (def base-requires
   "[clojure.string :as str]
-         [aerial.hanami.core :as hmi]
-         [aerial.hanami.common :as hc]
+         [aerial.hanami.core :as hmi :refer [md]]
+         [aerial.hanami.common :as hc :refer [RMV]]
          [aerial.hanami.templates :as ht]
-         [aerial.saite.core :as sc]
+         [aerial.saite.core :as sc :refer [read-data]]
          [com.rpl.specter :as sp]")
 
 (defn add-requires [base requires]
