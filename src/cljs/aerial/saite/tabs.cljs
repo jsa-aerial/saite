@@ -11,7 +11,6 @@
     :refer [printchan user-msg
             re-com-xref xform-recom
             default-header-fn start
-            update-adb get-adb
             get-vspec update-vspecs
             get-tab-field add-tab update-tab-field
             add-to-tab-body remove-from-tab-body
@@ -21,6 +20,9 @@
     :as hc
     :refer [RMV]]
 
+   [aerial.saite.splits :as ass]
+   [aerial.saite.savrest
+    :refer [update-ddb get-ddb]]
    [aerial.saite.codemirror
     :as cm
     :refer [code-mirror cm]]
@@ -84,7 +86,7 @@
                :ns ns
                :src src}]
     (set-namespace ns)
-    (update-adb [:tabs :extns tid] uinfo)
+    (update-ddb [:tabs :extns tid] uinfo)
     (add-tab
      {:id tid
       :label label
@@ -102,32 +104,47 @@
 
 
 (defn ^:export interactive-doc-tab
-  [tid label src & {:keys [width height out-height ns specs order eltsper size]
+  [tid label src & {:keys [width height out-height $split
+                           ns specs order eltsper size]
                     :or {width "730px"
                          height "700px"
                          out-height "100px"
+                         $split (get-ddb [:tabs :extns :$split])
                          ns 'aerial.saite.usercode
                          specs []
                          order :row eltsper 1 size "auto"}}]
   (let [cmfn (cm)
         eid (str "ed-" (name tid))
+        sratom (rgt/atom $split)
         uinfo {:fn ''interactive-doc-tab
                :tid tid
                :eid eid
                :width width
                :height height
                :out-height out-height
+               :$split $split
+               :$sratom sratom
                :ns ns
-               :src src}]
+               :src src}
+        hsfn (ass/h-split
+              :panel-1 "fake p1"
+              :panel-2 "fake p2"
+              :split-perc sratom
+              :on-split-change
+              #(update-ddb
+                [:tabs :extns (hmi/get-cur-tab :id) :$split]
+                (let [sp (/ (.round js/Math (* 100 %)) 100)]
+                  (if (<= sp 3.0) 0.0 sp)))
+              :width "2048px")]
     (set-namespace ns)
-    (update-adb [:tabs :extns tid] uinfo)
+    (update-ddb [:tabs :extns tid] uinfo)
     (add-tab
      {:id tid
       :label label
       :specs specs
       :opts {:order order, :eltsper eltsper, :size size
              :wrapfn (fn[hcomp]
-                       [h-split
+                       [hsfn
                         :panel-1 [cmfn :id eid
                                   :width width
                                   :height height
@@ -137,9 +154,7 @@
                                   :max-height "800px"
                                   :max-width "1200px"
                                   :align :start
-                                  :child hcomp]
-                        :initial-split "33%"
-                        :width "2048px"])}})
+                                  :child hcomp]])}})
     (let [opts (hmi/get-tab-field tid :opts)
           s-f-pairs (hmi/make-spec-frame-pairs tid opts specs)]
       (hmi/update-tab-field tid :compvis (hmi/vis-list tid s-f-pairs opts)))))
@@ -190,19 +205,49 @@
 
 
 
+;;; Header Editor Mgt Components ========================================== ;;;
+
+(defn editor-box []
+  [border :padding "2px" :radius "2px"
+   :l-border "1px solid lightgrey"
+   :r-border "1px solid lightgrey"
+   :b-border "1px solid lightgrey"
+   :child [h-box
+           :gap "10px"
+           :children
+           [[md-circle-icon-button
+             :md-icon-name "zmdi-unfold-more" :size :smaller
+             :tooltip "Open Editor Panel"
+             :on-click
+             #(let [tid (hmi/get-cur-tab :id)
+                    sratom (get-ddb [:tabs :extns tid :$sratom])
+                    last-split (get-ddb [:tabs :extns tid :$split])
+                    last-split (if (= 0 last-split)
+                                 (get-ddb [:tabs :extns :$split])
+                                 last-split)]
+                (reset! sratom last-split))]
+
+            [md-circle-icon-button
+             :md-icon-name "zmdi-unfold-less" :size :smaller
+             :tooltip "Collapse Editor Panel "
+             :on-click
+             #(let [tid (hmi/get-cur-tab :id)
+                    sratom (get-ddb [:tabs :extns tid :$sratom])]
+                (reset! sratom 0))]]]])
+
 ;;; Header Tab Mgt Components ============================================= ;;;
 
 (defn del-tab [tid]
   (let [x (sp/select-one [sp/ATOM :tabs :active sp/ATOM] hmi/app-db)
-        eid (get-adb [:tabs :extns tid :eid])]
+        eid (get-ddb [:tabs :extns tid :eid])]
     (push-undo x)
-    (update-adb [:tabs :extns tid] :rm
+    (update-ddb [:tabs :extns tid] :rm
                 [:editors eid] :rm)
     (hmi/del-tab tid)))
 
 (defn add-interactive-tab [info-map]
   (let [x (sp/select-one [sp/ATOM :tabs :active sp/ATOM] hmi/app-db)
-        {:keys [edtype id label
+        {:keys [edtype ns id label
                 order eltsper
                 width height out-height
                 size layout]} info-map]
@@ -212,13 +257,13 @@
 
       (= :editor edtype)
       (editor-repl-tab
-       id label ""
+       id label "" :ns ns
        :width width :height height
        :out-height out-height :layout layout)
 
       :else
       (interactive-doc-tab
-       id label ""
+       id label "" :ns ns
        :width width :height height
        :out-height out-height
        :order order :eltsper eltsper :size size))
@@ -226,11 +271,13 @@
     (printchan info-map)))
 
 
-(defn duplicate-cur-tab [tid label nssym]
-  (let [ctid (hmi/get-cur-tab :id)
-        uinfo (or (hmi/get-adb [:tabs :extns ctid]) {:fn [:_ :NA]})
+(defn duplicate-cur-tab [info]
+  (let [{:keys [tid label nssym]} info
+        ctid (hmi/get-cur-tab :id)
+        uinfo (or (get-ddb [:tabs :extns ctid]) {:fn [:_ :NA]})
         eid (str "ed-" (name tid))
-        {:keys [width height out-height layout src]} uinfo
+        {:keys [width height out-height layout]} uinfo
+        src (deref (get-ddb [:editors (uinfo :eid) :in]))
         tabval (hmi/get-tab-field ctid)
         {:keys [specs opts]} tabval
         {:keys [order eltsper size]} opts
@@ -252,6 +299,20 @@
        :width width :height height :out-height out-height
        :specs specs :order order :eltsper eltsper :size size))))
 
+
+(defn edit-cur-tab [info]
+  (let [curtab (hmi/get-cur-tab)
+        tid (curtab :id)
+        label (curtab :label)
+        opts (curtab :opts)
+        specs (curtab :specs)
+        {:keys [label nssym order eltsper size]} info
+        newopts (merge opts (dissoc info :label :nssym))
+        s-f-pairs (hmi/make-spec-frame-pairs tid newopts specs)]
+    (update-ddb [:tabs :extns tid :ns] nssym)
+    (hmi/update-tab-field tid :opts newopts)
+    (hmi/update-tab-field tid :label label)
+    (hmi/update-tab-field tid :compvis (hmi/vis-list tid s-f-pairs newopts))))
 
 
 
@@ -343,7 +404,7 @@
 
 
 (defn next-tid-label [edtype]
-  (let [i (inc (count (get-adb [:tabs :extns])))
+  (let [i (inc (count (get-ddb [:tabs :extns])))
         [tx lx] (if (= edtype :editor)
                   ["ed" "Editor "]
                   ["chap" "Chapter "])
@@ -358,7 +419,7 @@
         [tx lx] (next-tid-label @edtype)
         tid (rgt/atom tx)
         tlabel (rgt/atom lx)
-        nssym (rgt/atom 'doc.code)
+        nssym (rgt/atom "doc.code")
         advance? (rgt/atom false)
         width (rgt/atom "730")
         height (rgt/atom "700")
@@ -366,8 +427,8 @@
         size (rgt/atom "auto")
         layout (rgt/atom :up-down)
         donefn (fn[]
-                 (go (async/>! (get-adb [:main :chans :com])
-                               {:edtype @edtype
+                 (go (async/>! (hmi/get-adb [:main :chans :com])
+                               {:edtype @edtype :ns (symbol @nssym)
                                 :id (keyword @tid) :label @tlabel
                                 :order @order :eltsper (js/parseInt @eltsper)
                                 :width (px @width) :height (px @height)
@@ -375,7 +436,7 @@
                                 :layout @layout}))
                  (reset! show? false) nil)
         cancelfn (fn[]
-                   (go (async/>! (get-adb [:main :chans :com]) :cancel))
+                   (go (async/>! (hmi/get-adb [:main :chans :com]) :cancel))
                    (reset! show? false) nil)]
     (fn [show?]
       [modal-panel
@@ -495,16 +556,145 @@
                              :model tlabel
                              :width "200px" :height "26px"
                              :on-change #(reset! tlabel %)]]]
+                [h-box :gap "10px"
+                 :children [[label
+                             :style {:font-size "18px"}
+                             :label "Namespace"]
+                            [input-text
+                             :model nssym
+                             :width "200px" :height "26px"
+                             :on-change
+                             #(reset! nssym %)]]]
                 [ok-cancel donefn cancelfn] ]]])))
+
+
+(defn dup-modal [show?]
+  (let [curtab (hmi/get-cur-tab)
+        tid (rgt/atom (str (-> curtab :id name) "2"))
+        tlabel (rgt/atom (str (curtab :label) " 2"))
+        nssym (rgt/atom (name (get-ddb [:tabs :extns (curtab :id) :ns])))
+        donefn (fn[]
+                 (go (async/>! (hmi/get-adb [:main :chans :com])
+                               {:tid (keyword @tid) :label @tlabel
+                                :nssym (symbol @nssym)}))
+                 (reset! show? false))
+        cancelfn (fn[]
+                   (go (async/>! (hmi/get-adb [:main :chans :com]) :cancel))
+                   (reset! show? false))]
+    (fn [show?]
+      [modal-panel
+       :backdrop-color   "grey"
+       :backdrop-opacity 0.4
+       :child [v-box
+               :gap "10px"
+               :children
+               [[h-box :gap "10px"
+                 :children [[label
+                             :style {:font-size "18px"}
+                             :label "Id"]
+                            [input-text
+                             :model tid
+                             :width "200px" :height "26px"
+                             :on-change
+                             #(do (reset! tid %)
+                                  (reset! tlabel (cljstr/capitalize %)))]
+                            [gap :size "10px"]
+                            [label
+                             :style {:font-size "18px"}
+                             :label "Label"]
+                            [input-text
+                             :model tlabel
+                             :width "200px" :height "26px"
+                             :on-change #(reset! tlabel %)]]]
+                [h-box :gap "10px"
+                 :children [[label
+                             :style {:font-size "18px"}
+                             :label "Namespace"]
+                            [input-text
+                             :model nssym
+                             :width "200px" :height "26px"
+                             :on-change
+                             #(reset! nssym %)]]]
+                [ok-cancel donefn cancelfn]]]])))
+
+
+(defn edit-modal [show?]
+  (let [curtab (hmi/get-cur-tab)
+        curtid (curtab :id)
+        curlabel (curtab :label)
+        opts (curtab :opts)
+        order (rgt/atom (opts :order))
+        eltsper (rgt/atom (str (opts :eltsper)))
+        size (rgt/atom (opts :size))
+        tlabel (rgt/atom curlabel)
+        nssym (rgt/atom (str (get-ddb [:tabs :extns curtid :ns])))
+        donefn (fn[]
+                 (go (async/>! (hmi/get-adb [:main :chans :com])
+                               {:label @tlabel :nssym (symbol @nssym)
+                                :order @order :eltsper (js/parseInt @eltsper)
+                                :size @size}))
+                 (reset! show? false))
+        cancelfn (fn[]
+                   (go (async/>! (hmi/get-adb [:main :chans :com]) :cancel))
+                   (reset! show? false))]
+
+    (fn [show?]
+      [modal-panel
+       :backdrop-color   "grey"
+       :backdrop-opacity 0.4
+       :child [v-box
+               :gap "10px"
+               :children
+               [[label :style {:font-size "18px"} :label "Ordering"]
+                [radio-button
+                 :label "Row Ordered"
+                 :value :row
+                 :model order
+                 :label-style (when (= :row @order) {:font-weight "bold"})
+                 :on-change #(do (reset! size "auto")
+                                 (reset! order %))]
+                [radio-button
+                 :label "Column Ordered"
+                 :value :col
+                 :model order
+                 :label-style (when (= :col @order) {:font-weight "bold"})
+                 :on-change #(do (reset! size "none")
+                                 (reset! order %))]
+                [h-box :gap "10px"
+                 :children [[input-text
+                             :model eltsper
+                             :width "40px" :height "20px"
+                             :on-change #(reset! eltsper %)]
+                            [label :label (str "Elts/" (if (= @order :row)
+                                                         "row" "col"))]]]
+                [h-box :gap "10px"
+                 :children [[label
+                             :style {:font-size "18px"}
+                             :label "Label"]
+                            [input-text
+                             :model tlabel
+                             :width "200px" :height "26px"
+                             :on-change #(reset! tlabel %)]]]
+                [h-box :gap "10px"
+                 :children [[label
+                             :style {:font-size "18px"}
+                             :label "Namespace"]
+                            [input-text
+                             :model nssym
+                             :width "200px" :height "26px"
+                             :on-change
+                             #(reset! nssym %)]]]
+                [ok-cancel donefn cancelfn]]]])))
+
 
 
 (defn del-modal [show?]
   (let [donefn (fn[]
-                 (go (async/>! (get-adb [:main :chans :com])
+                 (go (async/>! (hmi/get-adb [:main :chans :com])
                                {:tab2del (hmi/get-cur-tab)}))
                  (reset! show? false))
         cancelfn (fn[]
-                   (go (async/>! (get-adb [:main :chans :com]) :cancel))
+                   (go (async/>! (hmi/get-adb [:main :chans :com]) :cancel))
                    (reset! show? false))]
     (fn [show?]
       [modal-panel
@@ -522,10 +712,10 @@
 
 (defn del-frame-modal [show? info]
   (let [donefn (fn[]
-                 (go (async/>! (get-adb [:main :chans :com]) :ok))
+                 (go (async/>! (hmi/get-adb [:main :chans :com]) :ok))
                  (reset! show? false))
         cancelfn (fn[]
-                   (go (async/>! (get-adb [:main :chans :com]) :cancel))
+                   (go (async/>! (hmi/get-adb [:main :chans :com]) :cancel))
                    (reset! show? false))]
     (fn [show? info]
       (printchan :DEL-FRAME :INFO (info :items) (info :selections))
@@ -547,8 +737,11 @@
 
 (defn tab-box []
   (let [add-show? (rgt/atom false)
+        dup-show? (rgt/atom false)
         del-show? (rgt/atom false)
+        ed-show?  (rgt/atom false)
         del-closefn #(do (reset! del-show? false))
+
 
         del-frame-show? (rgt/atom false)
         selections (rgt/atom #{})
@@ -567,7 +760,7 @@
                  :tooltip "Add Interactive Tab"
                  :on-click
                  #(go (reset! add-show? true)
-                      (let [ch (get-adb [:main :chans :com])
+                      (let [ch (hmi/get-adb [:main :chans :com])
                             info (async/<! ch)]
                         (when (not= :cancel info)
                           (add-interactive-tab info))))]
@@ -576,20 +769,24 @@
                  :md-icon-name "zmdi-plus-circle-o-duplicate" :size :smaller
                  :tooltip "Duplicate Current Tab"
                  :on-click
-                 #(go (printchan :DUPLICATE (hmi/get-cur-tab :id)))]
+                 #(go (reset! dup-show? true)
+                      (let [ch (hmi/get-adb [:main :chans :com])
+                            info (async/<! ch)]
+                        (when (not= :cancel info)
+                          (duplicate-cur-tab info))))]
 
                 [md-circle-icon-button
                  :md-icon-name "zmdi-minus-square" :size :smaller
                  :tooltip "Delete Frames"
                  :on-click
                  #(go (reset! del-frame-show? true)
-                     (let [ch (get-adb [:main :chans :com])
-                           answer (async/<! ch)]
-                       (when (not= :cancel answer)
-                         (printchan @selections)
-                         (doseq [id @selections]
-                           (remove-frame id))
-                         (reset! selections #{}))))]
+                      (let [ch (hmi/get-adb [:main :chans :com])
+                            answer (async/<! ch)]
+                        (when (not= :cancel answer)
+                          (printchan @selections)
+                          (doseq [id @selections]
+                            (remove-frame id))
+                          (reset! selections #{}))))]
 
                 [md-circle-icon-button
                  :md-icon-name "zmdi-undo" :size :smaller
@@ -616,14 +813,18 @@
                  :md-icon-name "zmdi-edit" :size :smaller
                  :tooltip "Edit current tab"
                  :on-click
-                 #(do (printchan "edit curtab"))]
+                 #(go (reset! ed-show? true)
+                      (let [ch (hmi/get-adb [:main :chans :com])
+                            info (async/<! ch)]
+                        (when (not= :cancel info)
+                          (edit-cur-tab info))))]
 
                 [md-circle-icon-button
                  :md-icon-name "zmdi-delete" :size :smaller
                  :tooltip "Delete Current Tab"
                  :on-click
                  #(go (reset! del-show? true)
-                      (let [ch (get-adb [:main :chans :com])
+                      (let [ch (hmi/get-adb [:main :chans :com])
                             info (async/<! ch)]
                         (when (not= :cancel info)
                           (let [{:keys [tab2del]} info
@@ -632,6 +833,8 @@
                             (del-tab tid)))))]
 
                 (when @add-show? [add-modal add-show?])
+                (when @dup-show? [dup-modal dup-show?])
+                (when @ed-show? [edit-modal ed-show?])
                 (when @del-show? [del-modal del-show? del-closefn])
 
                 (when @del-frame-show?
@@ -646,15 +849,15 @@
 
 (defn vis-panel [inspec donefn] (printchan :vis-panel)
   (go
-    (if-let [otchart (get-adb [:main :otchart])]
+    (if-let [otchart (get-ddb [:main :otchart])]
       otchart
-      (let [nm (get-adb [:main :uid :name])
+      (let [nm (hmi/get-adb [:main :uid :name])
             msg {:op :read-clj
                  :data {:session-name nm
                         :render? true
                         :cljstg inspec}}
             _ (hmi/send-msg msg)
-            otspec (async/<! (get-adb [:main :chans :convert]))
+            otspec (async/<! (hmi/get-adb [:main :chans :convert]))
             otchart (modal-panel
                      :backdrop-color   "grey"
                      :backdrop-opacity 0.4
@@ -670,7 +873,7 @@
                                                    :md-icon-name "zmdi-close"
                                                    :tooltip "Close"
                                                    :on-click donefn]]]]]])]
-        (update-adb [:main :otchart] otchart)
+        (update-ddb [:main :otchart] otchart)
         otchart))))
 
 (defn tab<-> [tabval] (printchan "Make TAB<-> called ")
@@ -680,7 +883,7 @@
         alert? (rgt/atom false)
         process-done (fn[event]
                        (reset! show? false)
-                       (update-adb [:main :otspec] :rm
+                       (update-ddb [:main :otspec] :rm
                                    [:main :otchart] :rm))
         process-close (fn[event] (reset! alert? false))]
     (fn [tabval] (printchan "TAB<-> called ")
@@ -730,7 +933,7 @@
                                "Empty specification can't be rendered"
                                process-close]
                               @show?
-                              (get-adb [:main :otchart])
+                              (get-ddb [:main :otchart])
                               :else [p])]
             [md-circle-icon-button
              :md-icon-name "zmdi-caret-left-circle"
@@ -739,13 +942,14 @@
              #(go (reset! input
                           (if (= @output "")
                             ""
-                            (let [nm (get-adb [:main :uid :name])
+                            (let [nm (hmi/get-adb [:main :uid :name])
                                   msg {:op :read-clj
                                        :data {:session-name nm
                                               :render? false
                                               :cljstg @output}}]
                               (hmi/send-msg msg)
-                              (async/<! (get-adb [:main :chans :convert]))))))]
+                              (async/<! (hmi/get-adb
+                                         [:main :chans :convert]))))))]
             [md-circle-icon-button
              :md-icon-name "zmdi-caret-up-circle"
              :tooltip "Render in Popup"
