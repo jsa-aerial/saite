@@ -26,9 +26,9 @@
     :refer [code-mirror cm]]
    [aerial.saite.tabs
     :refer [editor-repl-tab interactive-doc-tab extns-xref
-            file-modal tab-box tab<->]]
+            file-modal editor-box tab-box tab<->]]
    [aerial.saite.savrest
-    :refer [get-tab-data xform-tab-data load-doc]]
+    :refer [update-ddb get-ddb get-tab-data xform-tab-data load-doc]]
 
    [cljsjs.mathjax]
 
@@ -108,22 +108,22 @@
        choices (rgt/atom nil)
        mode (rgt/atom nil)
        donefn (fn[event]
-                (go (async/>! (get-adb [:main :chans :com])
+                (go (async/>! (hmi/get-adb [:main :chans :com])
                               {:session @session-name :file @file-name}))
                 (reset! show? false))
        cancelfn (fn[event]
-                  (go (async/>! (get-adb [:main :chans :com]) :cancel))
+                  (go (async/>! (hmi/get-adb [:main :chans :com]) :cancel))
                   (reset! show? false))]
     (fn []
       [h-box :gap "10px" :max-height "30px"
        :children
        [[gap :size "5px"]
-        [:img {:src (get-adb [:main :logo])}]
-        [hmi/session-input]
+        [:img {:src (hmi/get-adb [:main :logo])}]
+        #_[hmi/session-input]
         [gap :size "5px"]
         [title
          :level :level3
-         :label [:span.bold (get-adb [:main :uid :name])]]
+         :label [:span.bold @session-name #_(hmi/get-adb [:main :uid :name])]]
         [gap :size "30px"]
         [border :padding "2px" :radius "2px"
          :l-border "1px solid lightgrey"
@@ -135,42 +135,48 @@
                       :md-icon-name "zmdi-upload" :size :smaller
                       :tooltip "Upload Document"
                       :on-click
-                      #(go (let [ch (get-adb [:main :chans :com])]
+                      #(go (let [ch (hmi/get-adb [:main :chans :com])]
                              (js/console.log "upload clicked")
-                             (reset! session-name (get-adb [:main :uid :name]))
-                             (reset! file-name (get-adb [:main :files :load]))
+                             (reset! session-name (get-ddb [:main :files :dir]))
+                             (reset! file-name (get-ddb [:main :files :load]))
                              (reset! mode :load)
                              (reset! show? true)
                              (let [location (async/<! ch)]
                                (when (not= :cancel location)
                                  (let [fname (location :file)
+                                       dname (location :session)
                                        location (assoc
                                                  location
-                                                 :file (str fname ".clj"))
-                                       uid (get-adb [:main :uid])]
-                                   (update-adb [:main :files :load] fname)
+                                                 :file (str fname ".clj"))]
+                                   (update-ddb [:main :files :load] fname
+                                               [:main :files :dir] dname)
+                                   (when (not= @session-name
+                                               (hmi/get-adb [:main :uid :name]))
+                                     (hmi/set-session-name @session-name))
                                    (hmi/send-msg
                                     {:op :load-doc
-                                     :data {:uid uid
+                                     :data {:uid (hmi/get-adb [:main :uid])
                                             :location location}}))))))]
 
                      [md-circle-icon-button
                       :md-icon-name "zmdi-download" :size :smaller
                       :tooltip "Save Document"
                       :on-click
-                      #(go (let [ch (get-adb [:main :chans :com])]
+                      #(go (let [ch (hmi/get-adb [:main :chans :com])]
                              (js/console.log "download clicked")
-                             (reset! session-name (get-adb [:main :uid :name]))
-                             (reset! file-name (get-adb [:main :files :save]))
+                             (reset! session-name (get-ddb [:main :files :dir]))
+                             (reset! file-name (get-ddb [:main :files :save]))
                              (reset! mode :save)
                              (reset! show? true)
                              (let [location (async/<! ch)]
                                (when (not= :cancel location)
                                  (let [fname (location :file)
+                                       dname (location :session)
                                        location (assoc
                                                  location
                                                  :file (str fname ".clj"))]
-                                   (update-adb [:main :files :save] fname)
+                                   (update-ddb [:main :files :save] fname
+                                               [:main :files :dir] dname)
                                    (let [spec-info (xform-tab-data
                                                     (get-tab-data))]
                                      (hmi/send-msg
@@ -180,9 +186,12 @@
 
                      (when @show?
                        (when (nil? @choices)
-                         (reset! choices ((get-adb [:main :files]) :choices)))
+                         (reset! choices ((get-ddb [:main :files]) :choices)))
                        [file-modal choices session-name file-name mode
                         donefn cancelfn])] ]]
+
+        [gap :size "20px"]
+        [editor-box]
 
         [gap :size "20px"]
         [tab-box]]])))
@@ -192,9 +201,6 @@
 
 ;;; Messaging ============================================================ ;;;
 
-
-(defmethod user-msg :data [msg]
-  (printchan :DATA msg))
 
 
 (def newdoc-data (atom []))
@@ -213,7 +219,7 @@
                  clj
                  (try (-> clj clj->js (js/JSON.stringify nil, 2))
                       (catch js/Error e (str e))))
-        ch (get-adb [:main :chans :convert])]
+        ch (hmi/get-adb [:main :chans :convert])]
     #_(printchan render? result)
     (go (async/>! ch result))))
 
@@ -224,17 +230,20 @@
         dirs (-> choices keys sort)]
     (printchan :APP-INIT save-info editor)
     (printchan :CHOICES choices :DIRS dirs)
+
     (update-adb [:main :chans :convert] (async/chan)
                 [:main :chans :com] (async/chan)
-                [:main :chans :data] (async/chan)
+                [:main :chans :data] (async/chan))
 
-                [:main :files :choices] choices
+    (update-ddb [:main :files :choices] choices
                 [:main :files :dirs] dirs
+                [:main :files :dir]  (hmi/get-adb [:main :uid :name])
                 [:main :files :save] (-> dirs first choices sort first)
                 [:main :files :load] (-> dirs first choices sort first)
-
                 [:main :editor] editor
-                [:editors] {})
+                [:editors] {}
+                [:main :chans] {}
+                [:tabs :extns :$split] 33.0)
 
     (add-tab {:id :xvgl
               :label "<->"
@@ -255,9 +264,33 @@
             (assoc-in spec [:data :values] data)))
         data-maps))
 
-(defmethod user-msg :data [msg]
-  (update-data (msg :data)))
 
+(defmethod user-msg :data [msg]
+  (let [{:keys [chankey data]} (msg :data)
+        ch (get-ddb [:main :chans chankey])]
+    (printchan :DATA chankey)
+    (go (async/>! ch data))))
+
+
+;;; "~/Clojure/Projects/saite/Nano/rRNA-dist.clj"
+(defn read-data [path]
+  (let [ch (async/chan)
+        chankey (keyword (gensym "chan-"))
+        data (volatile! nil)
+        tid (hmi/get-cur-tab :id)
+        eid (get-ddb [:tabs :extns tid :eid])
+        throbber (get-ddb [:editors eid :opts :throbber])]
+    (hmi/send-msg {:op :read-data
+                   :data {:uid (hmi/get-adb [:main :uid])
+                          :chankey chankey
+                          :path path
+                          :from :file}})
+    (update-ddb [:main :chans chankey] ch)
+    (reset! throbber true)
+    (go (vreset! data (async/<! ch))
+        (reset! throbber false)
+        (update-ddb [:main :chans chankey] :rm))
+    data))
 
 
 
@@ -266,7 +299,7 @@
 #_(js/MathJax.Hub.Queue #js ["Typeset" js/MathJax.Hub])
 #_(js/MathJax.Hub.Queue
    #js ["Typeset" js/MathJax.Hub
-        (js/document.getElementById (get-adb [:mathjax]))])
+        (js/document.getElementById (get-ddb [:mathjax]))])
 
 (def mathjax-chan (async/chan 10))
 
@@ -349,8 +382,12 @@
 
 ;;; Startup ============================================================== ;;;
 
+;;; Load cache...
+(cljs.js/load-analysis-cache!
+ aerial.saite.compiler/state 'aerial.saite.core
+ (aerial.saite.analyzer/analyzer-state 'aerial.saite.core))
 
-#_(when-let [elem (js/document.querySelector "#app")]
+(when-let [elem (js/document.querySelector "#app")]
   (hc/update-defaults
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
               :frame {:top :TOP, :bottom :BOTTOM,
@@ -370,6 +407,7 @@
          :frame-cb frame-callback
          :header-fn saite-header
          :instrumentor-fn instrumentor))
+
 
 
 
@@ -463,7 +501,7 @@
                 (fn[cm]
                   (let [m (->> cm rest (partition-all 2) (mapv vec) (into {}))
                         id (m :id)
-                        ed (get-adb [:editors id])
+                        ed (get-ddb [:editors id])
                         instg (deref (ed :in))
                         otstg (deref (ed :ot))
                         opts (merge (ed :opts) {:instg instg :otstg otstg} m)]
