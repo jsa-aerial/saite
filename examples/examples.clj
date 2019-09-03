@@ -796,7 +796,7 @@
                    (range 0.06 0.98 0.01)))]
    (hc/xform ht/layer-chart
      :TITLE "Minimum entropy: True P to Binomial Q estimate"
-     :DATA data
+     :DATA data ;:SESSION-NAME "Nano"
      :LAYER [(hc/xform ht/line-chart
                        :POINT true
                        :TRANSFORM [{:filter {:field "RE" :equal "KLD"}}]
