@@ -93,10 +93,11 @@
        (mapv #(do {:id % :label (-> % name cljstr/capitalize)}))))
 
 (defn remove-frame [fid]
-  (let [tid (hmi/get-cur-tab :id)
-        x (sp/select-one [sp/ATOM :tabs :active sp/ATOM] hmi/app-db)]
-    (push-undo x)
-    (hmi/remove-from-tab-body tid fid)))
+  (when fid
+    (let [tid (hmi/get-cur-tab :id)
+          x (sp/select-one [sp/ATOM :tabs :active sp/ATOM] hmi/app-db)]
+      (push-undo x)
+      (hmi/remove-from-tab-body tid fid))))
 
 
 (defn add-frame [picframe at pos]
