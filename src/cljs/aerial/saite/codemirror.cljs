@@ -9,11 +9,13 @@
    [cljs.tools.reader :refer [read-string]]
 
    [aerial.hanami.core :as hmi
-    :refer [printchan md update-adb get-adb]]
+    :refer [printchan md]]
    [aerial.hanami.common :as hc
     :refer [RMV]]
    [aerial.hanami.templates :as ht]
 
+   [aerial.saite.savrest
+    :refer [update-ddb get-ddb]]
    [aerial.saite.compiler
     :refer [format evaluate load-analysis-cache!]]
    [aerial.saite.tabops :as tops
@@ -90,11 +92,14 @@
         (clojure.string/join "\n" [begstg midstg endstg])))))
 
 (defn find-outer-sexpr [cm]
-  (let [f ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-U")]
-    (loop [pos (do (f cm) (.getCursor cm))]
-      (if (= 0 pos.ch)
-        pos
-        (recur (do (f cm) (.getCursor cm)))))))
+  (let [f ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-U")
+        b ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-B")]
+    (loop [pos (do (f cm) (.getCursor cm))
+           lastpos :na]
+      (cond
+        (= 0 pos.ch) pos
+        (= lastpos pos) (recur (do (b cm) (.getCursor cm)) pos)
+        :else (recur (do (f cm) (.getCursor cm)) pos)))))
 
 (defn get-outer-sexpr-src [cm]
   (let [pos (.getCursor cm)
@@ -114,12 +119,17 @@
 
 #_(let [cm @dbg-cm] (read-string (str \( (.getValue cm) "\n" \))))
 (defn get-all-cm-as-code [cm]
-  (read-string (str \( (.getValue cm) "\n" \))))
+  (try
+    (read-string (str \( (.getValue cm) "\n" \)))
+    (catch js/Error e
+      (js/alert (str "Check for miss-matched parens / brackets\n\n" e))
+      '(:bad-code))))
 
 (defn get-cm-frame-ids [cm]
   (let [l (get-all-cm-as-code cm)]
     (->> l (sp/select [LIST-NODES #(= (first %) 'hc/xform)])
-         (mapv (fn[fm] (->> fm (drop-while #(not= % :FID)) second))))))
+         (mapv (fn[fm] (->> fm (drop-while #(not= % :FID)) second)))
+         (filter identity))))
 
 (defn get-tab-specs [tid]
   (sp/select-one [sp/ATOM :tabs :active sp/ATOM sp/ALL
@@ -136,8 +146,8 @@
 
 (defn get-frame-index [cm]
   (->> cm get-outer-sexpr-src read-string
-       (sp/select-first [LIST-NODES #(= (first %) 'hc/xform)])
-       (drop-while #(not= % :FID)) second))
+       (sp/select [LIST-NODES #(= (first %) 'hc/xform)])
+       last (drop-while #(not= % :FID)) second))
 
 (defn get-frame-index-positions [cm]
   (let [tid (hmi/get-cur-tab :id)
@@ -234,23 +244,34 @@
 (def dbg-cm (atom nil))
 
 
+(defn make-error-frame [fid msg]
+  {:usermeta
+   {:frame {:fid (if fid fid (keyword (gensym "ERR")))
+            :top [[p {:style {:font-size "20px" :color "red"}} msg]]}}})
+
 (defn insert-frame [cm]
   (let [tid (hmi/get-cur-tab :id)
-        nssym (get (get-adb [:tabs :extns tid]) :ns 'aerial.saite.compiler')
+        nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler')
         {:keys [fid locid tabfid]} (current-cm-frame-info cm)
         src (get-outer-sexpr-src cm)
         pos (if (= locid :beg) :same :after)
+        
         res (volatile! nil)
         _ (evaluate nssym src (fn[v] (vswap! res #(do v))))
-        picframe (or (@res :value)
-                     (let [err (@res :error)
-                           e (if (string? err) err (js->clj(@res :error)))]
-                       {:usermeta
-                        {:frame {:fid fid
-                                 :top (str "<p>"
-                                           (if (string? e) e e.cause.message)
-                                           "</p>")}}}))]
-    (when (and fid (not tabfid))
+        res (deref res)
+        
+        e (js->clj (res :error))
+        err (cond e e.cause.message
+                  (= (res :value) hc/xform) "Error : Missing closing paren!"
+                  :else nil)
+        undefined (when err (re-find #"undefined" err))
+        errmsg (if undefined
+                 (str err "'undefined' is usually due to undeclared var")
+                 err)
+        value (res :value)
+        picframe (if err (make-error-frame fid errmsg) value)]
+    
+    (when (and (or fid err) (not tabfid))
       (tops/add-frame picframe locid pos))))
 
 (defn delete-frame [cm]
@@ -258,12 +279,44 @@
     (when (and fid tabfid)
       (tops/remove-frame tabfid))))
 
+(defn re-visualize [cm]
+  (let [tid (hmi/get-cur-tab :id)
+        nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler')
+        {:keys [fid locid tabfid]} (current-cm-frame-info cm)
+        src (get-outer-sexpr-src cm)
+        res (volatile! nil)
+        _ (evaluate nssym src (fn[v] (vswap! res #(do v))))]
+    (when (and (@res :value) fid tabfid)
+      (tops/update-frame :vis (@res :value)))))
+
+
+(defn enhanced-cut [cm]
+  (let [ctrlwfn ((js->clj CodeMirror.keyMap.emacs) "Ctrl-W")
+        start (.getCursor cm "start")
+        end (.getCursor cm "end")
+        stgval (.getValue cm)
+        lines (clojure.string/split-lines stgval)
+        lines (subvec lines start.line (inc end.line))
+        fm (read-string (clojure.string/join "\n" lines))
+        fid (->> fm (drop-while #(not= % :FID)) second)]
+    (tops/remove-frame fid)
+    (ctrlwfn cm)))
+
+(defn enhanced-yank [cm]
+  (let [ctrlyfn ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Y")
+        _ (ctrlyfn cm)
+        pos (.getCursor cm)
+        _ (.setCursor cm (- pos.line 1))]
+    (insert-frame cm)
+    (.setCursor cm pos)))
+
+
 
 ;;#(reset! expr* %)
 (defn evalxe [cm] (reset! dbg-cm cm)
   (let [cb cm.CB
         tid (hmi/get-cur-tab :id)
-        nssym (get (get-adb [:tabs :extns tid]) :ns 'aerial.saite.compiler')]
+        nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler')]
     (if-let [source (get-cm-sexpr cm)]
       (evaluate nssym source cb)
       (cb {:value "not on sexpr"}))))
@@ -271,7 +324,7 @@
 (defn evalcc [cm] (reset! dbg-cm cm)
   (let [cb cm.CB
         tid (hmi/get-cur-tab :id)
-        nssym (get (get-adb [:tabs :extns tid]) :ns 'aerial.saite.compiler')
+        nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler')
         src (get-outer-sexpr-src cm)]
     (evaluate nssym src cb)))
 
@@ -288,8 +341,11 @@
              "Insert"    insert-frame
              "Delete"    delete-frame
 
+             "Ctrl-Alt-W"    enhanced-cut
+             "Ctrl-Alt-Y"    enhanced-yank
              "Ctrl-X Ctrl-I" insert-frame
              "Ctrl-X Ctrl-D" delete-frame
+             "Ctrl-X Ctrl-V" re-visualize
              "Ctrl-X Ctrl-E" evalxe
              "Ctrl-X Ctrl-C" evalcc
              })))
@@ -377,7 +433,12 @@
          :md-icon-name "zmdi-circle-o"
          :tooltip "Clear"
          :on-click
-         #(do (reset! output ""))]]]
+         #(do (reset! output ""))]
+        (when (deref (opts :throbber))
+          [md-circle-icon-button
+           :md-icon-name "zmdi-spinner"
+           :tooltip "I/O ..."
+           :on-click #(do  :nop)])]]
       [layout :gap "5px"
        :width (opts :width "500px")
        :height (+ ch oh 50)
@@ -418,15 +479,16 @@
     (fn [& opts]
       (let [opts (->> opts (partition-all 2) (mapv vec) (into {}))
             kwid (name (opts :id (gensym "cm-")))
-            opts (or (get-adb [:editors kwid :opts])
+            opts (or (get-ddb [:editors kwid :opts])
                      (merge {:id kwid, :size "auto" :layout :up-down
-                             :height "300px", :out-height "100px"}
+                             :height "300px", :out-height "100px"
+                             :throbber (rgt/atom false)}
                             opts))
             _ (if (and (opts :src) (= @input "")) (reset! input (opts :src)))
-            input (or (get-adb [:editors kwid :in]) input)
-            output (or (get-adb [:editors kwid :ot]) output)]
-        (when-not (get-adb [:editors kwid])
-          (update-adb [:editors kwid] {:in input, :ot output, :opts opts})
+            input (or (get-ddb [:editors kwid :in]) input)
+            output (or (get-ddb [:editors kwid :ot]) output)]
+        (when-not (get-ddb [:editors kwid])
+          (update-ddb [:editors kwid] {:in input, :ot output, :opts opts})
           (printchan :CM kwid :called :OPTS opts))
         [cm-hiccup opts input output]))))
 
