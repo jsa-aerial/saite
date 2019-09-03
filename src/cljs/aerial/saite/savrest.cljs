@@ -3,12 +3,36 @@
 
    [clojure.set :refer [map-invert]]
 
+   [aerial.hanasu.common
+    :refer [update-db get-db]]
    [aerial.hanami.core
     :as hmi
-    :refer [printchan get-adb update-adb]]
+    :refer [printchan]]
 
    [com.rpl.specter :as sp]
    ))
+
+
+
+
+;;; Data DB =============================================================== ;;;
+
+
+(defonce data-db (atom {}))
+
+(defn update-ddb
+  ([] (update-db data-db {}))
+  ([keypath vorf]
+   (update-db data-db keypath vorf))
+  ([kp1 vof1 kp2 vof2 & kps-vs]
+   (apply update-db data-db kp1 vof1 kp2 vof2 kps-vs)))
+
+(defn get-ddb
+  ([] (get-db data-db []))
+  ([key-path]
+   (get-db data-db key-path)))
+
+
 
 
 ;;; Document Save and Restore ============================================= ;;;
@@ -20,12 +44,17 @@
               (select-keys tab [:id :label :opts :specs])))))
 
 (defn get-extn-info [tid]
-  (let [m (get-adb [:tabs :extns tid])
+  (let [m (get-ddb [:tabs :extns tid])
         eid (m :eid)
-        src (get-adb [:editors eid :in])
-        src (if src (deref src) (m :src))]
+        src (get-ddb [:editors eid :in])
+        src (if src (deref src) (m :src))
+        sratom (m :$sratom)
+        sratom-val (when sratom (deref sratom))
+        $split (m :$split)
+        $split (if sratom-val sratom-val $split)
+        m (-> m (dissoc :$sratom) (assoc :$split $split :src src))]
     (printchan :TID tid :EID eid)
-    (assoc m :src src)))
+    m))
 
 (defn get-tab-data []
   (->> (tab-data)
@@ -45,7 +74,7 @@
                                             :else v)]
                                     (vector k v))))
                           (into {}))})))
-       (cons (get-adb [:main :uid :name]))
+       (cons (hmi/get-adb [:main :uid :name]))
        vec))
 
 (def invert-re-com-xref
@@ -72,9 +101,10 @@
                    (if-let [info (->> tm :opts :wrapfn)]
                      (let [f (-> info :fn second extns-xref)
                            {:keys [tid src]} info
+                           oopts (dissoc (tm :opts) :wrapfn)
                            label (tm :label)
                            specs (tm :specs)
-                           args (->> (dissoc info :fn :tid :src)
+                           args (->> (merge oopts (dissoc info :fn :tid :src))
                                      seq (cons [:specs specs])
                                      (apply concat))]
                        (printchan :ARGS args)
