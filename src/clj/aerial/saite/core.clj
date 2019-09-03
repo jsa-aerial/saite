@@ -122,16 +122,17 @@
 
 #_{:op :read-data
    :data {:uid uid
+
           :from <:url or :file
           :path the-full-path}}
 (defmethod hmi/user-msg :read-data [msg]
-  (let [{:keys [uid from path]} (msg :data)
+  (let [{:keys [uid chankey from path]} (msg :data)
         ftype (fs/ftype path)
-        data (cond (= from :file) (hd/get-data path)
+        data (cond (= from :file) (hd/get-data (fs/fullpath path))
                    (= ftype "json") (-> path slurp json/read-str)
                    (= ftype "csv") (-> path slurp csv/read-csv)
                    :else (slurp path))
-        msg {:op :data :data data}]
+        msg {:op :data :data {:chankey chankey :data data}}]
     (hmi/send-msg (uid :name) msg)))
 
 
