@@ -111,12 +111,12 @@
   (let [config (hmi/get-adb [:saite :cfg])
         saveloc (config :saveloc)
         {:keys [uid location]} (msg :data)
-        {:keys [session file]} location
+        {:keys [session file url]} location
         dir (fs/join (fs/fullpath saveloc) session)
         file (fs/join dir file)
-        data (->> file slurp read-string)
+        data (->> (if url url file) slurp read-string)
         msg {:op :load-doc :data data}]
-    (hmi/printchan :Loading file)
+    (hmi/printchan :Loading (if url url file))
     (hmi/send-msg (uid :name) msg)))
 
 
