@@ -255,11 +255,11 @@
         {:keys [fid locid tabfid]} (current-cm-frame-info cm)
         src (get-outer-sexpr-src cm)
         pos (if (= locid :beg) :same :after)
-        
+
         res (volatile! nil)
         _ (evaluate nssym src (fn[v] (vswap! res #(do v))))
         res (deref res)
-        
+
         e (js->clj (res :error))
         err (cond e e.cause.message
                   (= (res :value) hc/xform) "Error : Missing closing paren!"
@@ -270,7 +270,7 @@
                  err)
         value (res :value)
         picframe (if err (make-error-frame fid errmsg) value)]
-    
+
     (when (and (or fid err) (not tabfid))
       (tops/add-frame picframe locid pos))))
 
@@ -297,16 +297,23 @@
         stgval (.getValue cm)
         lines (clojure.string/split-lines stgval)
         lines (subvec lines start.line (inc end.line))
-        fm (read-string (clojure.string/join "\n" lines))
-        fid (->> fm (drop-while #(not= % :FID)) second)]
-    (tops/remove-frame fid)
+        cnt (count lines)
+        first-line (-> lines first (subs start.ch))
+        last-line (if (= 1 cnt) "" (-> lines last (subs 0 end.ch)))
+        mid-lines (if (= 1 cnt) [] (subvec lines 1 (dec (count lines))))
+        lines (-> [first-line mid-lines last-line] flatten vec)
+        src (clojure.string/join "\n" lines)
+        fm (try (read-string src) (catch js/Error e []))
+        fid (when (seq? fm) (->> fm (drop-while #(not= % :FID)) second))]
+    (when fid (tops/remove-frame fid))
     (ctrlwfn cm)))
 
 (defn enhanced-yank [cm]
   (let [ctrlyfn ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Y")
+        bsexpfn ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-B")
         _ (ctrlyfn cm)
-        pos (.getCursor cm)
-        _ (.setCursor cm (- pos.line 1))]
+        pos (.getCursor cm)]
+    (bsexpfn cm)
     (insert-frame cm)
     (.setCursor cm pos)))
 
