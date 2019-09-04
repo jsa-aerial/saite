@@ -403,6 +403,7 @@
    :OPTS (hc/default-opts :vgl), :TOPTS (hc/default-opts :tab))
   (start :elem elem
          :port js/location.port
+         :host js/location.hostname
          :symxlate-cb symxlate-callback
          :frame-cb frame-callback
          :header-fn saite-header
