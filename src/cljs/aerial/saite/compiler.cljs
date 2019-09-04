@@ -84,11 +84,22 @@
 
 (def base-requires
   "[clojure.string :as str]
-         [aerial.hanami.core :as hmi :refer [md]]
-         [aerial.hanami.common :as hc :refer [RMV]]
-         [aerial.hanami.templates :as ht]
-         [aerial.saite.core :as sc :refer [read-data]]
-         [com.rpl.specter :as sp]")
+   [aerial.hanami.core :as hmi :refer [md]]
+   [aerial.hanami.common :as hc :refer [RMV]]
+   [aerial.hanami.templates :as ht]
+   [aerial.saite.core :as sc :refer [read-data]]
+   [com.rpl.specter :as sp]
+
+   [re-com.core
+    :refer [h-box v-box box gap line h-split v-split scroller
+            button row-button md-icon-button md-circle-icon-button info-button
+            input-text input-password input-textarea
+            label title p
+            single-dropdown
+            checkbox radio-button slider progress-bar throbber
+            horizontal-bar-tabs vertical-bar-tabs
+            modal-panel popover-content-wrapper popover-anchor-wrapper]]
+  ")
 
 (defn add-requires [base requires]
   (reduce (fn[R r]
@@ -99,10 +110,7 @@
   [nssym & {:keys [base requires]
             :or {base base-requires}}]
   (evaluate
-   (format
-    "(ns %s
-       (:require
-         %s))"
+   (format "(ns %s\n  (:require\n   %s))"
     (name nssym)
     (add-requires base requires))
    println))
@@ -110,6 +118,9 @@
 
 #_(ambient.main.core/analyzer-state 'aerial.hanami.core)
 (defn load-analysis-cache! []
+  (cljs.js/load-analysis-cache!
+   state 're-com.core
+   (analyzer-state 're-com.core))
   (cljs.js/load-analysis-cache!
    state 'aerial.saite.compiler
    (analyzer-state 'aerial.saite.compiler))
