@@ -105,11 +105,13 @@
   (let[show? (rgt/atom false)
        session-name (rgt/atom "")
        file-name (rgt/atom "")
+       url (rgt/atom "")
        choices (rgt/atom nil)
        mode (rgt/atom nil)
        donefn (fn[event]
-                (go (async/>! (hmi/get-adb [:main :chans :com])
-                              {:session @session-name :file @file-name}))
+                (go (async/>!
+                     (hmi/get-adb [:main :chans :com])
+                     {:session @session-name :file @file-name :url @url}))
                 (reset! show? false))
        cancelfn (fn[event]
                   (go (async/>! (hmi/get-adb [:main :chans :com]) :cancel))
@@ -139,6 +141,7 @@
                              (js/console.log "upload clicked")
                              (reset! session-name (get-ddb [:main :files :dir]))
                              (reset! file-name (get-ddb [:main :files :load]))
+                             (reset! url nil)
                              (reset! mode :load)
                              (reset! show? true)
                              (let [location (async/<! ch)]
@@ -187,7 +190,7 @@
                      (when @show?
                        (when (nil? @choices)
                          (reset! choices ((get-ddb [:main :files]) :choices)))
-                       [file-modal choices session-name file-name mode
+                       [file-modal choices session-name file-name mode url
                         donefn cancelfn])] ]]
 
         [gap :size "20px"]

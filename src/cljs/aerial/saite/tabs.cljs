@@ -335,11 +335,25 @@
                :on-change #(reset! file-name %)]
               [ok-cancel donefn cancelfn]]])
 
+(defn urldoc [url donefn cancelfn]
+  [v-box
+   :gap "10px"
+   :children [[label
+               :style {:font-size "18px"}
+               :label "URL"]
+              [input-text
+               :model url
+               :width "700px" :height "26px"
+               :on-change #(reset! url %)]
+              [ok-cancel donefn cancelfn]]])
 
-(defn file-modal [choices session-name file-name mode donefn cancelfn]
+(defn file-modal [choices session-name file-name mode url donefn cancelfn]
   (let [sessions (->> choices deref keys sort (mapv (fn[k] {:id k :label k})))
         doc-files  (rgt/atom (->> session-name deref (#(@choices %))
                                   (mapv (fn[k] {:id k :label k}))))
+        url? (rgt/atom false)
+        urldonefn (fn[event] (reset! url? false) (donefn event))
+
         new? (rgt/atom false)
         newdonefn (fn[event]
                     (let [fname @file-name
@@ -351,7 +365,7 @@
                                              @session-name (vec names)))
                       (printchan @doc-files)
                       (reset! new? false)))]
-    (fn [choices session-name file-name mode donefn cancelfn]
+    (fn [choices session-name file-name mode url donefn cancelfn]
       [modal-panel
        :backdrop-color   "grey"
        :backdrop-opacity 0.4
@@ -363,8 +377,17 @@
                    :model new?
                    :label "New location"
                    :on-change #(reset! new? %)])
-                (if @new?
-                  [file-new session-name file-name newdonefn cancelfn]
+                (when (not= (deref mode) :save)
+                  [checkbox
+                   :model url?
+                   :label "URL"
+                   :on-change #(reset! url? %)])
+                (cond
+                  @new? [file-new session-name file-name newdonefn cancelfn]
+
+                  @url? [urldoc url urldonefn cancelfn]
+
+                  :else
                   [v-box
                    :gap "10px"
                    :children
