@@ -258,21 +258,17 @@
               ]]]]])
 
 (defn help-box []
-  [border :padding "2px" :radius "2px"
-   :l-border "1px solid lightgrey"
-   :r-border "1px solid lightgrey"
-   :b-border "1px solid lightgrey"
-   :child [h-box :gap "5px" :justify :end
-           :children
-           [[md-circle-icon-button
-             :md-icon-name "zmdi-help" :size :smaller
-             :tooltip "Quick Help"
-             :on-click #(printchan %)]
-            [md-circle-icon-button
-             :md-icon-name "zmdi-info" :size :smaller
-             :tooltip "Doc Help"
-             :on-click #()]
-            [gap :size "10px"]]]])
+  [h-box :gap "5px" :justify :end
+   :children
+   [[md-circle-icon-button
+     :md-icon-name "zmdi-help" :size :smaller
+     :tooltip "Quick Help"
+     :on-click #(printchan %)]
+    [md-circle-icon-button
+     :md-icon-name "zmdi-info" :size :smaller
+     :tooltip "Doc Help"
+     :on-click #()]
+    [gap :size "10px"]]])
 
 
 
