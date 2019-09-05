@@ -235,6 +235,48 @@
                     sratom (get-ddb [:tabs :extns tid :$sratom])]
                 (reset! sratom 0))]]]])
 
+
+
+
+;;; Header Help Component ================================================= ;;;
+
+(defn help-modal []
+  []
+  [modal-panel
+   :backdrop-color   "grey"
+   :backdrop-opacity 0.4
+   :child [v-box
+           :gap "10px"
+           :children
+           [[h-box :gap "10px"
+             :children
+             [[v-box :gap "10px"
+               :children
+               [[label :style {:font-size "18px"} :label "Editor Keys:"]
+                [md {:style {:fond-size "16px"}}
+                 ""]]]
+              ]]]]])
+
+(defn help-box []
+  [border :padding "2px" :radius "2px"
+   :l-border "1px solid lightgrey"
+   :r-border "1px solid lightgrey"
+   :b-border "1px solid lightgrey"
+   :child [h-box :gap "5px" :justify :end
+           :children
+           [[md-circle-icon-button
+             :md-icon-name "zmdi-help" :size :smaller
+             :tooltip "Quick Help"
+             :on-click #(printchan %)]
+            [md-circle-icon-button
+             :md-icon-name "zmdi-info" :size :smaller
+             :tooltip "Doc Help"
+             :on-click #()]
+            [gap :size "10px"]]]])
+
+
+
+
 ;;; Header Tab Mgt Components ============================================= ;;;
 
 (defn del-tab [tid]

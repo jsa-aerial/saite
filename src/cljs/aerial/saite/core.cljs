@@ -26,7 +26,7 @@
     :refer [code-mirror cm]]
    [aerial.saite.tabs
     :refer [editor-repl-tab interactive-doc-tab extns-xref
-            file-modal editor-box tab-box tab<->]]
+            file-modal editor-box tab-box help-box tab<->]]
    [aerial.saite.savrest
     :refer [update-ddb get-ddb get-tab-data xform-tab-data load-doc]]
 
@@ -117,87 +117,91 @@
                   (go (async/>! (hmi/get-adb [:main :chans :com]) :cancel))
                   (reset! show? false))]
     (fn []
-      [h-box :gap "10px" :max-height "30px"
+      [h-box :justify :between
        :children
-       [[gap :size "5px"]
-        [:img {:src (hmi/get-adb [:main :logo])}]
-        #_[hmi/session-input]
-        [gap :size "5px"]
-        [title
-         :level :level3
-         :label [:span.bold @session-name #_(hmi/get-adb [:main :uid :name])]]
-        [gap :size "30px"]
-        [border :padding "2px" :radius "2px"
-         :l-border "1px solid lightgrey"
-         :r-border "1px solid lightgrey"
-         :b-border "1px solid lightgrey"
-         :child
-         [h-box :gap "10px"
-          :children [[md-circle-icon-button
-                      :md-icon-name "zmdi-upload" :size :smaller
-                      :tooltip "Upload Document"
-                      :on-click
-                      #(go (let [ch (hmi/get-adb [:main :chans :com])]
-                             (js/console.log "upload clicked")
-                             (reset! session-name (get-ddb [:main :files :dir]))
-                             (reset! file-name (get-ddb [:main :files :load]))
-                             (reset! url nil)
-                             (reset! mode :load)
-                             (reset! show? true)
-                             (let [location (async/<! ch)]
-                               (when (not= :cancel location)
-                                 (let [fname (location :file)
-                                       dname (location :session)
-                                       location (assoc
-                                                 location
-                                                 :file (str fname ".clj"))]
-                                   (update-ddb [:main :files :load] fname
-                                               [:main :files :dir] dname)
-                                   (when (not= @session-name
-                                               (hmi/get-adb [:main :uid :name]))
-                                     (hmi/set-session-name @session-name))
-                                   (hmi/send-msg
-                                    {:op :load-doc
-                                     :data {:uid (hmi/get-adb [:main :uid])
-                                            :location location}}))))))]
+       [[h-box :gap "10px" :max-height "30px"
+         :children
+         [[gap :size "5px"]
+          [box :child [:img {:src (hmi/get-adb [:main :logo])}]]
+          [gap :size "5px"]
+          [title
+           :level :level3
+           :label [:span.bold @session-name]]
+          [gap :size "30px"]
+          [border :padding "2px" :radius "2px"
+           :l-border "1px solid lightgrey"
+           :r-border "1px solid lightgrey"
+           :b-border "1px solid lightgrey"
+           :child
+           [h-box :gap "10px"
+            :children
+            [[md-circle-icon-button
+              :md-icon-name "zmdi-upload" :size :smaller
+              :tooltip "Upload Document"
+              :on-click
+              #(go (let [ch (hmi/get-adb [:main :chans :com])]
+                     (js/console.log "upload clicked")
+                     (reset! session-name (get-ddb [:main :files :dir]))
+                     (reset! file-name (get-ddb [:main :files :load]))
+                     (reset! url nil)
+                     (reset! mode :load)
+                     (reset! show? true)
+                     (let [location (async/<! ch)]
+                       (when (not= :cancel location)
+                         (let [fname (location :file)
+                               dname (location :session)
+                               location (assoc
+                                         location
+                                         :file (str fname ".clj"))]
+                           (update-ddb [:main :files :load] fname
+                                       [:main :files :dir] dname)
+                           (when (not= @session-name
+                                       (hmi/get-adb [:main :uid :name]))
+                             (hmi/set-session-name @session-name))
+                           (hmi/send-msg
+                            {:op :load-doc
+                             :data {:uid (hmi/get-adb [:main :uid])
+                                    :location location}}))))))]
 
-                     [md-circle-icon-button
-                      :md-icon-name "zmdi-download" :size :smaller
-                      :tooltip "Save Document"
-                      :on-click
-                      #(go (let [ch (hmi/get-adb [:main :chans :com])]
-                             (js/console.log "download clicked")
-                             (reset! session-name (get-ddb [:main :files :dir]))
-                             (reset! file-name (get-ddb [:main :files :save]))
-                             (reset! mode :save)
-                             (reset! show? true)
-                             (let [location (async/<! ch)]
-                               (when (not= :cancel location)
-                                 (let [fname (location :file)
-                                       dname (location :session)
-                                       location (assoc
-                                                 location
-                                                 :file (str fname ".clj"))]
-                                   (update-ddb [:main :files :save] fname
-                                               [:main :files :dir] dname)
-                                   (let [spec-info (xform-tab-data
-                                                    (get-tab-data))]
-                                     (hmi/send-msg
-                                      {:op :save-doc
-                                       :data {:loc location
-                                              :info spec-info}})))))))]
+             [md-circle-icon-button
+              :md-icon-name "zmdi-download" :size :smaller
+              :tooltip "Save Document"
+              :on-click
+              #(go (let [ch (hmi/get-adb [:main :chans :com])]
+                     (js/console.log "download clicked")
+                     (reset! session-name (get-ddb [:main :files :dir]))
+                     (reset! file-name (get-ddb [:main :files :save]))
+                     (reset! mode :save)
+                     (reset! show? true)
+                     (let [location (async/<! ch)]
+                       (when (not= :cancel location)
+                         (let [fname (location :file)
+                               dname (location :session)
+                               location (assoc
+                                         location
+                                         :file (str fname ".clj"))]
+                           (update-ddb [:main :files :save] fname
+                                       [:main :files :dir] dname)
+                           (let [spec-info (xform-tab-data
+                                            (get-tab-data))]
+                             (hmi/send-msg
+                              {:op :save-doc
+                               :data {:loc location
+                                      :info spec-info}})))))))]
 
-                     (when @show?
-                       (when (nil? @choices)
-                         (reset! choices ((get-ddb [:main :files]) :choices)))
-                       [file-modal choices session-name file-name mode url
-                        donefn cancelfn])] ]]
+             (when @show?
+               (when (nil? @choices)
+                 (reset! choices ((get-ddb [:main :files]) :choices)))
+               [file-modal choices session-name file-name mode url
+                donefn cancelfn])] ]]
 
-        [gap :size "20px"]
-        [editor-box]
+          [gap :size "20px"]
+          [editor-box]
 
-        [gap :size "20px"]
-        [tab-box]]])))
+          [gap :size "20px"]
+          [tab-box]]]
+
+        [help-box]]])))
 
 
 
@@ -390,7 +394,7 @@
  aerial.saite.compiler/state 'aerial.saite.core
  (aerial.saite.analyzer/analyzer-state 'aerial.saite.core))
 
-(when-let [elem (js/document.querySelector "#app")]
+#_(when-let [elem (js/document.querySelector "#app")]
   (hc/update-defaults
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
               :frame {:top :TOP, :bottom :BOTTOM,
