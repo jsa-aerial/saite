@@ -240,35 +240,42 @@
 
 ;;; Header Help Component ================================================= ;;;
 
-(defn help-modal []
-  []
-  [modal-panel
-   :backdrop-color   "grey"
-   :backdrop-opacity 0.4
-   :child [v-box
-           :gap "10px"
-           :children
-           [[h-box :gap "10px"
-             :children
-             [[v-box :gap "10px"
+(defn help-modal [show?]
+  (let [closefn (fn[event] (reset! show? false))]
+    (fn[show?]
+      [modal-panel
+       :backdrop-color   "grey"
+       :backdrop-opacity 0.4
+       :child [v-box :gap "10px"
                :children
-               [[label :style {:font-size "18px"} :label "Editor Keys:"]
-                [md {:style {:fond-size "16px"}}
-                 ""]]]
-              ]]]]])
+               [[label :style {:font-size "18px"} :label "Synopsis:"]
+                [scroller
+                 :max-height "400px"
+                 :max-width "600px"
+                 :child [md {:style {:fond-size "16px"}}
+                         (get-ddb [:main :doc :quick])]]
+                [h-box :gap "5px" :justify :end
+                 :children
+                 [[md-circle-icon-button
+                   :md-icon-name "zmdi-close"
+                   :tooltip "Close"
+                   :on-click closefn]]]]]])))
 
 (defn help-box []
-  [h-box :gap "5px" :justify :end
-   :children
-   [[md-circle-icon-button
-     :md-icon-name "zmdi-help" :size :smaller
-     :tooltip "Quick Help"
-     :on-click #(printchan %)]
-    [md-circle-icon-button
-     :md-icon-name "zmdi-info" :size :smaller
-     :tooltip "Doc Help"
-     :on-click #()]
-    [gap :size "10px"]]])
+  (let [quick? (rgt/atom false)]
+    (fn []
+      [h-box :gap "5px" :justify :end
+       :children
+       [[md-circle-icon-button
+         :md-icon-name "zmdi-help" :size :smaller
+         :tooltip "Quick Help"
+         :on-click #(reset! quick? true)]
+        [md-circle-icon-button
+         :md-icon-name "zmdi-info" :size :smaller
+         :tooltip "Doc Help"
+         :on-click #()]
+        (when @quick? [help-modal quick?])
+        [gap :size "10px"]]])))
 
 
 
