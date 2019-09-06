@@ -151,12 +151,12 @@
    :saveloc (fs/join home-path "Doc")})
 
 
-(defn init []
+(defn init [port]
   (let [cfgfile (-> home-path fs/fullpath (fs/join "config.edn"))
         cfg (if (fs/exists? cfgfile)
               (-> cfgfile slurp read-string)
               default-cfg)]
-    (hmi/update-adb [:saite :cfg] cfg))
+    (hmi/update-adb [:saite :cfg] (assoc cfg :port port)))
 
   (hc/add-defaults
    :HEIGHT 400 :WIDTH 450
@@ -178,7 +178,9 @@
 (defn config-info [data-map]
   (let [config (hmi/get-adb [:saite :cfg])
         saveloc (config :saveloc)
-        sessions (-> saveloc fs/fullpath (fs/directory-files ""))]
+        sessions (-> saveloc fs/fullpath (fs/directory-files ""))
+        port (config :port)
+        quick-doc (slurp (format "http://localhost:%s/doc/quick.md" port))]
     (assoc
      data-map
      :save-info (mapv #(vector (fs/basename %)
@@ -187,11 +189,12 @@
                                     (mapv (fn[f] (-> f fs/basename
                                                     (fs/replace-type ""))))))
                       sessions)
+     :doc {:quick quick-doc}
      :editor (config :editor))))
 
 
 (defn start [port]
-  (init)
+  (init port)
   (hmi/start-server port
                     :connfn config-info
                     :idfn (constantly "Exploring")
