@@ -232,7 +232,7 @@
 
 
 (defmethod user-msg :app-init [msg]
-  (let [{:keys [save-info editor]} (msg :data)
+  (let [{:keys [save-info editor doc]} (msg :data)
         choices (into {} save-info)
         dirs (-> choices keys sort)]
     (printchan :APP-INIT save-info editor)
@@ -247,7 +247,10 @@
                 [:main :files :dir]  (hmi/get-adb [:main :uid :name])
                 [:main :files :save] (-> dirs first choices sort first)
                 [:main :files :load] (-> dirs first choices sort first)
+
                 [:main :editor] editor
+                [:main :doc] doc
+
                 [:editors] {}
                 [:main :chans] {}
                 [:tabs :extns :$split] 33.0)
