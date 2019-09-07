@@ -422,6 +422,17 @@
 
 
 
+(defn spinner??? []
+  [box
+   :child [:div {:class "lds-spinner"}
+           [:div] [:div] [:div] [:div] [:div] [:div]
+           [:div] [:div] [:div] [:div] [:div] [:div]]])
+
+(defn spinner []
+  [box
+   :justify :center
+   :child [:div {:class "spinner"}]])
+
 (defn cm-hiccup [opts input output]
   (let [id (opts :id)
         kwid (-> id name keyword)
@@ -430,7 +441,8 @@
         oh (opts :out-height "100px")]
     [h-box :gap "5px" :attr {:id id}
      :children
-     [[v-box :gap "5px"
+     [[gap :size "3px"]
+      [v-box :gap "5px"
        :children
        [[md-circle-icon-button
          :md-icon-name "zmdi-caret-right-circle"
@@ -442,10 +454,7 @@
          :on-click
          #(do (reset! output ""))]
         (when (deref (opts :throbber))
-          [md-circle-icon-button
-           :md-icon-name "zmdi-spinner"
-           :tooltip "I/O ..."
-           :on-click #(do  :nop)])]]
+          [spinner])]]
       [layout :gap "5px"
        :width (opts :width "500px")
        :height (+ ch oh 50)
