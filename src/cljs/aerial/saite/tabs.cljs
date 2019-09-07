@@ -174,7 +174,7 @@
   (printchan :alert-panel)
   [modal-panel
    :child [re-com.core/alert-box
-           :id 1 :alert-type :warning
+           :id 1 :alert-type :danger
            :heading txt
            :closeable? true
            :on-close closefn]
@@ -252,7 +252,7 @@
                 [scroller
                  :max-height "400px"
                  :max-width "600px"
-                 :child [md {:style {:fond-size "16px"}}
+                 :child [md {:style {:fond-size "16px" :width "600px"}}
                          (get-ddb [:main :doc :quick])]]
                 [h-box :gap "5px" :justify :end
                  :children
