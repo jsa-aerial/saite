@@ -26,7 +26,7 @@
     :refer [code-mirror cm]]
    [aerial.saite.tabs
     :refer [editor-repl-tab interactive-doc-tab extns-xref
-            file-modal editor-box tab-box help-box tab<->]]
+            alert-panel file-modal editor-box tab-box help-box tab<->]]
    [aerial.saite.savrest
     :refer [update-ddb get-ddb get-tab-data xform-tab-data load-doc]]
 
@@ -102,7 +102,10 @@
 
 
 (defn saite-header []
-  (let[show? (rgt/atom false)
+  (let[alert? (rgt/atom false)
+       _ (update-ddb [:alert :show?] alert? [:alert :txt] "")
+       close-alert (fn [event] (reset! alert? false))
+       show? (rgt/atom false)
        session-name (rgt/atom "")
        file-name (rgt/atom "")
        url (rgt/atom "")
@@ -199,7 +202,10 @@
           [editor-box]
 
           [gap :size "20px"]
-          [tab-box]]]
+          [tab-box]
+
+          (when @alert?
+            [alert-panel (get-ddb [:alert :txt]) close-alert])]]
 
         [help-box]]])))
 
@@ -209,6 +215,15 @@
 ;;; Messaging ============================================================ ;;;
 
 
+(defmethod user-msg :error [msg]
+  (let [alert? (get-ddb [:alert :show?])
+        errinfo (msg :data)
+        errname (-> errinfo :error (cljstr/split #"\.") last)]
+    (update-ddb [:alert :txt]
+                (str "ERROR : " errname  ", " (errinfo :msg)))
+    (reset! alert? true)))
+
+
 
 (def newdoc-data (atom []))
 
@@ -216,6 +231,11 @@
   (let [data (msg :data)]
     (reset! newdoc-data data)
     (load-doc data extns-xref)))
+
+
+(defmethod user-msg :evalres [msg]
+  (let [evalres (msg :data)]
+    (printchan evalres)))
 
 
 (defmethod user-msg :clj-read [msg]
