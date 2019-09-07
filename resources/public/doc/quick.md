@@ -45,5 +45,8 @@
 
   * `Ctrl-X Ctrl-V` : Repaint vis associated with frame at cursor
 
+  * `Ctrl-Alt-W` : Enhanced cut - will remove associated frame if visible
+  * `Ctrl-Alt-Y` : Enhanced yank - will insert (in position) associated frame if *not* visible
+
 
 ## Control Bar
