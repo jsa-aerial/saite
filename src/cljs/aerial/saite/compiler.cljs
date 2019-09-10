@@ -107,13 +107,19 @@
           base-requires requires))
 
 (defn set-namespace
-  [nssym & {:keys [base requires]
-            :or {base base-requires}}]
+  [nssym & {:keys [base requires cljrequires]
+            :or {base base-requires cljrequires []}}]
   (evaluate
    (format "(ns %s\n  (:require\n   %s))"
     (name nssym)
     (add-requires base requires))
-   println))
+   println)
+
+  (hmi/send-msg
+   {:op :set-namespace
+    :data {:nssym nssym :requires cljrequires}}))
+
+
 
 
 #_(ambient.main.core/analyzer-state 'aerial.hanami.core)
