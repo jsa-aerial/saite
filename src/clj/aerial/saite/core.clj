@@ -20,14 +20,16 @@
 
 
 (defmacro try+ [msg & body]
-  `(let [name# (get-in ~msg [:data :uid :name])]
+  `(let [name#  (get-in ~msg [:data :uid :name])
+         eval?# (get-in ~msg [:data :eval])
+         chkey# (get-in ~msg [:data :chankey])]
      (try
        ~@body
        (catch Error e#
          (hmi/send-msg
           name#
           {:op :error
-           :data {:error (str (type e#)),
+           :data {:error (str (type e#)), :eval eval?#, :chankey chkey#
                   :msg (->  ((Throwable->map e#) :cause)
                             (cljstr/split #"\n") first
                             (cljstr/split #": ") rest
@@ -36,13 +38,13 @@
          (hmi/send-msg
           name#
           {:op :error
-           :data {:error (str (type e#))
+           :data {:error (str (type e#)), :eval eval?#, :chankey chkey#
                   :msg (str (.getMessage e#) ": " (.getData e#))}}))
        (catch Exception e#
          (hmi/send-msg
           name#
           {:op :error
-           :data {:error (str (type e#)),
+           :data {:error (str (type e#)), :eval eval?#, :chankey chkey#
                   :cause (str ((Throwable->map e#) :cause))
                   :msg (-> e# Throwable->map :via first :message)}})))))
 
@@ -127,43 +129,49 @@
         {:keys [nssym requires]} nsinfo
         requires-stg (if (not (seq requires))
                        ""
-                       (cljstr/join "\n                " requires))]
+                       (cljstr/join "\n            " requires))]
     (try+ msg
-     (eval
-      (read-string
-       (format
-        "(ns %s
-      (:require [clojure.string :as str]
-                [clojure.data.csv :as csv]
-                [clojure.data.json :as json]
+     (binding [*ns* (find-ns 'aerial.saite.core)]
+       (eval
+        (read-string
+         (format
+          "(ns %s
+             (:require [clojure.string :as str]
+                       [clojure.data.csv :as csv]
+                       [clojure.data.json :as json]
 
-                [com.rpl.specter :as sp]
+                       [com.rpl.specter :as sp]
 
-                [aerial.fs :as fs]
-                [aerial.utils.string :as astr]
-                [aerial.utils.io :refer [letio] :as io]
-                [aerial.utils.coll :refer [vfold] :as coll]
-                [aerial.utils.math :as m]
-                [aerial.utils.math.probs-stats :as p]
-                [aerial.utils.math.infoth :as it]
+                       [aerial.fs :as fs]
+                       [aerial.utils.string :as astr]
+                       [aerial.utils.io :refer [letio] :as io]
+                       [aerial.utils.coll :refer [vfold] :as coll]
+                       [aerial.utils.math :as m]
+                       [aerial.utils.math.probs-stats :as p]
+                       [aerial.utils.math.infoth :as it]
 
-                [aerial.hanami.common :as hc :refer [RMV]]
-                [aerial.hanami.templates :as ht]
-                [aerial.hanami.core :as hmi]
-                [aerial.hanami.data :as hd]
-                %s))"
-        nssym requires-stg))))))
+                       [aerial.hanami.common :as hc :refer [RMV]]
+                       [aerial.hanami.templates :as ht]
+                       [aerial.hanami.core :as hmi]
+                       [aerial.hanami.data :as hd]
+                       %s)))"
+          nssym requires-stg)))))))
 
 
 (defmethod hmi/user-msg :eval-clj [msg]
   (try+ msg
    (let [codeinfo (msg :data)
-         {:keys [uid nssym code]} codeinfo
+         {:keys [uid chankey nssym code]} codeinfo
          nssym (if (string? nssym) (symbol nssym) nssym)
          code (if (string? code) (read-string code) code)
          res (binding [*ns* (find-ns nssym)]
                (eval code))
-         msg {:op :evalres :data res}]
+         res (cond (instance? clojure.lang.Var res)
+                   (let [v (deref res)]
+                     (if (fn? v) (str res) v))
+                   (instance? java.lang.Class res) (str res)
+                   :else res)
+         msg {:op :evalres :data {:chankey chankey :value res}}]
      (hmi/send-msg (uid :name) msg))))
 
 
