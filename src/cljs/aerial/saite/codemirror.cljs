@@ -125,6 +125,36 @@
       (js/alert (str "Check for miss-matched parens / brackets\n\n" e))
       '(:bad-code))))
 
+#_(get-ddb [:editors ~eid :opts :throbber])
+(defn xform-clj [clj? nssym code eid clj-forms-atom]
+  (sp/transform
+   sp/ALL
+   (fn[v]
+     (cond
+       (and (list? v) (= (first v) 'clj))
+       (let [body (cons 'do (rest v))
+             fmkey (keyword (gensym "cljcode-"))
+             newforms (assoc @clj-forms-atom fmkey [nssym body eid])]
+         (vreset! clj? true)
+         (reset! clj-forms-atom newforms)
+         fmkey)
+       
+       (and (list? v) (= (first v) 'let))
+       (let [bindings (xform-clj clj? nssym (second v) eid clj-forms-atom)
+             cljbindings (->> bindings (partition-all 2)
+                              (filter (fn[[k v]] (@clj-forms-atom v)))
+                              (mapv vec) (into {}))
+             _ (println :CLJBIND cljbindings)
+             body (xform-clj clj? nssym (drop 2 v) eid clj-forms-atom)]
+         (swap! clj-forms-atom (fn[m] (merge m cljbindings)))
+         `(let ~bindings ~@body))
+         
+       (coll? v) (xform-clj clj? nssym v eid clj-forms-atom)
+         
+       :else v))
+   code))
+
+
 (defn get-cm-frame-ids [cm]
   (let [l (get-all-cm-as-code cm)]
     (->> l (sp/select [LIST-NODES #(= (first %) 'hc/xform)])
@@ -251,7 +281,7 @@
 
 (defn insert-frame [cm]
   (let [tid (hmi/get-cur-tab :id)
-        nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler')
+        nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler)
         {:keys [fid locid tabfid]} (current-cm-frame-info cm)
         src (get-outer-sexpr-src cm)
         pos (if (= locid :beg) :same :after)
@@ -281,7 +311,7 @@
 
 (defn re-visualize [cm]
   (let [tid (hmi/get-cur-tab :id)
-        nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler')
+        nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler)
         {:keys [fid locid tabfid]} (current-cm-frame-info cm)
         src (get-outer-sexpr-src cm)
         res (volatile! nil)
@@ -323,7 +353,7 @@
 (defn evalxe [cm] (reset! dbg-cm cm)
   (let [cb cm.CB
         tid (hmi/get-cur-tab :id)
-        nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler')]
+        nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler)]
     (if-let [source (get-cm-sexpr cm)]
       (evaluate nssym source cb)
       (cb {:value "not on sexpr"}))))
@@ -331,9 +361,99 @@
 (defn evalcc [cm] (reset! dbg-cm cm)
   (let [cb cm.CB
         tid (hmi/get-cur-tab :id)
-        nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler')
+        nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler)
         src (get-outer-sexpr-src cm)]
     (evaluate nssym src cb)))
+
+
+
+;;; Server side execution
+;;;
+(defn eval-inner-on-jvm [nssym code eid]
+  (let [ch (async/chan)
+        chankey (keyword (gensym "chan-"))
+        res (volatile! nil)
+        spinr (get-ddb [:editors eid :opts :throbber])]
+    (update-ddb [:main :chans chankey] ch)
+    (hmi/send-msg {:op :eval-clj
+                   :data {:uid (hmi/get-adb [:main :uid])
+                          :eval true
+                          :chankey chankey
+                          :nssym nssym
+                          :code code}})
+    (reset! spinr true)
+    ch))
+
+(defn eval-mixed-xc [cm]
+  (let [cb cm.CB
+        src (get-outer-sexpr-src cm)
+        tid (hmi/get-cur-tab :id)
+        nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler)
+        eid (get-ddb [:tabs :extns tid :eid])
+        clj? (volatile! false)
+        clj-forms (atom {})
+        srccd (read-string src)
+        srccd (if (and (list? srccd) (= (first srccd)))
+                (list 'do srccd)
+                srccd)
+        code (xform-clj clj? nssym srccd eid clj-forms)
+        code (if @clj?
+               (let [code `(let [fm# ~(deref clj-forms)]
+                             ~code)]
+                 [@clj-forms code])
+               code)]
+    code
+    #_(evaluate nssym code cb)))
+
+(defn funcver [cm]
+  (go (let [cb cm.CB
+            [cljfms clscode] (eval-mixed-xc cm)]
+        (when (seq cljfms)
+          (loop [fms cljfms]
+            (if (not (seq fms))
+              :done
+              (let [[k v] (first fms)
+                    [nssym code eid] v
+                    res (async/<! (eval-inner-on-jvm nssym code eid))]
+                (reset! (get-ddb [:editors eid :opts :throbber]) false)
+                (cb res)
+                (recur (rest fms)))))))))
+
+
+
+
+(defn eval-on-jvm [src cb]
+  (let [ch (async/chan)
+        chankey (keyword (gensym "chan-"))
+        res (volatile! nil)
+        tid (hmi/get-cur-tab :id)
+        nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler)
+        eid (get-ddb [:tabs :extns tid :eid])
+        throbber (get-ddb [:editors eid :opts :throbber])]
+    (update-ddb [:main :chans chankey] ch)
+    (hmi/send-msg {:op :eval-clj
+                   :data {:uid (hmi/get-adb [:main :uid])
+                          :eval true
+                          :chankey chankey
+                          :nssym nssym
+                          :code src}})
+    (reset! throbber true)
+    (go (vreset! res (async/<! ch))
+        (reset! throbber false)
+        (update-ddb [:main :chans chankey] :rm)
+        (cb @res))))
+
+(defn evaljvm-xe [cm]
+  (let [cb cm.CB
+        src (get-cm-sexpr cm)]
+    (if src
+      (eval-on-jvm src cb)
+      (cb {:value "not on sexpr"}))))
+
+(defn evaljvm-cc [cm]
+  (let [cb cm.CB
+        src (get-outer-sexpr-src cm)]
+    (eval-on-jvm src cb)))
 
 
 (defn xtra-keys-emacs []
