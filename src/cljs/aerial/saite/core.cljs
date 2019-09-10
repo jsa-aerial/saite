@@ -216,11 +216,18 @@
 
 
 (defmethod user-msg :error [msg]
-  (let [alert? (get-ddb [:alert :show?])
+  (let [alert?  (get-ddb [:alert :show?])
         errinfo (msg :data)
-        errname (-> errinfo :error (cljstr/split #"\.") last)]
-    (update-ddb [:alert :txt]
-                (str "ERROR : " errname  ", " (errinfo :msg)))
+        eval?   (errinfo :eval)
+        errname (-> errinfo :error (cljstr/split #"\.") last)
+        errtxt  (str "ERROR : " errname  ", " (errinfo :msg))]
+
+    (when eval?
+      (let [chankey (errinfo :chankey)
+            ch (get-ddb [:main :chans chankey])]
+        (go (async/>! ch {:error errtxt}))))
+
+    (update-ddb [:alert :txt] errtxt)
     (reset! alert? true)))
 
 
@@ -234,8 +241,10 @@
 
 
 (defmethod user-msg :evalres [msg]
-  (let [evalres (msg :data)]
-    (printchan evalres)))
+  (let [res (msg :data)
+        chankey (res :chankey)
+        ch (get-ddb [:main :chans chankey])]
+    (go (async/>! ch res))))
 
 
 (defmethod user-msg :clj-read [msg]
@@ -310,12 +319,12 @@
         tid (hmi/get-cur-tab :id)
         eid (get-ddb [:tabs :extns tid :eid])
         throbber (get-ddb [:editors eid :opts :throbber])]
+    (update-ddb [:main :chans chankey] ch)
     (hmi/send-msg {:op :read-data
                    :data {:uid (hmi/get-adb [:main :uid])
                           :chankey chankey
                           :path path
                           :from :file}})
-    (update-ddb [:main :chans chankey] ch)
     (reset! throbber true)
     (go (vreset! data (async/<! ch))
         (reset! throbber false)
