@@ -138,19 +138,18 @@
          (vreset! clj? true)
          (reset! clj-forms-atom newforms)
          fmkey)
-       
+
        (and (list? v) (= (first v) 'let))
        (let [bindings (xform-clj clj? nssym (second v) eid clj-forms-atom)
              cljbindings (->> bindings (partition-all 2)
                               (filter (fn[[k v]] (@clj-forms-atom v)))
                               (mapv vec) (into {}))
-             _ (println :CLJBIND cljbindings)
              body (xform-clj clj? nssym (drop 2 v) eid clj-forms-atom)]
          (swap! clj-forms-atom (fn[m] (merge m cljbindings)))
          `(let ~bindings ~@body))
-         
+
        (coll? v) (xform-clj clj? nssym v eid clj-forms-atom)
-         
+
        :else v))
    code))
 
@@ -370,7 +369,8 @@
 ;;; Server side execution
 ;;;
 (defn eval-inner-on-jvm [nssym code eid]
-  (let [ch (async/chan)
+  (let [src (if (string? code) code (prn-str code))
+        ch (async/chan)
         chankey (keyword (gensym "chan-"))
         res (volatile! nil)
         spinr (get-ddb [:editors eid :opts :throbber])]
@@ -380,11 +380,11 @@
                           :eval true
                           :chankey chankey
                           :nssym nssym
-                          :code code}})
+                          :code src}})
     (reset! spinr true)
     ch))
 
-(defn eval-mixed-xc [cm]
+(defn get-mixed-cc [cm]
   (let [cb cm.CB
         src (get-outer-sexpr-src cm)
         tid (hmi/get-cur-tab :id)
@@ -398,27 +398,51 @@
                 srccd)
         code (xform-clj clj? nssym srccd eid clj-forms)
         code (if @clj?
-               (let [code `(let [fm# ~(deref clj-forms)]
-                             ~code)]
-                 [@clj-forms code])
-               code)]
-    code
-    #_(evaluate nssym code cb)))
+               [nssym @clj-forms code]
+               [nssym nil code])]
+    code))
 
-(defn funcver [cm]
+(defn eval-mixed-cc [cm]
   (go (let [cb cm.CB
-            [cljfms clscode] (eval-mixed-xc cm)]
-        (when (seq cljfms)
-          (loop [fms cljfms]
-            (if (not (seq fms))
-              :done
-              (let [[k v] (first fms)
-                    [nssym code eid] v
-                    res (async/<! (eval-inner-on-jvm nssym code eid))]
-                (reset! (get-ddb [:editors eid :opts :throbber]) false)
-                (cb res)
-                (recur (rest fms)))))))))
+            [nssym cljfms cljscode] (get-mixed-cc cm)
+            syms? (->> cljfms keys (filter #(-> % keyword? not)) empty? not)
+            resfms (atom cljfms)]
+        (cond (and cljscode cljfms)
+              (when (seq cljfms)
+                (loop [fms (->> cljfms (filter (fn[[k v]] (keyword? k)))
+                                (sort-by #(-> % first name)))]
+                  
+                  (if (not (seq fms)) ; done
+                    (let [subs (->> resfms deref
+                                    (filter (fn[[k v]] (keyword? k)))
+                                    (mapv vec) (into {}))
+                          cljsxcode (hc/xform cljscode subs)]
+                      (evaluate nssym cljsxcode cb))
+                    
+                    (let [[k v] (first fms)
+                          [nssym code eid] v
+                          code (if syms?
+                                 (hc/xform code (deref resfms))
+                                 code)
+                          res (async/<! (eval-inner-on-jvm nssym code eid))]
+                      (reset! (get-ddb [:editors eid :opts :throbber]) false)
+                      (swap! resfms (fn[m] (assoc m k (res :value))))
+                      #_(cb res)
+                      (recur (rest fms))))))
+              
+              cljscode
+              (evaluate nssym cljscode cb)
 
+              cljfms
+              (do
+                (update-ddb [:alert :txt]
+                            "Error : Clojure only in mixed request")
+                (reset! (get-ddb [:alert :show?]) true))))))
+
+#_(let [ch (eval-mixed-cc @dbg-cm)
+        v (volatile! nil)]
+    (go (vreset! v (async/<! ch)))
+    v)
 
 
 
@@ -475,6 +499,10 @@
              "Ctrl-X Ctrl-V" re-visualize
              "Ctrl-X Ctrl-E" evalxe
              "Ctrl-X Ctrl-C" evalcc
+
+             "Ctrl-X J" evaljvm-xe
+             "Ctrl-X Ctrl-J" evaljvm-cc
+             "Ctrl-X Ctrl-M" eval-mixed-cc
              })))
 
 
