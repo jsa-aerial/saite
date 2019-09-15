@@ -152,7 +152,7 @@
                                   :src src]
                         :panel-2 [scroller
                                   :max-height "800px"
-                                  :max-width "1200px"
+                                  :max-width "1800px"
                                   :align :start
                                   :child hcomp]])}})
     (let [opts (hmi/get-tab-field tid :opts)
