@@ -27,6 +27,7 @@
 
    [cljsjs.codemirror]
    [cljsjs.codemirror.mode.clojure]
+   [cljsjs.codemirror.mode.python]
    [cljsjs.codemirror.mode.javascript]
    [cljsjs.codemirror.addon.hint.show-hint]
 
@@ -48,6 +49,7 @@
    [cljsjs.highlight]
    [cljsjs.highlight.langs.clojure]
    [cljsjs.highlight.langs.javascript]
+   [cljsjs.highlight.langs.python]
 
    [re-com.core
     :as rcm
@@ -486,7 +488,9 @@
              "Ctrl-B"    ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-B")
              "Ctrl-Home" ((js->clj CodeMirror.keyMap.emacs) "Shift-Alt-,")
              "Ctrl-End"  ((js->clj CodeMirror.keyMap.emacs) "Shift-Alt-.")
-             "Alt-W"     ((js->clj CodeMirror.keyMap.emacs) "Ctrl-W")
+             ; "Alt-W"     ((js->clj CodeMirror.keyMap.emacs) "Ctrl-W")
+             "Alt-W"     enhanced-cut
+             "Ctrl-Y"    enhanced-yank
              "Alt-K"     ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-K")
              "Ctrl-X R"  ((js->clj CodeMirror.keyMap.emacs) "Shift-Alt-5")
              "Insert"    insert-frame
@@ -498,7 +502,7 @@
              "Ctrl-X Ctrl-D" delete-frame
              "Ctrl-X Ctrl-V" re-visualize
              "Ctrl-X Ctrl-E" evalxe
-             "Ctrl-X Ctrl-C" evalcc
+             "Ctrl-X Ctrl-C" eval-mixed-cc ;evalcc
 
              "Ctrl-X J" evaljvm-xe
              "Ctrl-X Ctrl-J" evaljvm-cc
@@ -525,7 +529,7 @@
         #_(js/console.log comp, (rgt/dom-node comp))
         (let [opts (clj->js (merge
                              {:lineNumbers true
-                              :lineWrapping false,
+                              :lineWrapping true,
                               :viewportMargin js/Infinity
                               :autofocus true
                               :keyMap "emacs"
