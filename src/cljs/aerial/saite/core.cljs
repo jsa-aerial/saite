@@ -282,7 +282,7 @@
 
                 [:editors] {}
                 [:main :chans] {}
-                [:tabs :extns :$split] 33.0)
+                [:tabs :extns :$split] 29.0)
 
     (add-tab {:id :xvgl
               :label "<->"
