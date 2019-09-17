@@ -275,35 +275,41 @@
 (def dbg-cm (atom nil))
 
 
+(declare eval-mixed-cc)
+
 (defn make-error-frame [fid msg]
   {:usermeta
    {:frame {:fid (if fid fid (keyword (gensym "ERR")))
             :top [[p {:style {:font-size "20px" :color "red"}} msg]]}}})
 
 (defn insert-frame [cm]
-  (let [tid (hmi/get-cur-tab :id)
-        nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler)
-        {:keys [fid locid tabfid]} (current-cm-frame-info cm)
-        src (get-outer-sexpr-src cm)
-        pos (if (= locid :beg) :same :after)
+  (go
+    (let [tid (hmi/get-cur-tab :id)
+          nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler)
+          {:keys [fid locid tabfid]} (current-cm-frame-info cm)
+          src (get-outer-sexpr-src cm)
+          pos (if (= locid :beg) :same :after)
 
-        res (volatile! nil)
-        _ (evaluate nssym src (fn[v] (vswap! res #(do v))))
-        res (deref res)
+          ;;res (volatile! nil)
+          ;;_ (evaluate nssym src (fn[v] (vswap! res #(do v))))
+          ;;res (deref res)
+          resch (chan)
+          _ (eval-mixed-cc cm :cb (fn[v] (go (async/>! resch v))))
+          res (async/<! resch)
 
-        e (js->clj (res :error))
-        err (cond e e.cause.message
-                  (= (res :value) hc/xform) "Error : Missing closing paren!"
-                  :else nil)
-        undefined (when err (re-find #"undefined" err))
-        errmsg (if undefined
-                 (str err "'undefined' is usually due to undeclared var")
-                 err)
-        value (res :value)
-        picframe (if err (make-error-frame fid errmsg) value)]
+          e (js->clj (res :error))
+          err (cond e e.cause.message
+                    (= (res :value) hc/xform) "Error : Missing closing paren!"
+                    :else nil)
+          undefined (when err (re-find #"undefined" err))
+          errmsg (if undefined
+                   (str err "'undefined' is usually due to undeclared var")
+                   err)
+          value (res :value)
+          picframe (if err (make-error-frame fid errmsg) value)]
 
-    (when (and (or fid err) (not tabfid))
-      (tops/add-frame picframe locid pos))))
+      (when (and (or fid err) (not tabfid))
+        (tops/add-frame picframe locid pos)))))
 
 (defn delete-frame [cm]
   (let [{:keys [fid locid tabfid]} (current-cm-frame-info cm)]
@@ -404,8 +410,8 @@
                [nssym nil code])]
     code))
 
-(defn eval-mixed-cc [cm]
-  (go (let [cb cm.CB
+(defn eval-mixed-cc [cm & {:keys [cb]}]
+  (go (let [cb (if cb cb cm.CB)
             [nssym cljfms cljscode] (get-mixed-cc cm)
             syms? (->> cljfms keys (filter #(-> % keyword? not)) empty? not)
             resfms (atom cljfms)]
@@ -427,9 +433,7 @@
                           [nssym code eid] v
                           subs (assoc @resfms
                                       :aerial.hanami.common/use-defaults? false)
-                          code (if true ;syms?
-                                 (hc/xform code subs)
-                                 code)
+                          code (hc/xform code subs)
                           res (async/<! (eval-inner-on-jvm nssym code eid))]
                       (reset! (get-ddb [:editors eid :opts :throbber]) false)
                       (swap! resfms (fn[m] (assoc m k (res :value))))
