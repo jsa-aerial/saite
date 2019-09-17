@@ -87,6 +87,7 @@
    [aerial.hanami.core :as hmi :refer [md]]
    [aerial.hanami.common :as hc :refer [RMV]]
    [aerial.hanami.templates :as ht]
+   [aerial.saite.compiler :refer [format]]
    [aerial.saite.core :as sc :refer [read-data]]
    [com.rpl.specter :as sp]
 
