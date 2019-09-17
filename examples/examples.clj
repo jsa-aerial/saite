@@ -37,6 +37,15 @@
 (saite/stop)
 
 
+(defn log2 [x]
+  (let [ln2 (Math/log 2)]
+    (/ (Math/log x) ln2)))
+
+(defn roundit [r & {:keys [places] :or {places 4}}]
+  (let [n (Math/pow 10.0 places)]
+    (-> r (* n) Math/round (/ n))))
+
+
 
 ;;; Examples for browser popup renderings. Cut and paste into Clj panel
 
@@ -566,8 +575,8 @@
 (->>
  (hc/xform
   {:usermeta :USERDATA
-   :width 700,
-   :height 500,
+   :width 500,
+   :height 300,
    :data {:url "data/airports.csv"},
    :projection {:type "albersUsa"},
    :mark "circle",
@@ -581,19 +590,19 @@
   :TID :geo)
  hmi/sv!)
 
+
 (->>
  (hc/xform
   {:usermeta :USERDATA
-   :$schema "https://vega.github.io/schema/vega-lite/v3.json",
-   :width 1000,
-   :height 600,
+   :width 500,
+   :height 300,
    :data
-   {:url "https://raw.githubusercontent.com/vega/vega-datasets/gh-pages/data/us-10m.json",
+   {:url "https://raw.githubusercontent.com/vega/vega-datasets/master/data/us-10m.json",
     :format {:type "topojson", :feature "counties"}},
    :transform
    [{:lookup "id",
      :from
-     {:data {:url "https://raw.githubusercontent.com/vega/vega-datasets/gh-pages/data/unemployment.tsv"},
+     {:data {:url "https://raw.githubusercontent.com/vega/vega-datasets/master/data/unemployment.tsv"},
       :key "id",
       :fields ["rate"]}}],
    :projection {:type "albersUsa"},
@@ -601,6 +610,8 @@
    :encoding {:color {:field "rate", :type "quantitative"}}}
   :TID :geo)
  hmi/sv!)
+
+
 
 
 
@@ -732,8 +743,8 @@
  (let [data (mapv #(let [RE (it/KLD (->> obsdist (into {}))
                                     (->> (p/binomial-dist 10 %)
                                          (into {})))
-                         REtt (ac/roundit RE)
-                         ptt (ac/roundit % :places 2)]
+                         REtt (roundit RE)
+                         ptt (roundit % :places 2)]
                      {:x % :y RE})
                   (range 0.06 0.98 0.01))]
    (hc/xform ht/line-chart
@@ -751,8 +762,8 @@
                               (->> obsdist (into {}))
                               (->> (p/binomial-dist 10 %)
                                    (into {})))
-                          REtt (ac/roundit RE)
-                          ptt (ac/roundit % :places 2)]
+                          REtt (roundit RE)
+                          ptt (roundit % :places 2)]
                       {:x % :y RE})
                    (range 0.06 0.98 0.01))]
     (hc/xform ht/line-chart
@@ -767,8 +778,8 @@
                                (->> obsdist (into {}))
                                (->> (p/binomial-dist 10 %)
                                     (into {}))))
-                          REtt (ac/roundit RE)
-                          ptt (ac/roundit % :places 2)]
+                          REtt (roundit RE)
+                          ptt (roundit % :places 2)]
                       {:x % :y RE})
                    (range 0.06 0.98 0.01))]
     (hc/xform ht/line-chart
