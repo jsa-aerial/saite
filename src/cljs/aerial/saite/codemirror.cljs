@@ -417,14 +417,18 @@
                   (if (not (seq fms)) ; done
                     (let [subs (->> resfms deref
                                     (filter (fn[[k v]] (keyword? k)))
-                                    (mapv vec) (into {}))
+                                    (mapv vec)
+                                    (into {:aerial.hanami.common/use-defaults?
+                                           false}))
                           cljsxcode (hc/xform cljscode subs)]
                       (evaluate nssym cljsxcode cb))
                     
                     (let [[k v] (first fms)
                           [nssym code eid] v
-                          code (if syms?
-                                 (hc/xform code (deref resfms))
+                          subs (assoc @resfms
+                                      :aerial.hanami.common/use-defaults? false)
+                          code (if true ;syms?
+                                 (hc/xform code subs)
                                  code)
                           res (async/<! (eval-inner-on-jvm nssym code eid))]
                       (reset! (get-ddb [:editors eid :opts :throbber]) false)
