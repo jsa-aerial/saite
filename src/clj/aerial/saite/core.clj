@@ -240,7 +240,8 @@
                    :evalsexp "Ctrl-X Ctrl-E",
                    :evalosexp "Ctrl-X Ctrl-C",
                    :repregex "Ctrl-X R"}},
-   :saveloc (fs/join home-path "Doc")})
+   :saveloc (fs/join home-path "Doc")
+   :dataloc (fs/join home-path "Data")})
 
 
 (defn init [port]
