@@ -754,7 +754,8 @@
                                                              "row" "col"))]]]]]
                   [v-box :gap "10px"
                    :children
-                   [[input-area "Row Gap" rgap]
+                   [[label :style {:font-size "18px"} :label "Gapping"]
+                    [input-area "Row Gap" rgap]
                     [input-area "Col Gap" cgap]
                     [input-area "Flex size" size]]]]]
                 
