@@ -102,12 +102,13 @@
                      (let [f (-> info :fn second extns-xref)
                            {:keys [tid src]} info
                            oopts (dissoc (tm :opts) :wrapfn)
+                           oopts (merge {:rgap "20px" :cgap "20px"} oopts)
                            label (tm :label)
                            specs (tm :specs)
                            args (->> (merge oopts (dissoc info :fn :tid :src))
                                      seq (cons [:specs specs])
                                      (apply concat))]
-                       (printchan :ARGS args)
+                       (printchan :ARGS oopts)
                        (apply f tid label src args)
                        [tid :done])
                      (do (->> m vals first :specs hmi/update-tabs)

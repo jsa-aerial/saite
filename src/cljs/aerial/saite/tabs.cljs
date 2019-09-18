@@ -105,14 +105,15 @@
 
 (defn ^:export interactive-doc-tab
   [tid label src & {:keys [width height out-height $split
-                           ns specs order eltsper size]
+                           ns specs order eltsper rgap cgap size]
                     :or {width "730px"
                          height "700px"
                          out-height "100px"
                          $split (get-ddb [:tabs :extns :$split])
                          ns 'aerial.saite.usercode
                          specs []
-                         order :row eltsper 1 size "auto"}}]
+                         order :row eltsper 1 :rgap "20px" :cgap "20px"
+                         size "auto"}}]
   (let [cmfn (cm)
         eid (str "ed-" (name tid))
         sratom (rgt/atom $split)
@@ -142,7 +143,8 @@
      {:id tid
       :label label
       :specs specs
-      :opts {:order order, :eltsper eltsper, :size size
+      :opts {:order order, :eltsper eltsper,
+             :rgap rgap :cgap cgap :size size
              :wrapfn (fn[hcomp]
                        [hsfn
                         :panel-1 [cmfn :id eid
@@ -295,7 +297,7 @@
         {:keys [edtype ns id label
                 order eltsper
                 width height out-height
-                size layout]} info-map]
+                size rgap cgap layout]} info-map]
     (push-undo x)
     (cond
       (= :converter edtype) (printchan :NYI)
@@ -311,7 +313,8 @@
        id label "" :ns ns
        :width width :height height
        :out-height out-height
-       :order order :eltsper eltsper :size size))
+       :order order :eltsper eltsper
+       :rgap rgap :cgap cgap :size size))
 
     (printchan info-map)))
 
@@ -351,7 +354,7 @@
         label (curtab :label)
         opts (curtab :opts)
         specs (curtab :specs)
-        {:keys [label nssym order eltsper size]} info
+        {:keys [label nssym order eltsper rgap cgap size]} info
         newopts (merge opts (dissoc info :label :nssym))
         s-f-pairs (hmi/make-spec-frame-pairs tid newopts specs)]
     (update-ddb [:tabs :extns tid :ns] nssym)
@@ -484,6 +487,8 @@
   (let [edtype (rgt/atom :interactive-doc)
         order (rgt/atom :row)
         eltsper (rgt/atom "1")
+        rgap (rgt/atom "20")
+        cgap (rgt/atom "20")
         [tx lx] (next-tid-label @edtype)
         tid (rgt/atom tx)
         tlabel (rgt/atom lx)
@@ -499,6 +504,7 @@
                                {:edtype @edtype :ns (symbol @nssym)
                                 :id (keyword @tid) :label @tlabel
                                 :order @order :eltsper (js/parseInt @eltsper)
+                                :rgap (px @rgap) :cgap (px @cgap)
                                 :width (px @width) :height (px @height)
                                 :out-height (px @out-height) :size @size
                                 :layout @layout}))
@@ -586,7 +592,11 @@
                          :children
                          [[input-area "Editor Width" width]
                           [input-area "Editor Height" height]
-                          [input-area "Output Height" out-height]
+                          [input-area "Output Height" out-height]]]
+                        [v-box :gap "10px"
+                         :children
+                         [[input-area "Row Gap" rgap]
+                          [input-area "Col Gap" cgap]
                           [input-area "Flex size" size]]]
                         [v-box :gap "10px"
                          :children
@@ -693,6 +703,8 @@
         opts (curtab :opts)
         order (rgt/atom (opts :order))
         eltsper (rgt/atom (str (opts :eltsper)))
+        rgap (rgt/atom (-> opts :rgap (cljstr/replace #"px$" "")))
+        cgap (rgt/atom (-> opts :cgap (cljstr/replace #"px$" "")))
         size (rgt/atom (opts :size))
         tlabel (rgt/atom curlabel)
         nssym (rgt/atom (str (get-ddb [:tabs :extns curtid :ns])))
@@ -700,6 +712,7 @@
                  (go (async/>! (hmi/get-adb [:main :chans :com])
                                {:label @tlabel :nssym (symbol @nssym)
                                 :order @order :eltsper (js/parseInt @eltsper)
+                                :rgap (px @rgap) :cgap (px @cgap)
                                 :size @size}))
                  (reset! show? false))
         cancelfn (fn[]
@@ -713,28 +726,38 @@
        :child [v-box
                :gap "10px"
                :children
-               [[label :style {:font-size "18px"} :label "Ordering"]
-                [radio-button
-                 :label "Row Ordered"
-                 :value :row
-                 :model order
-                 :label-style (when (= :row @order) {:font-weight "bold"})
-                 :on-change #(do (reset! size "auto")
-                                 (reset! order %))]
-                [radio-button
-                 :label "Column Ordered"
-                 :value :col
-                 :model order
-                 :label-style (when (= :col @order) {:font-weight "bold"})
-                 :on-change #(do (reset! size "none")
-                                 (reset! order %))]
-                [h-box :gap "10px"
-                 :children [[input-text
-                             :model eltsper
-                             :width "40px" :height "20px"
-                             :on-change #(reset! eltsper %)]
-                            [label :label (str "Elts/" (if (= @order :row)
-                                                         "row" "col"))]]]
+               [[h-box :gap "10px"
+                 :children
+                 [[v-box :gap "15px"
+                   :children
+                   [[label :style {:font-size "18px"} :label "Ordering"]
+                    [radio-button
+                     :label "Row Ordered"
+                     :value :row
+                     :model order
+                     :label-style (when (= :row @order) {:font-weight "bold"})
+                     :on-change #(do (reset! size "auto")
+                                     (reset! order %))]
+                    [radio-button
+                     :label "Column Ordered"
+                     :value :col
+                     :model order
+                     :label-style (when (= :col @order) {:font-weight "bold"})
+                     :on-change #(do (reset! size "none")
+                                     (reset! order %))] 
+                    [h-box :gap "10px"
+                     :children [[input-text
+                                 :model eltsper
+                                 :width "40px" :height "20px"
+                                 :on-change #(reset! eltsper %)]
+                                [label :label (str "Elts/" (if (= @order :row)
+                                                             "row" "col"))]]]]]
+                  [v-box :gap "10px"
+                   :children
+                   [[input-area "Row Gap" rgap]
+                    [input-area "Col Gap" cgap]
+                    [input-area "Flex size" size]]]]]
+                
                 [h-box :gap "10px"
                  :children [[label
                              :style {:font-size "18px"}
