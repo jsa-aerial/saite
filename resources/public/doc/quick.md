@@ -19,11 +19,11 @@
 
   * `Shift-[an arrow key]` : make selection (for cutting, copying)
 
-  * `Alt-W` : Cut current selection
+  * `Alt-W` : Cut current selection (and delete associated picframe if relevant)
+
+  * `Ctrl-Y` : Yank last cut to cursor position (and insert associated picframe if relevant)
 
   * `Alt-K` : Cut/kill forward sexpression
-
-  * `Ctrl-Y` : Yank last cut to cursor position
 
   * `Ctrl-/` : Undo last change. Repeat for more.
 
@@ -32,7 +32,11 @@
 
   * `Ctrl-X Ctrl-E` : Evaluate last sexpression
 
-  * `Ctrl-X Ctrl-C` : Evaluate outer sexpression at cursor
+  * `Ctrl-X Ctrl-C` : Evaluate outer sexpression at cursor (including any 'clj' subcode on JVM)
+
+  * `Ctrl-X J`      : Evaluate last sexpression _on the JVM_
+
+  * `Ctrl-X Ctrl-J` : Evaluate outer sexpession _on the JVM_
 
 
 ### Frame visualization
@@ -45,8 +49,8 @@
 
   * `Ctrl-X Ctrl-V` : Repaint vis associated with frame at cursor
 
-  * `Ctrl-Alt-W` : Enhanced cut - will remove associated frame if visible
-  * `Ctrl-Alt-Y` : Enhanced yank - will insert (in position) associated frame if *not* visible
+  * `Ctrl-Alt-W` : Enhanced cut - will remove associated frame if visible. This is now included in standard cut (see above `Alt-W`)
+  * `Ctrl-Alt-Y` : Enhanced yank - will insert (in position) associated frame if *not* visible. This is now included in standard yank (see above `Ctrl-Y`)
 
 
 ## Control Bar
