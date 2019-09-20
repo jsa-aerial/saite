@@ -51,6 +51,8 @@
    [cljsjs.highlight.langs.javascript]
    [cljsjs.highlight.langs.python]
 
+   [paredit-cm.core :as pe]
+
    [re-com.core
     :as rcm
     :refer [h-box v-box box border gap line h-split v-split scroller
@@ -492,8 +494,15 @@
 
 (defn xtra-keys-emacs []
   (CodeMirror.normalizeKeyMap
-   (js->clj {"Ctrl-F"    ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-F")
-             "Ctrl-B"    ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-B")
+   (js->clj {;;"Ctrl-F"     ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-F")
+             ;;"Ctrl-B"     ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-B")
+             "Ctrl-F"     pe/forward-sexp
+             "Ctrl-B"     pe/backward-sexp
+             "Ctrl-Left"  pe/forward-barf-sexp
+             "Ctrl-Right" pe/forward-slurp-sexp
+             "Ctrl-Alt-Left"  pe/backward-barf-sexp
+             "Ctrl-Alt-Right" pe/backward-slurp-sexp
+             
              "Ctrl-Home" ((js->clj CodeMirror.keyMap.emacs) "Shift-Alt-,")
              "Ctrl-End"  ((js->clj CodeMirror.keyMap.emacs) "Shift-Alt-.")
              ; "Alt-W"     ((js->clj CodeMirror.keyMap.emacs) "Ctrl-W")
