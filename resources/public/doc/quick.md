@@ -17,6 +17,10 @@
 
   * `Ctrl-B` : Move backward sexpression
 
+  * `Ctrl-Right` : Forward slurp sexpression
+
+  * `Ctrl-Left`  : Forward barf sexpression
+
   * `Shift-[an arrow key]` : make selection (for cutting, copying)
 
   * `Alt-W` : Cut current selection (and delete associated picframe if relevant)
