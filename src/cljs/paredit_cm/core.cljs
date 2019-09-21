@@ -494,7 +494,8 @@
       (= type "builtin")
       (= type "number")
       (= type "variable")
-      (= type "keyword")))
+      (= type "keyword")
+      (= type "meta")))
 
 (defn at-a-word?
   "returns true if at a word of code"
