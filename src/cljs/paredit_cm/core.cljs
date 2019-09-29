@@ -21,6 +21,9 @@
 ;; The above copyright notice and this permission notice shall be included
 ;; in all copies or substantial portions of the Software.
 ;;
+;; Jon Anthony (2019):
+;; Many changes and fixes for working with newer codemirror releases 
+;;
 ;; ** PAREDI PROJECT CONVENTIONS **
 ;;
 ;; consider this notation: aXbc
@@ -201,22 +204,36 @@
   [cm]
   (->> cm cursor .-line (.indentLine cm)))
 
+(defn escaped-char-name? [stg]
+  (let [escnames #{"\\newline", "\\space", "\\tab",
+                   "\\formfeed", "\\backspace", "\\return"}]
+    (when (escnames stg) (dec (count stg)))))
+
 (defn in-escaped-char?
   "returns true if backslash is to the left and cursor is on an escaped char"
-  ([cm cur] (in-escaped-char? cm cur 0))
+  ([cm cur]
+   (in-escaped-char? cm cur 0))
   ([cm cur offset]
    (let [{:keys [ch start end type]} (get-info cm cur)]
-     (and (= start (+ (dec ch) offset))
-          (= end (+ (inc ch) offset))
-          (= type "string-2")))))
+     #_(js/console.log start ch end type)
+     (and (= type "string-2") (and (< start ch) (< ch end))))))
 
 (defn escaped-char-to-left?
   "returns true if an escaped char and its backslash are to the left"
-  [cm cur] (in-escaped-char? cm cur -1))
+  [cm cur]
+  (let [{:keys [ch end type string]} (get-info cm cur)]
+    (and (= type "string-2") (= ch end))))
+
 
 (defn escaped-char-to-right?
   "returns true if an escaped char and its backslash is to the right"
-  [cm cur] (in-escaped-char? cm cur 1))
+  [cm cur]
+  (let [cur+ (cursor cm 0)
+        {:keys [type]} (get-info cm cur)]
+  (and (not= type "string-2"))
+    (set! cur+.line cur.line)
+    (set! cur+.ch (inc cur.ch))
+    (in-escaped-char? cm cur)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; paredit-open-round (
@@ -304,14 +321,25 @@
 (defn token-start
   "returns the cursor for the start of the current token"
   [cm cur]
-  (let [{:keys [i start ch]} (get-info cm cur)]
-    (cursor cm (- i (- ch start)))))
+  (let [{:keys [i line start ch type]} (get-info cm cur)]
+    (if (not= type "string")
+      (cursor cm (- i (- ch start)))
+      (let [newcur (cursor cm i)]
+        (set! newcur.line line)
+        (set! newcur.ch start)
+        (cursor cm (index cm newcur))))))
 
 (defn token-end
   "returns the cursor for the end of the current token"
   ([cm cur] (token-end cm cur 0))
-  ([cm cur offset] (let [{:keys [i end ch]} (get-info cm cur)]
-                     (cursor cm (+ i offset (- end ch))))))
+  ([cm cur offset]
+   (let [{:keys [i line end ch type]} (get-info cm cur)]
+     (if (not= type "string")
+       (cursor cm (+ i offset (- end ch)))
+       (let [newcur (cursor cm i)]
+         (set! newcur.line line)
+         (set! newcur.ch (if (= ch end) (+ end offset) end))
+         (cursor cm (index cm newcur)))))))
 
 (defn token-end-index
   "take an index. get its token. return index of that token's end."
@@ -330,16 +358,18 @@
   infinite loops."
   [cm cur sp state n]
   (if (>= n 0)
-    (let [{:keys [left-cur i]} (get-info cm cur)
+    (let [{:keys [left-cur right-cur i]} (get-info cm cur)
           result (sp cm cur state)]
+      #_(js/console.log result)
       (case result
         :eof               nil
         :stop              nil
         :yes               cur
         :left              left-cur
+        :right             right-cur
         :end-of-this-token (token-end cm cur)
         :start-of-this-tok (token-start cm cur)
-        (let [next-cur (token-end cm cur 1)]
+        (let [next-cur (token-end cm cur 1)] #_(js/console.log next-cur)
           (fn [] ;; for trampoline
             (skip-trampoline-helper cm next-cur sp result (dec n))))))
     (guard)))
@@ -349,7 +379,7 @@
   [cm cur sp state n]
   (if (>= n 0)
     (let [{:keys [left-cur right-cur i start ch]} (get-info cm cur)
-          result (sp cm cur state)]
+          result (sp cm cur state)] #_(js/console.log result)
       (case result
         :bof               nil
         :stop              nil
@@ -513,21 +543,26 @@
 (defn start-of-a-string?
   "returns true if at the start of a string."
   [cm cur]
-  (let [{:keys [string type start end mode]} (get-info cm cur)]
-    (and (= type "string")
-         (= 1 (- end start))
-         (= string "\"")
-         (= mode "string"))))
+  (let [{:keys [string type start ch left-char]} (get-info cm cur)]
+    #_(js/console.log right-char type string ch start)
+    (and #_(= left-char "\"")
+         (= type "string")
+         (= 1 (- ch start)))))
+
+(defn start-of-a-string2? [cm cur]
+  (let [i (index cm cur)
+        p2 (cursor cm (inc i))]
+    #_(js/console.log cur p2)
+    (start-of-a-string? cm p2)))
 
 (defn end-of-a-string?
   "returns true if just to the right of a closing doublequote of a string."
   [cm cur]
-  (let [{:keys [type ch end string mode]} (get-info cm cur)]
+  (let [{:keys [type ch end string left-char]} (get-info cm cur)]
+    #_(js/console.log left-char type string ch end)
     (and (= type "string")
          (= ch end)
-         (= \" (last string))
-         (not= \\ (last (drop-last string)))
-         (= mode false))))
+         (= left-char "\""))))
 
 (defn end-of-next-sibling-sp ;; -sp see 'skipping predicate'
   "returns the cursor at the end of the sibling to the right or nil if
@@ -541,22 +576,31 @@
   (let [{:keys [string type eof ch end]} (get-info cm cur)
         stack-empty (zero? stack)
         one-left    (= 1 stack)
-        string-extends (or (not= \" (last string))
-                           (= \\ (last (drop-last string))))] ;; for multi-line
+        string-extends (or (not= "\"" (last string))
+                           (= "\\" (last (drop-last string))))] ; for multi-line
+    #_(js/console.log stack string type ch end cur
+                    #_(escaped-char-to-right? cm cur)
+                    (start-of-a-string? cm cur)
+                    (end-of-a-string? cm cur))
     (cond ;; we return a keyword when we know where to stop, stack otherwise.
-      (and (end-of-a-string? cm cur) one-left), :yes
-      (and (escaped-char-to-left? cm cur) stack-empty), :yes
-      (and (word? type) stack-empty (= ch end)), :yes
-      (and (is-bracket-type? type) (closer? string) one-left), :yes
-      eof, :eof
 
       ;; skip whitespace
       (or (nil? type) (and (= type "error") (= string ","))), stack
+
+      (and (escaped-char-to-left? cm cur) stack-empty), :yes
+      (and (word? type) stack-empty (= ch end)), :yes
+      (and (is-bracket-type? type) (closer? string) one-left), :yes
+      (and (end-of-a-string? cm cur) one-left), :yes
+
+      eof, :eof
 
       ;; skip comments
       (= type "comment"), stack
 
       ;; strings ...............................................................
+
+      ;; our starting point is at beginning of a string
+      (and (start-of-a-string? cm cur) stack-empty), :end-of-this-token
 
       ;; entering a string, push " onto stack
       (start-of-a-string? cm cur), (inc stack)
@@ -587,6 +631,10 @@
 
       ;; inside an escaped char and the end of it is what we want
       (and (in-escaped-char? cm cur) stack-empty), :end-of-this-token
+
+      ;; To the right of escaped char, keep going
+      (and (escaped-char-to-right? cm cur) stack-empty), :start-of-this-tok
+
 
       ;; in an escaped char inside the next sibling
       (in-escaped-char? cm cur), stack
@@ -646,6 +694,11 @@
         stack-empty (zero? stack)
         one-left    (= 1 stack)
         string-extends (not= "\"" (first string))];; for multiline strings
+    #_(js/console.log stack string type ch start cur
+                    (escaped-char-to-left? cm cur)
+                    (escaped-char-to-right? cm cur)
+                    (start-of-a-string? cm cur)
+                    (end-of-a-string? cm cur))
     (cond ;; we return a keyword when we know where to stop, stack otherwise.
 
       ;; check these before checking for bof:
@@ -656,9 +709,6 @@
       ;; at the first line of a string and we want its opening doublequote:
       (and (start-of-a-string? cm cur) one-left), :yes
 
-      ;; at the start of an escaped char:
-      (and (escaped-char-to-right? cm cur) stack-empty), :yes
-
       ;; at the start of a word:
       (and (word? type) stack-empty (= ch start)), :yes
 
@@ -667,13 +717,22 @@
 
       bof, :bof; reached beginning of file
 
+      (and (start-of-a-string2? cm cur) (> stack 1)), (dec stack)
+
+      ;; at the start of an escaped char:
+      (and (escaped-char-to-right? cm cur) stack-empty), stack ;:start-of-this-tok
+
       ;; skip whitespace
       (or (nil? type) (and (= type "error") (= string ","))), stack
+
 
       ;; skip comments
       (= type "comment"), stack
 
       ;; strings ...............................................................
+
+      ;; our starting point is at end of a string
+      (and (end-of-a-string? cm cur) stack-empty), :start-of-this-tok
 
       ;; entering a string from the right; push " onto stack
       (end-of-a-string? cm cur), (inc stack)
@@ -696,15 +755,19 @@
 
       ;; in string, need to get out of this form, pop stack
       (and (= type "string") string-extends), stack
-      (= type "string"), (dec stack)
+
 
       ;; escaped chars .........................................................
 
       ;; inside an escaped char and the start of it is what we want
       (and (in-escaped-char? cm cur) stack-empty), :start-of-this-tok
 
+      ;; To the left of escaped char, keep going
+      (and (escaped-char-to-left? cm cur) stack-empty), :start-of-this-tok
+
       ;; in an escaped char inside the prev sibling
-      (in-escaped-char? cm cur), stack
+      (or (in-escaped-char? cm cur)
+          (escaped-char-to-left? cm cur)), stack
 
       ;; at start of an escaped char which was the prev sibling -- handled
       ;; before check for bof above
@@ -1113,6 +1176,7 @@
   (let [{:keys [string type left-char right-cur]} (get-info cm cur)]
     ;;(println "closing delim?" type string left-char)
     (or (and (is-bracket-type? type) (closer? left-char))
+        (end-of-a-string? cm cur)
         (and (= type "string")
              (= "\"" left-char)
              ;; at this point, we could be just inside the start of a string.
@@ -1946,13 +2010,14 @@
   ([cm] (forward-barf-sexp cm (cursor cm)))
   ([cm cur]
    (if-let [[parent inside sibling bracket moved]
-              (trampoline fwd-barf cm cur (char-count cm))]
-       (do (.replaceRange cm "" inside parent)
-           (insert cm bracket 0 sibling)
-           (if moved
-             (.setCursor cm (cursor cm (+ (index cm cur) (count bracket))))
-             (.setCursor cm cur)))
-       (.setCursor cm cur))))
+            (trampoline fwd-barf cm cur (char-count cm))]
+     (do #_(js/console.log parent inside sibling bracket moved)
+         (.replaceRange cm "" inside parent)
+         (insert cm bracket 0 sibling)
+         (if moved
+           (.setCursor cm (cursor cm (+ (index cm cur) (count bracket))))
+           (.setCursor cm cur)))
+     (.setCursor cm cur))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; paredit-backard-barf-sexp C-{, C-M-<right>, Esc C-<right>
