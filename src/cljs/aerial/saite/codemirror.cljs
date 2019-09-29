@@ -310,7 +310,12 @@
           value (res :value)
           picframe (if err (make-error-frame fid errmsg) value)]
 
-      (when (and (or fid err) (not tabfid))
+      #_(printchan :IF fid err tabfid)
+      (when (or fid err)
+        (if (not tabfid)
+          (tops/add-frame picframe locid pos)
+          (tops/update-frame :frame picframe)))
+      #_(when (and (or fid err) (not tabfid))
         (tops/add-frame picframe locid pos)))))
 
 (defn delete-frame [cm]
@@ -353,8 +358,9 @@
         _ (ctrlyfn cm)
         pos (.getCursor cm)]
     (bsexpfn cm)
-    (insert-frame cm)
-    (.setCursor cm pos)))
+    (go (let [ch (insert-frame cm)]
+          (async/<! ch)
+          (.setCursor cm pos)))))
 
 
 
@@ -421,7 +427,7 @@
               (when (seq cljfms)
                 (loop [fms (->> cljfms (filter (fn[[k v]] (keyword? k)))
                                 (sort-by #(-> % first name)))]
-                  
+
                   (if (not (seq fms)) ; done
                     (let [subs (->> resfms deref
                                     (filter (fn[[k v]] (keyword? k)))
@@ -430,7 +436,7 @@
                                            false}))
                           cljsxcode (hc/xform cljscode subs)]
                       (evaluate nssym cljsxcode cb))
-                    
+
                     (let [[k v] (first fms)
                           [nssym code eid] v
                           subs (assoc @resfms
@@ -441,7 +447,7 @@
                       (swap! resfms (fn[m] (assoc m k (res :value))))
                       #_(cb res)
                       (recur (rest fms))))))
-              
+
               cljscode
               (evaluate nssym cljscode cb)
 
@@ -492,6 +498,12 @@
     (eval-on-jvm src cb)))
 
 
+(defn clear-output [cm]
+  (let [eid (get-ddb [:tabs :extns (hmi/get-cur-tab :id) :eid])
+        output (get-ddb [:editors eid :ot])]
+    (reset! output "")))
+
+
 (defn xtra-keys-emacs []
   (CodeMirror.normalizeKeyMap
    (js->clj {;;"Ctrl-F"     ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-F")
@@ -502,26 +514,27 @@
              "Ctrl-Right" pe/forward-slurp-sexp
              "Ctrl-Alt-Left"  pe/backward-barf-sexp
              "Ctrl-Alt-Right" pe/backward-slurp-sexp
-             
-             "Ctrl-Home" ((js->clj CodeMirror.keyMap.emacs) "Shift-Alt-,")
-             "Ctrl-End"  ((js->clj CodeMirror.keyMap.emacs) "Shift-Alt-.")
-             ; "Alt-W"     ((js->clj CodeMirror.keyMap.emacs) "Ctrl-W")
-             "Alt-W"     enhanced-cut
-             "Ctrl-Y"    enhanced-yank
-             "Alt-K"     ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-K")
-             "Ctrl-X R"  ((js->clj CodeMirror.keyMap.emacs) "Shift-Alt-5")
-             "Insert"    insert-frame
-             "Delete"    delete-frame
+
+             "Ctrl-Home"     ((js->clj CodeMirror.keyMap.emacs) "Shift-Alt-,")
+             "Ctrl-End"      ((js->clj CodeMirror.keyMap.emacs) "Shift-Alt-.")
+             ;;; "Alt-W"     ((js->clj CodeMirror.keyMap.emacs) "Ctrl-W")
+             "Alt-W"         enhanced-cut
+             "Ctrl-Y"        enhanced-yank
+             "Alt-K"         ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-K")
+             "Ctrl-X R"      ((js->clj CodeMirror.keyMap.emacs) "Shift-Alt-5")
+             "Ctrl-X Ctrl-B" clear-output
 
              "Ctrl-Alt-W"    enhanced-cut
              "Ctrl-Alt-Y"    enhanced-yank
              "Ctrl-X Ctrl-I" insert-frame
+             "Insert"        insert-frame
              "Ctrl-X Ctrl-D" delete-frame
+             "Delete"        delete-frame
              "Ctrl-X Ctrl-V" re-visualize
+
              "Ctrl-X Ctrl-E" evalxe
              "Ctrl-X Ctrl-C" eval-mixed-cc ;evalcc
-
-             "Ctrl-X J" evaljvm-xe
+             "Ctrl-X J"      evaljvm-xe
              "Ctrl-X Ctrl-J" evaljvm-cc
              "Ctrl-X Ctrl-M" eval-mixed-cc
              })))
@@ -613,7 +626,7 @@
      [[gap :size "3px"]
       [v-box :gap "5px"
        :children
-       [[md-circle-icon-button
+       [#_[md-circle-icon-button
          :md-icon-name "zmdi-caret-right-circle"
          :tooltip "Eval Code"
          :on-click #(printchan :ID id :VID (opts :vid) :eval @input)]
