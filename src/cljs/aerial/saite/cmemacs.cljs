@@ -14,8 +14,8 @@
 (def set-mark ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Space"))
 (def select-all ((js->clj CodeMirror.keyMap.emacs) "Ctrl-X H"))
 
-(def  forward-char ((js->clj CodeMirror.keyMap.emacs) "Ctrl-F"))
-(def  backward-char ((js->clj CodeMirror.keyMap.emacs) "Ctrl-B"))
+(def forward-char ((js->clj CodeMirror.keyMap.emacs) "Ctrl-F"))
+(def backward-char ((js->clj CodeMirror.keyMap.emacs) "Ctrl-B"))
 
 (def delete-forward-char ((js->clj CodeMirror.keyMap.emacs) "Ctrl-D"))
 (def delete-backward-char ((js->clj CodeMirror.keyMap.emacs) "Backspace"))
@@ -74,7 +74,6 @@
 (def search-backward ((js->clj CodeMirror.keyMap.emacs) "Ctrl-R"))
 (def query-replace ((js->clj CodeMirror.keyMap.emacs) "Shift-Alt-5"))
 
-(def autocomplete ((js->clj CodeMirror.keyMap.emacs) "Alt-/"))
 (def newline-indent ((js->clj CodeMirror.keyMap.emacs) "Enter"))
 (def electric-newline-indent ((js->clj CodeMirror.keyMap.emacs) "Ctrl-J"))
 (def indent-auto ((js->clj CodeMirror.keyMap.emacs) "Tab"))
@@ -84,4 +83,153 @@
 (def save-doc ((js->clj CodeMirror.keyMap.emacs) "Ctrl-X Ctrl-S"))
 (def open-doc ((js->clj CodeMirror.keyMap.emacs) "Ctrl-X F"))
 
+(def autocomplete ((js->clj CodeMirror.keyMap.emacs) "Alt-/"))
+
 (def keyboard-quit ((js->clj CodeMirror.keyMap.emacs) "Ctrl-G"))
+
+
+
+
+(def emacs-kb-xref
+  (->>
+   (mapv vector
+         '[kill-region kill-line kill-ring-save
+           yank yank-pop  set-mark select-all
+           forward-char backward-char
+           delete-forward-char delete-backward-char
+           forward-word backward-word forward-kill-word backward-kill-word
+           next-line previous-line
+           beginning-of-line end-of-line
+           scroll-down scroll-up page-up page-down
+           backward-paragraph forward-paragraph
+           backward-sentence forward-sentence
+           kill-sentence kill-sexp kill-back-sexp
+           forward-sexp backward-sexp
+           mark-sexp transpose-sexps backward-up-list
+           just-one-space open-line transpose-chars
+           capitalize-word uppercase-word downcase-word
+           toggle-comment
+           undo repeat-undo
+           go-doc-start go-doc-end goto-line
+           search-forward search-backward query-replace
+           newline-indent electric-newline-indent indent-auto indent-selection
+           exchange-point-mark
+           save-doc open-doc
+           autocomplete
+           keyboard-quit]
+         [kill-region kill-line kill-ring-save
+          yank yank-pop  set-mark select-all
+          forward-char backward-char
+          delete-forward-char delete-backward-char
+          forward-word backward-word forward-kill-word backward-kill-word
+          next-line previous-line
+          beginning-of-line end-of-line
+          scroll-down scroll-up page-up page-down
+          backward-paragraph forward-paragraph
+          backward-sentence forward-sentence
+          kill-sentence kill-sexp kill-back-sexp
+          forward-sexp backward-sexp
+          mark-sexp transpose-sexps backward-up-list
+          just-one-space open-line transpose-chars
+          capitalize-word uppercase-word downcase-word
+          toggle-comment
+          undo repeat-undo
+          go-doc-start go-doc-end goto-line
+          search-forward search-backward query-replace
+          newline-indent electric-newline-indent indent-auto indent-selection
+          exchange-point-mark
+          save-doc open-doc
+          autocomplete
+          keyboard-quit])
+   (into {})))
+
+
+
+
+(def std-keymap
+  {"Ctrl-W" kill-region
+   "Ctrl-K" kill-line
+   "Alt-W"  kill-ring-save
+
+   "Ctrl-Y" yank
+   "Alt-Y"  yank-pop
+
+   "Ctrl-Space" set-mark
+   "Ctrl-X H"   select-all
+
+   "Ctrl-F" forward-char
+   "Ctrl-B" backward-char
+
+   "Ctrl-D"    delete-forward-char
+   "Backspace" delete-backward-char
+
+   "Alt-F"         forward-word
+   "Alt-B"         backward-word
+   "Alt-D"         forward-kill-word
+   "Alt-Backspace" backward-kill-word
+
+   "Ctrl-N" next-line
+   "Ctrl-P" previous-line
+
+   "Ctrl-A" beginning-of-line
+   "Ctrl-E" end-of-line
+
+   "Alt-V"    scroll-down
+   "Ctrl-V"   scroll-up
+   "PageUp"   page-up
+   "PageDown" page-down
+
+   "Ctrl-Up"   backward-paragraph
+   "Ctrl-Down" forward-paragraph
+
+   "Alt-A" backward-sentence
+   "Alt-E" forward-sentence
+   "Alt-K" kill-sentence
+
+   "Ctrl-Alt-K"         kill-sexp
+   "Ctrl-Alt-Backspace" kill-back-sexp
+
+   "Ctrl-Alt-F" forward-sexp
+   "Ctrl-Alt-B" backward-sexp
+
+   "Shift-Ctrl-Alt-2" mark-sexp
+   "Ctrl-Alt-T"       transpose-sexps
+   "Ctrl-Alt-U"       backward-up-list
+
+   "Alt-Space" just-one-space
+   "Ctrl-O"    open-line
+   "Ctrl-T"    transpose-chars
+
+   "Alt-C" capitalize-word
+   "Alt-U" uppercase-word
+   "Alt-L" downcase-word
+
+   "Alt-;" toggle-comment
+
+   "Ctrl-/"       undo
+   "Shift-Ctrl--" repeat-undo
+   "Ctrl-Z"       undo
+   "Cmd-Z"        repeat-undo
+
+   "Shift-Alt-," go-doc-start
+   "Shift-Alt-." go-doc-end
+   "Alt-G G"     goto-line
+
+   "Ctrl-S"      search-forward
+   "Ctrl-R"      search-backward
+   "Shift-Alt-5" query-replace
+
+   "Enter"         newline-indent
+   "Ctrl-J"        electric-newline-indent
+   "Tab"           indent-auto
+   "Ctrl-X Tab"    indent-selection
+   "Ctrl-X Ctrl-X" exchange-point-mark
+
+   "Ctrl-X Ctrl-S" save-doc
+   "Ctrl-X F"      open-doc
+
+   "Alt-/" autocomplete
+
+   "Ctrl-G" keyboard-quit
+   })
+
