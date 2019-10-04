@@ -51,6 +51,7 @@
    [cljsjs.highlight.langs.javascript]
    [cljsjs.highlight.langs.python]
 
+   [aerial.saite.cmemacs :as em]
    [paredit-cm.core :as pe]
 
    [re-com.core
@@ -80,7 +81,7 @@
 
 (defn get-cm-sexpr [cm]
   (let [end (.getCursor cm)
-        start (do (((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-B") cm)
+        start (do (em/backward-sexp cm)
                   (.getCursor cm))
         stgval (.getValue cm)
         lines (subvec (clojure.string/split-lines stgval)
@@ -96,8 +97,8 @@
         (clojure.string/join "\n" [begstg midstg endstg])))))
 
 (defn find-outer-sexpr [cm]
-  (let [f ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-U")
-        b ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-B")]
+  (let [f em/backward-up-list
+        b em/backward-sexp]
     (loop [pos (do (f cm) (.getCursor cm))
            lastpos :na]
       (cond
@@ -108,7 +109,7 @@
 (defn get-outer-sexpr-src [cm]
   (let [pos (.getCursor cm)
         _ (find-outer-sexpr cm)
-        _ (((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-F") cm)
+        _ (em/forward-sexp  cm)
         s (get-cm-sexpr cm)]
     (.setCursor cm pos)
     s))
@@ -335,7 +336,7 @@
 
 
 (defn enhanced-cut [cm]
-  (let [ctrlwfn ((js->clj CodeMirror.keyMap.emacs) "Ctrl-W")
+  (let [ctrlwfn em/kill-region
         start (.getCursor cm "start")
         end (.getCursor cm "end")
         stgval (.getValue cm)
@@ -353,8 +354,8 @@
     (ctrlwfn cm)))
 
 (defn enhanced-yank [cm]
-  (let [ctrlyfn ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Y")
-        bsexpfn ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-B")
+  (let [ctrlyfn em/yank
+        bsexpfn em/backward-sexp
         _ (ctrlyfn cm)
         pos (.getCursor cm)]
     (bsexpfn cm)
@@ -504,40 +505,85 @@
     (reset! output "")))
 
 
-(defn xtra-keys-emacs []
+
+
+(def xtra-key-xref
+  (->>
+   (mapv vector
+         '[pe/forward-sexp pe/backward-sexp
+           pe/splice-sexp
+           pe/splice-sexp-killing-backward pe/splice-sexp-killing-forward
+           pe/raise-sexp
+           pe/forward-slurp-sexp pe/forward-barf-sexp
+           pe/backward-slurp-sexp pe/backward-barf-sexp
+           pe/split-sexp pe/join-sexps
+           pe/reindent-defun
+           enhanced-cut enhanced-yank
+           insert-frame delete-frame re-visualize
+           evalxe evalcc eval-mixed-cc
+           evaljvm-xe evaljvm-cc
+           clear-output]
+         [pe/forward-sexp pe/backward-sexp
+          pe/splice-sexp
+          pe/splice-sexp-killing-backward pe/splice-sexp-killing-forward
+          pe/raise-sexp
+          pe/forward-slurp-sexp pe/forward-barf-sexp
+          pe/backward-slurp-sexp pe/backward-barf-sexp
+          pe/split-sexp pe/join-sexps
+          pe/reindent-defun
+          enhanced-cut enhanced-yank
+          insert-frame delete-frame re-visualize
+          evalxe evalcc eval-mixed-cc
+          evaljvm-xe evaljvm-cc
+          clear-output])
+   (into {})))
+
+(defn xform-kb-syms [kb-map]
+  (->> kb-map
+       (mapv (fn[[k sym]]
+               [k (or (xtra-key-xref sym)
+                      (em/emacs-kb-xref (-> sym name symbol)))]))
+       (into {})))
+
+(defn xtra-keys-emacs-old []
   (CodeMirror.normalizeKeyMap
-   (js->clj {;;"Ctrl-F"     ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-F")
-             ;;"Ctrl-B"     ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-B")
-             "Ctrl-F"     pe/forward-sexp
-             "Ctrl-B"     pe/backward-sexp
-             "Ctrl-Left"  pe/forward-barf-sexp
-             "Ctrl-Right" pe/forward-slurp-sexp
+   (js->clj {"Ctrl-F"         pe/forward-sexp
+             "Ctrl-B"         pe/backward-sexp
+             "Ctrl-Left"      pe/forward-barf-sexp
+             "Ctrl-Right"     pe/forward-slurp-sexp
              "Ctrl-Alt-Left"  pe/backward-barf-sexp
              "Ctrl-Alt-Right" pe/backward-slurp-sexp
 
-             "Ctrl-Home"     ((js->clj CodeMirror.keyMap.emacs) "Shift-Alt-,")
-             "Ctrl-End"      ((js->clj CodeMirror.keyMap.emacs) "Shift-Alt-.")
-             ;;; "Alt-W"     ((js->clj CodeMirror.keyMap.emacs) "Ctrl-W")
-             "Alt-W"         enhanced-cut
-             "Ctrl-Y"        enhanced-yank
-             "Alt-K"         ((js->clj CodeMirror.keyMap.emacs) "Ctrl-Alt-K")
-             "Ctrl-X R"      ((js->clj CodeMirror.keyMap.emacs) "Shift-Alt-5")
-             "Ctrl-X Ctrl-B" clear-output
+             "Ctrl-Home"      em/go-doc-start
+             "Ctrl-End"       em/go-doc-end
 
-             "Ctrl-Alt-W"    enhanced-cut
-             "Ctrl-Alt-Y"    enhanced-yank
-             "Ctrl-X Ctrl-I" insert-frame
-             "Insert"        insert-frame
-             "Ctrl-X Ctrl-D" delete-frame
-             "Delete"        delete-frame
-             "Ctrl-X Ctrl-V" re-visualize
+             "Alt-W"          enhanced-cut
+             "Ctrl-Y"         enhanced-yank
+             "Alt-K"          em/kill-sexp
+             "Ctrl-X R"       em/query-replace
+             "Ctrl-X Ctrl-B"  clear-output
 
-             "Ctrl-X Ctrl-E" evalxe
-             "Ctrl-X Ctrl-C" eval-mixed-cc ;evalcc
-             "Ctrl-X J"      evaljvm-xe
-             "Ctrl-X Ctrl-J" evaljvm-cc
-             "Ctrl-X Ctrl-M" eval-mixed-cc
+             "Ctrl-Alt-W"     enhanced-cut
+             "Ctrl-Alt-Y"     enhanced-yank
+             "Ctrl-X Ctrl-I"  insert-frame
+             "Insert"         insert-frame
+             "Ctrl-X Ctrl-D"  delete-frame
+             "Delete"         delete-frame
+             "Ctrl-X Ctrl-V"  re-visualize
+
+             "Ctrl-X Ctrl-E"  evalxe
+             "Ctrl-X Ctrl-C"  eval-mixed-cc ;evalcc
+             "Ctrl-X J"       evaljvm-xe
+             "Ctrl-X Ctrl-J"  evaljvm-cc
+             "Ctrl-X Ctrl-M"  eval-mixed-cc
              })))
+
+(defn xtra-keys-emacs []
+  (CodeMirror.normalizeKeyMap
+   (js->clj
+    (get-ddb [:main :editor :key-bindings]))))
+
+
 
 
 (defn code-mirror
@@ -562,7 +608,7 @@
                               :lineWrapping true,
                               :viewportMargin js/Infinity
                               :autofocus true
-                              :keyMap "emacs"
+                              :keyMap (get-ddb [:main :editor :name])
                               :extraKeys (xtra-keys-emacs)
                               :matchBrackets true
                               :autoCloseBrackets true
@@ -649,7 +695,7 @@
            :height (opts :height "300px")
            :justify (opts :justify :start)
            :align (opts :justify :stretch)
-           :child [code-mirror input "clojure"
+           :child [code-mirror input (get-ddb [:main :editor :mode])
                    :cb (fn[m]
                          (let [ostg (with-out-str
                                       (cljs.pprint/pprint
@@ -665,7 +711,7 @@
            :height oh
            :justify (opts :justify :start)
            :align (opts :justify :stretch)
-           :child [code-mirror output "clojure"
+           :child [code-mirror output (get-ddb [:main :editor :mode])
                    :js-cm-opts {:lineNumbers false,
                                 :lineWrapping true}]]]]]]
       [gap :size "10px"]]]))
