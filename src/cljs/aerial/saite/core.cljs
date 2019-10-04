@@ -263,7 +263,10 @@
 (defmethod user-msg :app-init [msg]
   (let [{:keys [save-info editor doc]} (msg :data)
         choices (into {} save-info)
-        dirs (-> choices keys sort)]
+        dirs (-> choices keys sort)
+        {:keys [name mode key-bindings]} editor
+        key-bindings (cm/xform-kb-syms key-bindings)
+        editor {:name name :mode mode :key-bindings key-bindings}]
     (printchan :APP-INIT save-info editor)
     (printchan :CHOICES choices :DIRS dirs)
 
