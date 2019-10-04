@@ -234,12 +234,36 @@
 (defonce default-cfg
   {:editor
    {:name "emacs",
-    :key-bindings {:fwdsexp "Ctrl-F",
-                   :bkwdsexp "Ctrl-B",
-                   :killsexp "Alt-K",
-                   :evalsexp "Ctrl-X Ctrl-E",
-                   :evalosexp "Ctrl-X Ctrl-C",
-                   :repregex "Ctrl-X R"}},
+    :mode "clojure"
+    :key-bindings '{"Ctrl-F"         pe/forward-sexp
+                    "Ctrl-B"         pe/backward-sexp
+                    "Ctrl-Left"      pe/forward-barf-sexp
+                    "Ctrl-Right"     pe/forward-slurp-sexp
+                    "Ctrl-Alt-Left"  pe/backward-barf-sexp
+                    "Ctrl-Alt-Right" pe/backward-slurp-sexp
+
+                    "Ctrl-Home"      em/go-doc-start
+                    "Ctrl-End"       em/go-doc-end
+
+                    "Alt-W"          enhanced-cut
+                    "Ctrl-Y"         enhanced-yank
+                    "Alt-K"          em/kill-sexp
+                    "Ctrl-X R"       em/query-replace
+                    "Ctrl-X Ctrl-B"  clear-output
+
+                    "Ctrl-Alt-W"     enhanced-cut
+                    "Ctrl-Alt-Y"     enhanced-yank
+                    "Ctrl-X Ctrl-I"  insert-frame
+                    "Insert"         insert-frame
+                    "Ctrl-X Ctrl-D"  delete-frame
+                    "Delete"         delete-frame
+                    "Ctrl-X Ctrl-V"  re-visualize
+
+                    "Ctrl-X Ctrl-E"  evalxe
+                    "Ctrl-X Ctrl-C"  eval-mixed-cc ;evalcc
+                    "Ctrl-X J"       evaljvm-xe
+                    "Ctrl-X Ctrl-J"  evaljvm-cc
+                    "Ctrl-X Ctrl-M"  eval-mixed-cc}},
    :saveloc (fs/join home-path "Doc")
    :dataloc (fs/join home-path "Data")})
 
