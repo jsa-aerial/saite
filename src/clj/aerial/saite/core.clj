@@ -3,6 +3,7 @@
             [clojure.data.csv :as csv]
             [clojure.data.json :as json]
 
+            [cemerick.pomegranate :as pom]
             [com.rpl.specter :as sp]
 
             [aerial.fs :as fs]
@@ -124,6 +125,13 @@
 
 
 
+(defn deps [coords]
+  (pom/add-dependencies
+   :coordinates coords
+   :repositories (merge cemerick.pomegranate.aether/maven-central
+                        {"clojars" "https://clojars.org/repo"}))
+  :success)
+
 (defmethod hmi/user-msg :set-namespace [msg]
   (let [nsinfo (msg :data)
         {:keys [nssym requires]} nsinfo
@@ -140,6 +148,7 @@
                        [clojure.data.csv :as csv]
                        [clojure.data.json :as json]
 
+                       [cemerick.pomegranate :as pom]
                        [com.rpl.specter :as sp]
 
                        [aerial.fs :as fs]
@@ -154,6 +163,7 @@
                        [aerial.hanami.templates :as ht]
                        [aerial.hanami.core :as hmi]
                        [aerial.hanami.data :as hd]
+                       [aerial.saite.core :refer [deps]]
                        %s)))"
           nssym requires-stg)))))))
 
