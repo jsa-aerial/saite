@@ -1,4 +1,4 @@
-(defproject aerial.saite "0.15.0"
+(defproject aerial.saite "0.17.0"
   :description "Interactive document and visualization system - exploration, presentation, publication"
   :url "https://github.com/jsa-aerial/saite"
   :license {:name "MIT"
@@ -7,6 +7,8 @@
                  [org.clojure/clojurescript "1.10.238"]
                  [org.clojure/core.async "0.4.474"]
                  [org.clojure/data.csv "0.1.3"]
+
+                 [com.cemerick/pomegranate "0.3.1"]  ; dynamic loader
 
                  [com.rpl/specter "1.1.1"]
 
