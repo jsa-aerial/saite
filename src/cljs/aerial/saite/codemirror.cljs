@@ -697,9 +697,13 @@
            :align (opts :justify :stretch)
            :child [code-mirror input (get-ddb [:main :editor :mode])
                    :cb (fn[m]
-                         (let [ostg (with-out-str
-                                      (cljs.pprint/pprint
-                                       (or (m :value) (m :error))))]
+                         (let [oval (or (m :value) (m :error))
+                               ostg (if (and (string? oval)
+                                             (re-find #"\n" oval))
+                                      oval
+                                      (with-out-str
+                                        (cljs.pprint/pprint
+                                         (or (m :value) (m :error)))))]
                            (reset! output (str @output
                                                "=> " ostg))
                            (printchan :output @output)))]]]]
