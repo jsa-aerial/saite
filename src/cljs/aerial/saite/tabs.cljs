@@ -353,14 +353,17 @@
         tid (curtab :id)
         label (curtab :label)
         opts (curtab :opts)
+        rgap? (opts :rgap)
         specs (curtab :specs)
         {:keys [label nssym order eltsper rgap cgap size]} info
         newopts (merge opts (dissoc info :label :nssym))
-        s-f-pairs (hmi/make-spec-frame-pairs tid newopts specs)]
+        s-f-pairs (when rgap? (hmi/make-spec-frame-pairs tid newopts specs))]
     (update-ddb [:tabs :extns tid :ns] nssym)
     (hmi/update-tab-field tid :opts newopts)
     (hmi/update-tab-field tid :label label)
-    (hmi/update-tab-field tid :compvis (hmi/vis-list tid s-f-pairs newopts))))
+    (when rgap?
+      (hmi/update-tab-field
+       tid :compvis (hmi/vis-list tid s-f-pairs newopts)))))
 
 
 
@@ -703,8 +706,9 @@
         opts (curtab :opts)
         order (rgt/atom (opts :order))
         eltsper (rgt/atom (str (opts :eltsper)))
-        rgap (rgt/atom (-> opts :rgap (cljstr/replace #"px$" "")))
-        cgap (rgt/atom (-> opts :cgap (cljstr/replace #"px$" "")))
+        rgap? (opts :rgap)
+        rgap (rgt/atom (when rgap? (-> opts :rgap (cljstr/replace #"px$" ""))))
+        cgap (rgt/atom (when rgap? (-> opts :cgap (cljstr/replace #"px$" ""))))
         size (rgt/atom (opts :size))
         tlabel (rgt/atom curlabel)
         nssym (rgt/atom (str (get-ddb [:tabs :extns curtid :ns])))
@@ -726,39 +730,43 @@
        :child [v-box
                :gap "10px"
                :children
-               [[h-box :gap "10px"
-                 :children
-                 [[v-box :gap "15px"
+               [(when @rgap
+                  [h-box :gap "10px"
                    :children
-                   [[label :style {:font-size "18px"} :label "Ordering"]
-                    [radio-button
-                     :label "Row Ordered"
-                     :value :row
-                     :model order
-                     :label-style (when (= :row @order) {:font-weight "bold"})
-                     :on-change #(do (reset! size "auto")
-                                     (reset! order %))]
-                    [radio-button
-                     :label "Column Ordered"
-                     :value :col
-                     :model order
-                     :label-style (when (= :col @order) {:font-weight "bold"})
-                     :on-change #(do (reset! size "none")
-                                     (reset! order %))] 
-                    [h-box :gap "10px"
-                     :children [[input-text
-                                 :model eltsper
-                                 :width "40px" :height "20px"
-                                 :on-change #(reset! eltsper %)]
-                                [label :label (str "Elts/" (if (= @order :row)
-                                                             "row" "col"))]]]]]
-                  [v-box :gap "10px"
-                   :children
-                   [[label :style {:font-size "18px"} :label "Gapping"]
-                    [input-area "Row Gap" rgap]
-                    [input-area "Col Gap" cgap]
-                    [input-area "Flex size" size]]]]]
-                
+                   [[v-box :gap "15px"
+                     :children
+                     [[label :style {:font-size "18px"} :label "Ordering"]
+                      [radio-button
+                       :label "Row Ordered"
+                       :value :row
+                       :model order
+                       :label-style (when (= :row @order)
+                                      {:font-weight "bold"})
+                       :on-change #(do (reset! size "auto")
+                                       (reset! order %))]
+                      [radio-button
+                       :label "Column Ordered"
+                       :value :col
+                       :model order
+                       :label-style (when (= :col @order)
+                                      {:font-weight "bold"})
+                       :on-change #(do (reset! size "none")
+                                       (reset! order %))]
+                      [h-box :gap "10px"
+                       :children [[input-text
+                                   :model eltsper
+                                   :width "40px" :height "20px"
+                                   :on-change #(reset! eltsper %)]
+                                  [label :label (str "Elts/"
+                                                     (if (= @order :row)
+                                                       "row" "col"))]]]]]
+                    [v-box :gap "10px"
+                     :children
+                     [[label :style {:font-size "18px"} :label "Gapping"]
+                      [input-area "Row Gap" rgap]
+                      [input-area "Col Gap" cgap]
+                      [input-area "Flex size" size]]]]])
+
                 [h-box :gap "10px"
                  :children [[label
                              :style {:font-size "18px"}
