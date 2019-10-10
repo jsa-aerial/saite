@@ -20,6 +20,118 @@ Table of Contents
 [toc](https://github.com/ekalinin/github-markdown-toc)
 # saite
 
+Saite has progressed a great deal even from the [Aug 29 presentation](https://www.youtube.com/watch?v=3Hx7kbub9YE). Loads of stuff mentioned in the futures there are now implemented, including server side code execution, mixing of server and client side code execution, loading from URLs, full paredit support for editors, and more.
+
+Some of the new things in this release:
+
+* Self-installing uberjar, which also is used to run the server
+
+* Load saved docs from URLs (see below for example). So, you can easily publish documents for use by others.
+
+* Emacs editor support for editor buffers.
+  - Vim and Sublime can be specified in the config.edn file
+  - The Emacs functionality (actual Codemirror functions) are available for vim and sublime users, but they will need to setup the key configurations to access them.
+
+* Full paredit support is available - in particular slurp and barf
+
+* Autocomplete (defaults to `Alt-\` key sequence)
+
+* Code execution:
+  - On client (with self-hoste ClojureScript)
+  - On server (with synchronized evaluations)
+  - Mixed code - interweave server code with client code. This mode is especially useful for large computation based visualizations
+
+* Dynamic dependencies - declare dependencies in your code buffers via the `deps` function. You can use this to pull in your favorite libraries, so that you can then `require` their resources.
+
+______________________________________________________________________________
+
+As indicated, there is now a full self-installing JAR, which will also install the MKL libraries necessary for [Neanderthal](https://clojars.org/uncomplicate/neanderthal) as well as a default config.edn file. For the MKL libs, at the time of this note (9-Oct-2019), only Linux 64bit is supported.  I hope to have MacOS soon.  Windows is intended.
+
+For the self installing JAR, you can grab it with this (note, new versions are coming out fairly often and these versions will be reflected here):
+
+wget http://bioinformatics.bc.edu/~jsa/aerial.aerosaite-0.2.17-standalone.jar
+
+You need Java-8. At present it will run on 9+ due to all the non backward compatible changes there (in particular dynamic dependencies do not yet work on 9+). But Java 8 seems to be the platform most (80% I think) JVM users still use. And in any case would be easy to get.
+
+Once you have the uberjar and Java 8, you can run it with (for example on Linux from a terminal session):
+
+/usr/bin/nohup java -jar path-to-where-you-downloaded-it/aerial.aerosaite-0.2.17-standalone.jar --port 3000 --repl-port 4100 > start.log &
+
+There is also an `example-runserver` (Linux...) script that is installed. This script also sets the LD_LIBRARY_PATH for MKL use.
+
+As you probably know, `nohup` just keeps the app running if you exit the terminal session. `--port` is where the web server is listening. `--repl-port` is where you could connect emacs / cider, but it uses `nrepl 0.2.13` so you would need something compatible with that. In any case, you don't really need to connect to the nrepl (and I find myself never doing that actually...), especially as you can execute server code from the client.
+
+Connect by pointing your browser at `localhost:3000`. Once in, next click on the 'Upload Document' button (standard icon for this - and all the buttons have tooltips). Then click the URL checkbox. Then put this URL in:
+
+https://raw.githubusercontent.com/jsa-aerial/saite/master/examples/Docs/Scicloj/present.clj
+
+and click the check/OK button. This will load a new version of the document I presented. There is expanded walk through commentary in the 'Templates', 'Tabs', and 'Picture Frames' tabs. Additionally some of the commentary (especially in the 'saite' tabs) has been updated. Finally there is a new 'Gallery' tab with full walk through comments in the code.
+
+All the 'interactive document' tabs have their editor panels closed on load (that's how the doc was saved). You can open and close them with the 'Open Editor Panel' and 'Collapse Editor Panel' buttons. Once open you can use the slider to adjust how much is showing.
+
+The editors are emacs - most of the usual base emacs stuff is available. I haven't actually checked, but if you configure the editor to be `vim` or `sublime` a lot of stuff will still work - including 'key-chords'.  To get a quick overview of the *default* (as from the default config.edn) text manipulation and sexp navigation, various code execution capabilities, and frame visualization capabilities (and their key bindings) click the '?' "Quick Help" button at the upper right. A lot of this is also gone over in the walk through commentary. You can clear output area panels with the 'open circle' button at the left of editor panels (you may need to pull the slider to the right to make this visible if the panel was collapsed).  `Ctrl-X Ctrl-B` will also work.
+
+**Do not** use the editors in the <-> tab for any code execution. They are not intended for that - only for converting between JSON and Clj Vega/Vega-Lite specification code.
+
+To entice you a bit, here is some code snippets (from a real session) showing server and mixed server / client code.
+
+The **key thing** here is to pay attention to which evaluator to use (which key chord). In particular, mixed code, code with a clj form in it, can only be correctly run with Ctrl-X Ctrl-C. If you (accidently or otherwise) use Ctrl-X Ctrl-J (run outer sexp on JVM), Ctrl-X J (run last sexp on JVM), or Ctrl-X Ctrl-E (run last sexp on client), you will get an error saying the clj symbol is not resolvable. That's because it actually doesn't exist - there is no clj operator. Mixed code is dealt with via a re-write transformation where the clj disappears and async messages (to and from the server) and channels for synching are used in the implementation.
+
+To try this, you can simply click the 'Add Interactive Tab' button, then click 'Editor and Output', then click check/OK button. Just select/copy the following and paste into the left editor panel (the right is the repl/output buffer). Pay attention to the comments to make sure you use the 'correct' evaluators...
+
+```Clojure
+;;; Place cursor at end of form paren and use Ctrl-X J to run last sexp on
+;;; JVM or place cursor in the form and use Ctrl-X Ctrl-J (run outer sexp on
+;;; JVM)
+(defn roundit [r & {:keys [places] :or {places 4}}]
+   (let [n (Math/pow 10.0 places)]
+    (-> r (* n) Math/round (/ n))))
+
+;;; Same for this
+(defn log2 [x]
+  (let [ln2 (Math/log 2)]
+    (/ (Math/log x) ln2)))
+
+;;; Now run this by placing cursor in the form (anywhere) and use Ctrl-X  Ctrl-C
+;;; (run mixed code) The (clj ...) form will run on the server (during which a
+;;; spinner will appear under the open-circle / clear button The results of
+;;; that server side computation are then bound to the outer obsdist in
+;;; the client. After, you can check both obsdist vars: place cursor at
+;;; the end of `obdist`. Use Ctrl-X Ctrl-E to get the client's value and
+;;; use Ctrl-X J to get the server's value (they will be equal...)
+(def obsdist
+  (clj
+   (def obsdist
+     (let [obs [[0 9] [1 78] [2 305] [3 752] [4 1150] [5 1166]
+                [6 899] [7 460] [8 644] [9 533] [10 504]]
+           totcnt (->> obs (mapv second) (apply +))
+           pdist (map (fn[[k cnt]] [k (double (/ cnt totcnt))]) obs)]
+       pdist))))
+
+;;; Like above, use Ctrl-X Ctrl-C. The body will be run on the server and
+;;; then the result will be handed to the client side (take 10 ...) form
+(take 10 (clj (mapv #(let [RE (it/KLD (->> obsdist (into {}))
+                                      (->> (p/binomial-dist 10 %)
+                                        (into {})))
+                           REtt (roundit RE)
+                           ptt (roundit % :places 2)]
+                       {:x % :y RE})
+                    (range 0.06 0.98 0.01))))
+
+;;; This one is kind of interesting. Use Ctrl-X Ctrl-C (as before)
+;;; Runs (log2 23.4) on server then binds to x on client, then runs
+;;; (roundit x) on the server binding that result to y on client. Then
+;;; runs (+ x y) in client.
+(let [x (clj (log2 23.4))
+      y (clj (roundit x))]
+  (+ x y))
+```
+
+End of new preamble note
+_____________________________________________________________________________
+
+
+
 **Saite** is a Clojure(Script) mini "client/server" application for exploratory creation of interactive visualizations based in [Vega-Lite](https://vega.github.io/vega-lite/) (VGL) and/or [Vega](https://vega.github.io/vega/) (VG) specifications. These specifications are declarative and completely specified by _data_ (JSON maps). VGL compiles into the lower level grammar of VG which in turn compiles to a runtime format utilizting lower level runtime environments such as [D3](https://d3js.org/), HTML5 Canvas, and [WebGL](https://github.com/vega/vega-webgl-renderer).
 
 Typical work flow starts by requiring `aerial.saite.core` and running the `start` function which takes a port. This port is for the websocket messaging. Browsing to this port on localhost will open the viewer.
@@ -58,7 +170,7 @@ To install, add the following to your project `:dependencies`:
   * useful for merging VGL with VG only capabilities
   * Visualization templates have a default tab, with name "Expl"
   * Any number of additional tabs can be created and used
-* Multiple named based sessions
+* Multiple [named sessions groups]https://github.com/jsa-aerial/hanami#sessions()
   * Each session can be given a name (the default is 'Exploring')
   * An input area is available to change the name
   * All sessions with the same name get updates for that name
@@ -180,7 +292,7 @@ Saite sets a variety of defaults for `:USERDATA` as follows:
 
 The `TLBL` value is an example of a substitution key which is a [function](https://github.com/jsa-aerial/hanami#function-values-for-substitution-keys). Such functions are passed the current substitution map as an argument during recursive transformation. So, in this case, the current tab will get a label that is the capitalized string of the `:TID` value. The `:TOPTS` provides a way of describing the layout of independent visualizations. Visualizations that are _independent_ are those that are separate VGL/VG renderings. So, they constitute different/independent VGL/VG specifications.
 
-All of these values can be changed, either via an explicit call to [hc/add-defaults](https://github.com/jsa-aerial/hanami#templates-and-substitution-keys) or implicitly per visualization by supplying them to the [hc/xform](https://github.com/jsa-aerial/hanami#templates-and-substitution-keys) function. For example, in the following, we specify a new tab `:dists`. The tab label will automatically be set to "Dists" (you could override this with an explicit `:TLBL` k/v):
+All of these values can be changed, either via a call to [hc/update-defaults](https://github.com/jsa-aerial/hanami#templates-and-substitution-keys) or per visualization by explicitly supplying them to the [hc/xform](https://github.com/jsa-aerial/hanami#templates-and-substitution-keys) function. For example, in the following, we specify a new tab `:dists`. The tab label will automatically be set to "Dists" (you could override this with an explicit `:TLBL` k/v):
 
 ```Clojure
 (->>
