@@ -53,11 +53,17 @@ wget http://bioinformatics.bc.edu/~jsa/aerial.aerosaite-0.2.17-standalone.jar
 
 You need Java-8. At present it will run on 9+ due to all the non backward compatible changes there (in particular dynamic dependencies do not yet work on 9+). But Java 8 seems to be the platform most (80% I think) JVM users still use. And in any case would be easy to get.
 
-Once you have the uberjar and Java 8, you can run it with (for example on Linux from a terminal session):
+Once you have the uberjar and Java 8, you can install with this command:
 
-/usr/bin/nohup java -jar path-to-where-you-downloaded-it/aerial.aerosaite-0.2.17-standalone.jar --port 3000 --repl-port 4100 > start.log &
+`java -jar path-to-where-you-downloaded-it/aerial.aerosaite-0.2.17-standalone.jar --install`
 
-There is also an `example-runserver` (Linux...) script that is installed. This script also sets the LD_LIBRARY_PATH for MKL use.
+You will be asked for the home/install directory with the default `~/.saite`. It is a good idea to take the default - otherwise you will need to always change directory to the install/home directory to run the server. A log of what happens is output to stdout. If you are on Linux, MKL libraries for Neanderthal will also be downloaded and installed under the `Libs` directory of the home/install directory.
+
+Once installed, you can run it with (for example on Linux from a terminal session):
+
+`/usr/bin/nohup java -jar path-to-where-you-downloaded-it/aerial.aerosaite-0.2.17-standalone.jar --port 3000 --repl-port 4100 > start.log &`
+
+There is also an `example-runserver` (Linux...) script that is installed. This script also sets the `LD_LIBRARY_PATH` for MKL use.
 
 As you probably know, `nohup` just keeps the app running if you exit the terminal session. `--port` is where the web server is listening. `--repl-port` is where you could connect emacs / cider, but it uses `nrepl 0.2.13` so you would need something compatible with that. In any case, you don't really need to connect to the nrepl (and I find myself never doing that actually...), especially as you can execute server code from the client.
 
