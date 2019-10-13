@@ -17,7 +17,7 @@ Table of Contents
          * [The default Expl1 tab](#the-default-expl1-tab)
          * [User tabs](#user-tabs)
 
-[toc](https://github.com/ekalinin/github-markdown-toc)
+toc[gh-md-toc](https://github.com/ekalinin/github-markdown-toc)
 # saite
 
 Saite has progressed a great deal even from the [Aug 29 presentation](https://www.youtube.com/watch?v=3Hx7kbub9YE). Loads of stuff mentioned in the futures there are now implemented, including server side code execution, mixing of server and client side code execution, loading from URLs, full paredit support for editors, and more.
@@ -45,25 +45,25 @@ Some of the new things in this release:
 
 ______________________________________________________________________________
 
-As indicated, there is now a full self-installing JAR, which will also install the MKL libraries necessary for [Neanderthal](https://clojars.org/uncomplicate/neanderthal) as well as a default config.edn file. For the MKL libs, at the time of this note (9-Oct-2019), only Linux 64bit is supported.  I hope to have MacOS soon.  Windows is intended.
+As indicated, there is now a full self-installing JAR, which will also install the MKL libraries necessary for [Neanderthal](https://clojars.org/uncomplicate/neanderthal) as well as a default config.edn file. For the MKL libs, at the time of this note (13-Oct-2019), Linux 64bit and MacOS 10.11+ 64bit are supported.  Windows is intended.
 
 For the self installing JAR, you can grab it with this (note, new versions are coming out fairly often and these versions will be reflected here):
 
-wget http://bioinformatics.bc.edu/~jsa/aerial.aerosaite-0.2.17-standalone.jar
+wget http://bioinformatics.bc.edu/~jsa/aerial.aerosaite-0.2.19-standalone.jar
 
-You need Java-8. At present it will run on 9+ due to all the non backward compatible changes there (in particular dynamic dependencies do not yet work on 9+). But Java 8 seems to be the platform most (80% I think) JVM users still use. And in any case would be easy to get.
+You need Java-8. At present it will **not** run properly on 9+ due to all the non backward compatible changes there (in particular dynamic dependencies do not yet work on 9+). But Java 8 seems to be the platform most (80% I think) JVM users still use. And in any case would be easy to get.
 
 Once you have the uberjar and Java 8, you can install with this command:
 
-`java -jar path-to-where-you-downloaded-it/aerial.aerosaite-0.2.17-standalone.jar --install`
+`java -jar path-to-where-you-downloaded-it/aerial.aerosaite-0.2.19-standalone.jar --install`
 
-You will be asked for the home/install directory with the default `~/.saite`. It is a good idea to take the default - otherwise you will need to always change directory to the install/home directory to run the server. A log of what happens is output to stdout. If you are on Linux, MKL libraries for Neanderthal will also be downloaded and installed under the `Libs` directory of the home/install directory.
+You will be asked for the home/install directory with the default `~/.saite`. It is a good idea to take the default - otherwise you will need to always change directory to the install/home directory to run the server. A log of what happens is output to stdout. If you are on Linux or Mac, MKL libraries for Neanderthal will also be downloaded and installed under the `Libs` directory of the home/install directory.
 
-Once installed, you can run it with (for example on Linux from a terminal session):
+Once installed it is best to move the standalone.jar to the home/install directory. The run scripts are setup to expect the jar in ~/.saite.  However, you can also run it with (for example on Linux from a terminal session):
 
 `/usr/bin/nohup java -jar path-to-where-you-downloaded-it/aerial.aerosaite-0.2.17-standalone.jar --port 3000 --repl-port 4100 > start.log &`
 
-There is also an `example-runserver` (Linux...) script that is installed. This script also sets the `LD_LIBRARY_PATH` for MKL use.
+There are also scripts `linux-runserver` (Linux...) script and `mac-runserver` that are installed. These scripts also setup the requirements for MKL use. To use the scripts the home/install directory should be `~/.saite`, the jar should be in this directory, and lastly you will need to `chmod a+x linux-runserver` or `chmod a+x mac-runserver`.
 
 As you probably know, `nohup` just keeps the app running if you exit the terminal session. `--port` is where the web server is listening. `--repl-port` is where you could connect emacs / cider, but it uses `nrepl 0.2.13` so you would need something compatible with that. In any case, you don't really need to connect to the nrepl (and I find myself never doing that actually...), especially as you can execute server code from the client.
 
