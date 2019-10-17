@@ -1,4 +1,4 @@
-(defproject aerial.saite "0.17.1"
+(defproject aerial.saite "0.17.3"
   :description "Interactive document and visualization system - exploration, presentation, publication"
   :url "https://github.com/jsa-aerial/saite"
   :license {:name "MIT"
@@ -18,7 +18,7 @@
                  [cljsjs/mathjax "2.7.5-0"]
 
                  [net.apribase/clj-dns "0.1.0"]
-                 [aerial.fs "1.1.5"]
+                 [aerial.fs "1.1.6"]
                  [aerial.utils "1.2.0"]
                  [aerial.bio.utils "2.0.0"]]
 
