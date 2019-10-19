@@ -80,6 +80,10 @@ https://raw.githubusercontent.com/jsa-aerial/saite/master/examples/Docs/Scicloj/
 
 and click the check/OK button. This will load a new version of the document I presented. There is expanded walk through commentary in the 'Templates', 'Tabs', and 'Picture Frames' tabs. Additionally some of the commentary (especially in the 'saite' tabs) has been updated. Finally there is a new 'Gallery' tab with full walk through comments in the code.
 
+Also, there is now a simple example document showing Neanderthal and Kixi Stats usage (via dynamic dependencies). URL:
+
+https://raw.githubusercontent.com/jsa-aerial/saite/master/examples/Docs/Test/neanderthal-et-al.clj
+
 All the 'interactive document' tabs have their editor panels closed on load (that's how the doc was saved). You can open and close them with the 'Open Editor Panel' and 'Collapse Editor Panel' buttons. Once open you can use the slider to adjust how much is showing.
 
 The editors are emacs - most of the usual base emacs stuff is available. I haven't actually checked, but if you configure the editor to be `vim` or `sublime` a lot of stuff will still work - including 'key-chords'.  To get a quick overview of the *default* (as from the default config.edn) text manipulation and sexp navigation, various code execution capabilities, and frame visualization capabilities (and their key bindings) click the '?' "Quick Help" button at the upper right. A lot of this is also gone over in the walk through commentary. You can clear output area panels with the 'open circle' button at the left of editor panels (you may need to pull the slider to the right to make this visible if the panel was collapsed).  `Ctrl-X Ctrl-B` will also work.
