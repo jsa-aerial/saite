@@ -17,7 +17,7 @@ Table of Contents
          * [The default Expl1 tab](#the-default-expl1-tab)
          * [User tabs](#user-tabs)
 
-toc[gh-md-toc](https://github.com/ekalinin/github-markdown-toc)
+[toc](https://github.com/ekalinin/github-markdown-toc)
 # saite
 
 Saite has progressed a great deal even from the [Aug 29 presentation](https://www.youtube.com/watch?v=3Hx7kbub9YE). Loads of stuff mentioned in the futures there are now implemented, including server side code execution, mixing of server and client side code execution, loading from URLs, full paredit support for editors, and more.
@@ -29,19 +29,26 @@ Some of the new things in this release:
 * Load saved docs from URLs (see below for example). So, you can easily publish documents for use by others.
 
 * Emacs editor support for editor buffers.
+  - Full ability to configure your key-sequences to functionality (in config.edn `editor` section)
+  
+  - Full set of CodeMirror base emacs and full paredit functions exposed for such bindings (see [key bindings](https://github.com/jsa-aerial/saite/blob/master/doc/std-key-maps.md)
+  
   - Vim and Sublime can be specified in the config.edn file
-  - The Emacs functionality (actual Codemirror functions) are available for vim and sublime users, but they will need to setup the key configurations to access them.
-
-* Full paredit support is available - in particular slurp and barf
-
-* Autocomplete (defaults to `Alt-\` key sequence)
+  
+  - The same functions are available to vim and sublime users, but they will need to setup the key configurations to access them.
+  
+  - Autocomplete (defaults to Alt-\ key sequence). This 'works' but is not yet fully functional...
+  
+  - Full paredit support is available - in particular slurp and barf
 
 * Code execution:
   - On client (with self-hoste ClojureScript)
   - On server (with synchronized evaluations)
   - Mixed code - interweave server code with client code. This mode is especially useful for large computation based visualizations
 
-* Dynamic dependencies - declare dependencies in your code buffers via the `deps` function. You can use this to pull in your favorite libraries, so that you can then `require` their resources.
+* **Turnkey** Neanderthal support (for Mac and Linux)
+
+* **Dynamic dependencies**: declare dependencies in your code buffers via the `deps` function. You can use this to pull in your favorite libraries, so that you can then `require` their resources.
 
 ______________________________________________________________________________
 
@@ -49,19 +56,19 @@ As indicated, there is now a full self-installing JAR, which will also install t
 
 For the self installing JAR, you can grab it with this (note, new versions are coming out fairly often and these versions will be reflected here):
 
-wget http://bioinformatics.bc.edu/~jsa/aerial.aerosaite-0.2.19-standalone.jar
+wget http://bioinformatics.bc.edu/~jsa/aerial.aerosaite-0.2.21-standalone.jar
 
 You need Java-8. At present it will **not** run properly on 9+ due to all the non backward compatible changes there (in particular dynamic dependencies do not yet work on 9+). But Java 8 seems to be the platform most (80% I think) JVM users still use. And in any case would be easy to get.
 
 Once you have the uberjar and Java 8, you can install with this command:
 
-`java -jar path-to-where-you-downloaded-it/aerial.aerosaite-0.2.19-standalone.jar --install`
+`java -jar path-to-where-you-downloaded-it/aerial.aerosaite-0.2.21-standalone.jar --install`
 
 You will be asked for the home/install directory with the default `~/.saite`. It is a good idea to take the default - otherwise you will need to always change directory to the install/home directory to run the server. A log of what happens is output to stdout. If you are on Linux or Mac, MKL libraries for Neanderthal will also be downloaded and installed under the `Libs` directory of the home/install directory.
 
 Once installed it is best to move the standalone.jar to the home/install directory. The run scripts are setup to expect the jar in ~/.saite.  However, you can also run it with (for example on Linux from a terminal session):
 
-`/usr/bin/nohup java -jar path-to-where-you-downloaded-it/aerial.aerosaite-0.2.17-standalone.jar --port 3000 --repl-port 4100 > start.log &`
+`/usr/bin/nohup java -jar path-to-where-you-downloaded-it/aerial.aerosaite-0.2.21-standalone.jar --port 3000 --repl-port 4100 > start.log &`
 
 There are also scripts `linux-runserver` (Linux...) script and `mac-runserver` that are installed. These scripts also setup the requirements for MKL use. To use the scripts the home/install directory should be `~/.saite`, the jar should be in this directory, and lastly you will need to `chmod a+x linux-runserver` or `chmod a+x mac-runserver`.
 
