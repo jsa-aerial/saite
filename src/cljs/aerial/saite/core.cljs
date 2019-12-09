@@ -260,11 +260,17 @@
     (go (async/>! ch result))))
 
 
+(defn xform-tab-defaults [defaults]
+  (->> defaults
+       (mapv (fn[[k v]] [k (if (number? v) (str v) v)]))
+       (into {})))
+
 (defmethod user-msg :app-init [msg]
-  (let [{:keys [save-info editor doc]} (msg :data)
+  (let [{:keys [save-info editor interactive-tab doc]} (msg :data)
         choices (into {} save-info)
         dirs (-> choices keys sort)
         {:keys [name mode key-bindings]} editor
+        interactive-tab (xform-tab-defaults interactive-tab)
         key-bindings (cm/xform-kb-syms key-bindings)
         editor {:name name :mode mode :key-bindings key-bindings}]
     (printchan :APP-INIT save-info editor)
@@ -281,6 +287,7 @@
                 [:main :files :load] (-> dirs first choices sort first)
 
                 [:main :editor] editor
+                [:main :interactive-tab] interactive-tab
                 [:main :doc] doc
 
                 [:editors] {}
@@ -429,7 +436,7 @@
  aerial.saite.compiler/state 'aerial.saite.core
  (aerial.saite.analyzer/analyzer-state 'aerial.saite.core))
 
-(when-let [elem (js/document.querySelector "#app")]
+#_(when-let [elem (js/document.querySelector "#app")]
   (hc/update-defaults
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
               :frame {:top :TOP, :bottom :BOTTOM,
