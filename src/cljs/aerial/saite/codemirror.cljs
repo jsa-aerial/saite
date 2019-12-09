@@ -20,6 +20,7 @@
     :refer [format evaluate load-analysis-cache!]]
    [aerial.saite.tabops :as tops
     :refer [push-undo undo redo]]
+   [aerial.saite.splits :as ass]
 
    [com.rpl.specter :as sp]
 
@@ -505,6 +506,29 @@
     (reset! output "")))
 
 
+(defn get-sym-at-cursor [cm]
+  (try
+    (let [sym (get-cm-sexpr cm)
+          sym? (-> sym read-string symbol?)]
+      [sym sym?])
+    (catch js/Error e
+      (js/alert (str "Cannot read symbol\n\n" e)))))
+
+(defn show-doc [cm]
+  (let [[sym sym?] (get-sym-at-cursor cm)
+        cb cm.CB]
+    (if sym?
+      (eval-on-jvm (format "(with-out-str (cr/doc %s))" sym) cb)
+      "Cursor not on symbol")))
+
+(defn show-source [cm]
+  (let [[sym sym?] (get-sym-at-cursor cm)
+        cb cm.CB]
+    (if sym?
+      (eval-on-jvm (format "(with-out-str (cr/source %s))" sym) cb)
+      "Cursor not on symbol")))
+
+
 
 
 (def xtra-key-xref
@@ -522,7 +546,7 @@
            insert-frame delete-frame re-visualize
            evalxe evalcc eval-mixed-cc
            evaljvm-xe evaljvm-cc
-           clear-output]
+           clear-output show-doc show-source]
          [pe/forward-sexp pe/backward-sexp
           pe/splice-sexp
           pe/splice-sexp-killing-backward pe/splice-sexp-killing-forward
@@ -535,7 +559,7 @@
           insert-frame delete-frame re-visualize
           evalxe evalcc eval-mixed-cc
           evaljvm-xe evaljvm-cc
-          clear-output])
+          clear-output show-doc show-source])
    (into {})))
 
 (defn xform-kb-syms [kb-map]
@@ -556,6 +580,8 @@
 
              "Ctrl-Home"      em/go-doc-start
              "Ctrl-End"       em/go-doc-end
+             "Ctrl-X D"       show-doc
+             "Ctrl-X S"       show-source
 
              "Alt-W"          enhanced-cut
              "Ctrl-Y"         enhanced-yank
@@ -661,22 +687,55 @@
    :justify :center
    :child [:div {:class "spinner"}]])
 
+(defn editor-hiccup [opts input output]
+  [v-box
+   :children
+   [[box
+     :size (opts :size "auto")
+     :width (opts :width "500px")
+     :height (opts :height "300px")
+     :justify (opts :justify :start)
+     :align (opts :justify :stretch)
+     :child [code-mirror input (get-ddb [:main :editor :mode])
+             :cb (fn[m]
+                   (let [oval (or (m :value) (m :error))
+                         ostg (if (and (string? oval)
+                                       (re-find #"\n" oval))
+                                oval
+                                (with-out-str
+                                  (cljs.pprint/pprint
+                                   (or (m :value) (m :error)))))]
+                     (reset! output (str @output
+                                         "=> " ostg))
+                     (printchan :output @output)))]]]])
+
+(defn output-hiccup [opts oh output]
+  [v-box
+   :children
+   [[box
+     :size (opts :size "auto")
+     :width (opts :width "500px")
+     :height oh
+     :justify (opts :justify :start)
+     :align (opts :justify :stretch)
+     :child [code-mirror output (get-ddb [:main :editor :mode])
+             :js-cm-opts {:lineNumbers false,
+                          :lineWrapping true}]]]])
+
 (defn cm-hiccup [opts input output]
   (let [id (opts :id)
         kwid (-> id name keyword)
         layout (if (= (opts :layout) :up-down) v-box h-box)
+        ed-pos (if (= (opts :ed-out-order) :first-last) :first :last)
         ch (opts :height "400px")
-        oh (opts :out-height "100px")]
+        oh (opts :out-height "100px")
+        esratom (opts :$esratom)]
     [h-box :gap "5px" :attr {:id id}
      :children
      [[gap :size "3px"]
       [v-box :gap "5px"
        :children
-       [#_[md-circle-icon-button
-         :md-icon-name "zmdi-caret-right-circle"
-         :tooltip "Eval Code"
-         :on-click #(printchan :ID id :VID (opts :vid) :eval @input)]
-        [md-circle-icon-button
+       [[md-circle-icon-button
          :md-icon-name "zmdi-circle-o"
          :tooltip "Clear"
          :on-click
@@ -687,37 +746,11 @@
        :width (opts :width "500px")
        :height (+ ch oh 50)
        :children
-       [[v-box
-         :children
-         [[box
-           :size (opts :size "auto")
-           :width (opts :width "500px")
-           :height (opts :height "300px")
-           :justify (opts :justify :start)
-           :align (opts :justify :stretch)
-           :child [code-mirror input (get-ddb [:main :editor :mode])
-                   :cb (fn[m]
-                         (let [oval (or (m :value) (m :error))
-                               ostg (if (and (string? oval)
-                                             (re-find #"\n" oval))
-                                      oval
-                                      (with-out-str
-                                        (cljs.pprint/pprint
-                                         (or (m :value) (m :error)))))]
-                           (reset! output (str @output
-                                               "=> " ostg))
-                           (printchan :output @output)))]]]]
-        [v-box
-         :children
-         [[box
-           :size (opts :size "auto")
-           :width (opts :width "500px")
-           :height oh
-           :justify (opts :justify :start)
-           :align (opts :justify :stretch)
-           :child [code-mirror output (get-ddb [:main :editor :mode])
-                   :js-cm-opts {:lineNumbers false,
-                                :lineWrapping true}]]]]]]
+       (if (= ed-pos :first)
+         [[editor-hiccup opts input output]
+          [output-hiccup opts oh output]]
+         [[output-hiccup opts oh output]
+          [editor-hiccup opts input output]])]
       [gap :size "10px"]]]))
 
 
@@ -728,14 +761,17 @@
       (let [opts (->> opts (partition-all 2) (mapv vec) (into {}))
             kwid (name (opts :id (gensym "cm-")))
             opts (or (get-ddb [:editors kwid :opts])
-                     (merge {:id kwid, :size "auto" :layout :up-down
+                     (merge {:id kwid, :size "auto"
+                             :layout :up-down :ed-out-order :last-first
                              :height "300px", :out-height "100px"
+                             :$esplit 0.2
                              :throbber (rgt/atom false)}
                             opts))
             _ (if (and (opts :src) (= @input "")) (reset! input (opts :src)))
             input (or (get-ddb [:editors kwid :in]) input)
             output (or (get-ddb [:editors kwid :ot]) output)]
         (when-not (get-ddb [:editors kwid])
+          (assoc opts :$esratom (rgt/atom (opts :$esplit)))
           (update-ddb [:editors kwid] {:in input, :ot output, :opts opts})
           (printchan :CM kwid :called :OPTS opts))
         [cm-hiccup opts input output]))))
