@@ -102,7 +102,9 @@
                      (let [f (-> info :fn second extns-xref)
                            {:keys [tid src]} info
                            oopts (dissoc (tm :opts) :wrapfn)
-                           oopts (merge {:rgap "20px" :cgap "20px"} oopts)
+                           oopts (merge {:rgap "20px" :cgap "20px"
+                                         :ed-out-order :first-last}
+                                        oopts)
                            label (tm :label)
                            specs (tm :specs)
                            args (->> (merge oopts (dissoc info :fn :tid :src))
