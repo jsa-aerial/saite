@@ -68,11 +68,12 @@
 
 
 (defn ^:export editor-repl-tab
-  [tid label src & {:keys [width height out-height layout ns]
+  [tid label src & {:keys [width height out-height layout ed-out-order ns]
                     :or {width "730px"
                          height "700px"
                          out-height "700px"
                          layout :left-right
+                         ed-out-order :first-last
                          ns 'aerial.saite.usercode}}]
   (let [cmfn (cm)
         eid (str "ed-" (name tid))
@@ -83,6 +84,7 @@
                :height height
                :out-height out-height
                :layout layout
+               :ed-out-order ed-out-order
                :ns ns
                :src src}]
     (set-namespace ns)
@@ -99,16 +101,18 @@
                                 :height height
                                 :out-height out-height
                                 :layout layout
+                                :ed-out-order ed-out-order
                                 :src src]
                         :width "2048px"])}})))
 
 
 (defn ^:export interactive-doc-tab
-  [tid label src & {:keys [width height out-height $split
+  [tid label src & {:keys [width height out-height ed-out-order $split
                            ns specs order eltsper rgap cgap size]
                     :or {width "730px"
                          height "700px"
                          out-height "100px"
+                         ed-out-order :last-first
                          $split (get-ddb [:tabs :extns :$split])
                          ns 'aerial.saite.usercode
                          specs []
@@ -123,6 +127,7 @@
                :width width
                :height height
                :out-height out-height
+               :ed-out-order ed-out-order
                :$split $split
                :$sratom sratom
                :ns ns
@@ -151,6 +156,7 @@
                                   :width width
                                   :height height
                                   :out-height out-height
+                                  :ed-out-order ed-out-order
                                   :src src]
                         :panel-2 [scroller
                                   :max-height "800px"
@@ -297,7 +303,7 @@
         {:keys [edtype ns id label
                 order eltsper
                 width height out-height
-                size rgap cgap layout]} info-map]
+                size rgap cgap layout ed-out-order]} info-map]
     (push-undo x)
     (cond
       (= :converter edtype) (printchan :NYI)
@@ -306,13 +312,14 @@
       (editor-repl-tab
        id label "" :ns ns
        :width width :height height
-       :out-height out-height :layout layout)
+       :out-height out-height :layout layout :ed-out-order ed-out-order)
 
       :else
       (interactive-doc-tab
        id label "" :ns ns
        :width width :height height
        :out-height out-height
+       :ed-out-order ed-out-order
        :order order :eltsper eltsper
        :rgap rgap :cgap cgap :size size))
 
@@ -355,7 +362,7 @@
         opts (curtab :opts)
         rgap? (opts :rgap)
         specs (curtab :specs)
-        {:keys [label nssym order eltsper rgap cgap size]} info
+        {:keys [label nssym order eltsper rgap cgap size ed-out-order]} info
         newopts (merge opts (dissoc info :label :nssym))
         s-f-pairs (when rgap? (hmi/make-spec-frame-pairs tid newopts specs))]
     (update-ddb [:tabs :extns tid :ns] nssym)
@@ -487,21 +494,25 @@
     [tid label]))
 
 (defn add-modal [show?]
-  (let [edtype (rgt/atom :interactive-doc)
-        order (rgt/atom :row)
-        eltsper (rgt/atom "1")
-        rgap (rgt/atom "20")
-        cgap (rgt/atom "20")
+  (let [defaults (get-ddb [:main :interactive-tab])
+        edtype (rgt/atom (defaults :edtype :interactive-doc))
+        order (rgt/atom (defaults :order :row))
+        eltsper (rgt/atom (defaults :eltsper "1"))
+        rgap (rgt/atom (defaults :rgap "20"))
+        cgap (rgt/atom (defaults :cgap "20"))
         [tx lx] (next-tid-label @edtype)
         tid (rgt/atom tx)
         tlabel (rgt/atom lx)
         nssym (rgt/atom "doc.code")
         advance? (rgt/atom false)
-        width (rgt/atom "730")
-        height (rgt/atom "700")
-        out-height (rgt/atom (if (= @edtype :interactive-doc) "100" "700"))
-        size (rgt/atom "auto")
-        layout (rgt/atom :up-down)
+        width (rgt/atom (defaults :width "730"))
+        height (rgt/atom (defaults :height "500"))
+        out-height (rgt/atom
+                    (defaults :out-height
+                              (if (= @edtype :interactive-doc) "100" "700")))
+        size (rgt/atom (defaults :size "auto"))
+        layout (rgt/atom (defaults :layout :up-down))
+        ed-out-order (rgt/atom (defaults :ed-out-order :first-last))
         donefn (fn[]
                  (go (async/>! (hmi/get-adb [:main :chans :com])
                                {:edtype @edtype :ns (symbol @nssym)
@@ -510,7 +521,7 @@
                                 :rgap (px @rgap) :cgap (px @cgap)
                                 :width (px @width) :height (px @height)
                                 :out-height (px @out-height) :size @size
-                                :layout @layout}))
+                                :layout @layout :ed-out-order @ed-out-order}))
                  (reset! show? false) nil)
         cancelfn (fn[]
                    (go (async/>! (hmi/get-adb [:main :chans :com]) :cancel))
@@ -535,6 +546,7 @@
                                     {:font-weight "bold"})
                      :on-change #(let [[tx lx] (next-tid-label :doc)]
                                    (reset! layout :up-down)
+                                   (reset! ed-out-order :first-last)
                                    (reset! out-height "100")
                                    (reset! tid tx)
                                    (reset! tlabel lx)
@@ -547,6 +559,7 @@
                                     {:font-weight "bold"})
                      :on-change #(let [[tx lx] (next-tid-label :editor)]
                                    (reset! layout :left-right)
+                                   (reset! ed-out-order :first-last)
                                    (reset! out-height "700")
                                    (reset! tid tx)
                                    (reset! tlabel lx)
@@ -604,20 +617,38 @@
                         [v-box :gap "10px"
                          :children
                          [[label :label "Editor / Output Layout"]
-                          [radio-button
-                           :label "Left-Right"
-                           :value :left-right
-                           :model layout
-                           :label-style (when (= :left-right @layout)
-                                          {:font-weight "bold"})
-                           :on-change #(reset! layout %)]
-                          [radio-button
-                           :label "Up-Down"
-                           :value :up-down
-                           :model layout
-                           :label-style (when (= :up-down @layout)
-                                          {:font-weight "bold"})
-                           :on-change #(reset! layout %)]]]]])]]
+                          [h-box :gap "10px"
+                           :children
+                           [[radio-button
+                             :label "Left-Right"
+                             :value :left-right
+                             :model layout
+                             :label-style (when (= :left-right @layout)
+                                            {:font-weight "bold"})
+                             :on-change #(reset! layout %)]
+                            [radio-button
+                             :label "First-Last"
+                             :value :first-last
+                             :model ed-out-order
+                             :label-style (when (= :first-last @ed-out-order)
+                                            {:font-weight "bold"})
+                             :on-change #(reset! ed-out-order %)]]]
+                          [h-box :gap "10px"
+                           :children
+                           [[radio-button
+                             :label "Up-Down"
+                             :value :up-down
+                             :model layout
+                             :label-style (when (= :up-down @layout)
+                                            {:font-weight "bold"})
+                             :on-change #(reset! layout %)]
+                            [radio-button
+                             :label "Last-First"
+                             :value :last-first
+                             :model ed-out-order
+                             :label-style (when (= :last-first @ed-out-order)
+                                            {:font-weight "bold"})
+                             :on-change #(reset! ed-out-order %)]]]]]]])]]
                   ]]
                 [h-box :gap "10px"
                  :children [[label
@@ -710,6 +741,7 @@
         rgap (rgt/atom (when rgap? (-> opts :rgap (cljstr/replace #"px$" ""))))
         cgap (rgt/atom (when rgap? (-> opts :cgap (cljstr/replace #"px$" ""))))
         size (rgt/atom (opts :size))
+        ed-out-order (rgt/atom (opts :ed-out-order))
         tlabel (rgt/atom curlabel)
         nssym (rgt/atom (str (get-ddb [:tabs :extns curtid :ns])))
         donefn (fn[]
@@ -717,7 +749,7 @@
                                {:label @tlabel :nssym (symbol @nssym)
                                 :order @order :eltsper (js/parseInt @eltsper)
                                 :rgap (px @rgap) :cgap (px @cgap)
-                                :size @size}))
+                                :size @size :ed-out-order @ed-out-order}))
                  (reset! show? false))
         cancelfn (fn[]
                    (go (async/>! (hmi/get-adb [:main :chans :com]) :cancel))
@@ -765,7 +797,26 @@
                      [[label :style {:font-size "18px"} :label "Gapping"]
                       [input-area "Row Gap" rgap]
                       [input-area "Col Gap" cgap]
-                      [input-area "Flex size" size]]]]])
+                      [input-area "Flex size" size]]]
+                    [v-box :gap "10px"
+                     :children
+                     [[label
+                       :style {:font-size "18px"}
+                       :label "Editor / Output"]
+                      [radio-button
+                       :label "First-Last"
+                       :value :first-last
+                       :model ed-out-order
+                       :label-style (when (= :first-last @ed-out-order)
+                                      {:font-weight "bold"})
+                       :on-change #(reset! ed-out-order %)]
+                      [radio-button
+                       :label "Last-First"
+                       :value :last-first
+                       :model ed-out-order
+                       :label-style (when (= :last-first @ed-out-order)
+                                      {:font-weight "bold"})
+                       :on-change #(reset! ed-out-order %)]]]]])
 
                 [h-box :gap "10px"
                  :children [[label
