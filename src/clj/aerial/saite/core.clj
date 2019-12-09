@@ -273,7 +273,14 @@
                     "Ctrl-X Ctrl-C"  eval-mixed-cc ;evalcc
                     "Ctrl-X J"       evaljvm-xe
                     "Ctrl-X Ctrl-J"  evaljvm-cc
-                    "Ctrl-X Ctrl-M"  eval-mixed-cc}},
+                    "Ctrl-X Ctrl-M"  eval-mixed-cc}}
+
+   :interactive-tab
+   {:edtype :interactive-doc
+    :order :row, :eltsper 1, :rgap 20, :cgap 20
+    :width 730, :height 600, :out-width 730 :out-height 100 :size "auto"
+    :layout :up-down, :ed-out-order :first-last}
+
    :saveloc (fs/join home-path "Doc")
    :dataloc (fs/join home-path "Data")})
 
@@ -317,7 +324,8 @@
                                                     (fs/replace-type ""))))))
                       sessions)
      :doc {:quick quick-doc}
-     :editor (config :editor))))
+     :editor (config :editor)
+     :interactive-tab (config :interactive-tab))))
 
 
 (defn start [port]
