@@ -619,9 +619,10 @@
   options
   :js-cm-opts
     options passed into the CodeMirror constructor"
-  [input mode & {:keys [js-cm-opts cb] :or {cb #(printchan %)}}]
+  [input mode & {:keys [js-cm-opts cb id] :or {cb #(printchan %)}}]
   (printchan "CODE-MIRROR called")
-  (let [cm (atom nil)]
+  (let [cm (atom nil)
+        curpos (when id (get-ddb [:editors id :opts :curpos]))]
     (rgt/create-class
      {:display-name "CMirror"
 
@@ -641,18 +642,21 @@
                               :value @input
                               :mode mode}
                              js-cm-opts))
+              pos (get-ddb [:editors id :opts :curpos])
               inst (.fromTextArea js/CodeMirror (rgt/dom-node comp) opts)]
 
           (.setValue inst @input)
+          (when id (.setCursor inst @curpos))
           (set! (.-CB inst) cb)
           (reset! cm inst)
           (reset! dbg-cm inst)
-          (.on inst "change" #_#(reset! input (.getValue %))
-               (fn []
+          (.on inst "change"
+               (fn [_ _]
                  (let [value (.getValue inst)]
-                   #_(printchan :INPUTDM @input :CMDM value)
-                   (when #_true (not= value @input)
-                     (reset! input value) #_(on-change value)))))
+                   (when (not= value @input) (reset! input value)))))
+          (.on inst "cursorActivity"
+               (fn [_]
+                 (when curpos (reset! curpos (.getCursor @cm)))))
           ))
 
       :component-did-update
@@ -697,6 +701,7 @@
      :justify (opts :justify :start)
      :align (opts :justify :stretch)
      :child [code-mirror input (get-ddb [:main :editor :mode])
+             :id (opts :id)
              :cb (fn[m]
                    (let [oval (or (m :value) (m :error))
                          ostg (if (and (string? oval)
@@ -756,7 +761,8 @@
 
 (defn cm []
   (let [input (rgt/atom "")
-        output (rgt/atom "")]
+        output (rgt/atom "")
+        pos (rgt/atom (new js/CodeMirror.Pos 0 0 "after"))]
     (fn [& opts]
       (let [opts (->> opts (partition-all 2) (mapv vec) (into {}))
             kwid (name (opts :id (gensym "cm-")))
@@ -765,6 +771,7 @@
                              :layout :up-down :ed-out-order :last-first
                              :height "300px", :out-height "100px"
                              :$esplit 0.2
+                             :curpos pos
                              :throbber (rgt/atom false)}
                             opts))
             _ (if (and (opts :src) (= @input "")) (reset! input (opts :src)))
