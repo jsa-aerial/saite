@@ -762,7 +762,7 @@
 (defn cm []
   (let [input (rgt/atom "")
         output (rgt/atom "")
-        pos (rgt/atom (new js/CodeMirror.Pos 0 0 "after"))]
+        pos (atom (new js/CodeMirror.Pos 0 0 "after"))]
     (fn [& opts]
       (let [opts (->> opts (partition-all 2) (mapv vec) (into {}))
             kwid (name (opts :id (gensym "cm-")))
