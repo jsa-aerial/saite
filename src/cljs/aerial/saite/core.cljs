@@ -436,7 +436,7 @@
  aerial.saite.compiler/state 'aerial.saite.core
  (aerial.saite.analyzer/analyzer-state 'aerial.saite.core))
 
-#_(when-let [elem (js/document.querySelector "#app")]
+(when-let [elem (js/document.querySelector "#app")]
   (hc/update-defaults
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
               :frame {:top :TOP, :bottom :BOTTOM,
@@ -486,8 +486,6 @@
 
 
 
-  "compile aerial.saite.usercode; (in-ns 'aerial.saite.usercode);
-   execute when-let; now should be able to user usercode"
 
 
 
@@ -504,8 +502,6 @@
                                    (apply concat))]
                      `(apply ~f ~tid ~label ~src ~args))
                    m)))))
-
-
 
 
 
