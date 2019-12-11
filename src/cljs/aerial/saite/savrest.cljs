@@ -93,8 +93,12 @@
 
 
 (defn load-doc [doc-data extns-xref]
-  (let [tids (rest (mapv :id (tab-data)))]
+  (let [tids (rest (mapv :id (tab-data)))
+        $split (get-ddb [:tabs :extns :$split])]
     (doseq [tid tids] (hmi/del-tab tid))
+    (update-ddb [:editors] {}
+                [:main :chans] {}
+                [:tabs] {:extns {:$split $split}})
     (->> doc-data
          (mapv (fn[m]
                  (let [tm (->> m vals first)]
