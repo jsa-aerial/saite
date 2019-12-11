@@ -336,33 +336,41 @@
       (tops/update-frame :vis (@res :value)))))
 
 
+(defn doctab? []
+  (let [tid (hmi/get-cur-tab :id)
+        edid (get-ddb [:tabs :extns tid :eid])]
+    (get-ddb [:editors edid :opts :rgap])))
+
 (defn enhanced-cut [cm]
-  (let [ctrlwfn em/kill-region
-        start (.getCursor cm "start")
-        end (.getCursor cm "end")
-        stgval (.getValue cm)
-        lines (clojure.string/split-lines stgval)
-        lines (subvec lines start.line (inc end.line))
-        cnt (count lines)
-        first-line (-> lines first (subs start.ch))
-        last-line (if (= 1 cnt) "" (-> lines last (subs 0 end.ch)))
-        mid-lines (if (= 1 cnt) [] (subvec lines 1 (dec (count lines))))
-        lines (-> [first-line mid-lines last-line] flatten vec)
-        src (clojure.string/join "\n" lines)
-        fm (try (read-string src) (catch js/Error e []))
-        fid (when (seq? fm) (->> fm (drop-while #(not= % :FID)) second))]
-    (when fid (tops/remove-frame fid))
-    (ctrlwfn cm)))
+  (if (not (doctab?))
+    (em/kill-region cm)
+    (let [ctrlwfn em/kill-region
+          start (.getCursor cm "start")
+          end (.getCursor cm "end")
+          stgval (.getValue cm)
+          lines (clojure.string/split-lines stgval)
+          lines (subvec lines start.line (inc end.line))
+          cnt (count lines)
+          first-line (-> lines first (subs start.ch))
+          last-line (if (= 1 cnt) "" (-> lines last (subs 0 end.ch)))
+          mid-lines (if (= 1 cnt) [] (subvec lines 1 (dec (count lines))))
+          lines (-> [first-line mid-lines last-line] flatten vec)
+          src (clojure.string/join "\n" lines)
+          fm (try (read-string src) (catch js/Error e []))
+          fid (when (seq? fm) (->> fm (drop-while #(not= % :FID)) second))]
+      (when fid (tops/remove-frame fid))
+      (ctrlwfn cm))))
 
 (defn enhanced-yank [cm]
   (let [ctrlyfn em/yank
         bsexpfn em/backward-sexp
         _ (ctrlyfn cm)
         pos (.getCursor cm)]
-    (bsexpfn cm)
-    (go (let [ch (insert-frame cm)]
-          (async/<! ch)
-          (.setCursor cm pos)))))
+    (when (doctab?)
+      (bsexpfn cm)
+      (go (let [ch (insert-frame cm)]
+            (async/<! ch)
+            (.setCursor cm pos))))))
 
 
 
