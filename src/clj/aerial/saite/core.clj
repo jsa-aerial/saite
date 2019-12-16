@@ -147,6 +147,7 @@
              (:require [clojure.string :as str]
                        [clojure.data.csv :as csv]
                        [clojure.data.json :as json]
+                       [clojure.repl :as cr]
 
                        [cemerick.pomegranate :as pom]
                        [com.rpl.specter :as sp]
