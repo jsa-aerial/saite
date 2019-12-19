@@ -331,11 +331,11 @@
         ctid (hmi/get-cur-tab :id)
         uinfo (or (get-ddb [:tabs :extns ctid]) {:fn [:_ :NA]})
         eid (str "ed-" (name tid))
-        {:keys [width height out-height layout]} uinfo
+        {:keys [width height out-height layout ed-out-order]} uinfo
         src (deref (get-ddb [:editors (uinfo :eid) :in]))
         tabval (hmi/get-tab-field ctid)
         {:keys [specs opts]} tabval
-        {:keys [order eltsper size]} opts
+        {:keys [order eltsper size rgap cgap]} opts
         edtype (second (uinfo :fn))]
     (case edtype
       :NA
@@ -346,13 +346,15 @@
       (editor-repl-tab
        tid label src :ns nssym
        :width width :height height
-       :out-height out-height :layout layout)
+       :out-height out-height :layout layout :ed-out-order ed-out-order)
 
       interactive-doc-tab
       (interactive-doc-tab
        tid label src :ns nssym
        :width width :height height :out-height out-height
-       :specs specs :order order :eltsper eltsper :size size))))
+       :ed-out-order ed-out-order
+       :specs specs :order order :eltsper eltsper :size size
+       :rgap rgap :cgap cgap))))
 
 
 (defn edit-cur-tab [info]
