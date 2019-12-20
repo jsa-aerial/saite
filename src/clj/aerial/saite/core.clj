@@ -177,10 +177,8 @@
          code (if (string? code) (read-string code) code)
          res (binding [*ns* (find-ns nssym)]
                (eval code))
-         res (cond (instance? clojure.lang.Var res)
-                   (let [v (deref res)]
-                     (if (fn? v) (str res) v))
-                   (instance? java.lang.Class res) (str res)
+         res (cond (instance? clojure.lang.Var res) (str res)
+                   (instance? java.lang.Class res)  (str res)
                    :else res)
          msg {:op :evalres :data {:chankey chankey :value res}}]
      (hmi/send-msg (uid :name) msg))))
