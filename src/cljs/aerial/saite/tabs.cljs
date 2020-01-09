@@ -246,7 +246,7 @@
 
 
 
-;;; Header Help Component ================================================= ;;;
+;;; Header Misc Component ================================================= ;;;
 
 (defn help-modal [show?]
   (let [closefn (fn[event] (reset! show? false))]
@@ -269,12 +269,55 @@
                    :tooltip "Close"
                    :on-click closefn]]]]]])))
 
+(def theme-names
+  ["3024-day" "3024-night" "abcdef" "ambiance" "ayu-dark" "ayu-mirage"
+   "base16-dark" "base16-light" "bespin" "blackboard" "cobalt" "colorforth"
+   "darcula" "dracula" "duotone-dark" "duotone-light" "eclipse" "elegant"
+   "erlang-dark" "gruvbox-dark" "hopscotch" "icecoder" "idea" "isotope"
+   "lesser-dark" "liquibyte" "lucario" "material" "material-darker"
+   "material-palenight" "material-ocean" "mbo" "mdn-like" "midnight" "monokai"
+   "moxer" "neat" "neo" "night" "nord" "oceanic-next" "panda-syntax"
+   "paraiso-dark" "paraiso-light" "pastel-on-dark" "railscasts" "rubyblue"
+   "seti" "shadowfox" "solarized dark" "solarized light" "the-matrix"
+   "tomorrow-night-bright" "tomorrow-night-eighties" "ttcn" "twilight"
+   "vibrant-ink" "xq-dark" "xq-light" "yeti" "yonce" "zenburn"])
+
+(def themes (->> theme-names (mapv vector (map keyword theme-names)) (into {})))
+
+(defn theme-modal [theme? theme]
+  (let [choices (->> themes (sort-by second)
+                     (mapv (fn[[k v]] {:id k :label v})))
+        cancelfn (fn[event] (reset! theme? false))
+        donefn #(let [cms [@cm/dbg-cm]]
+                  (doseq [cm cms] (cm/set-theme cm (themes @theme)))
+                  (reset! theme? false))]
+    (fn[theme? theme]
+      [modal-panel
+       :backdrop-color   "grey"
+       :backdrop-opacity 0.4
+       :child [v-box :gap "10px"
+               :children
+               [[label :style {:font-size "18px"} :label "Themes"]
+                [single-dropdown
+                 :choices choices
+                 :model theme
+                 :width "300px"
+                 :on-change #(reset! theme %)]
+                [ok-cancel donefn cancelfn]]]])))
+
+
 (defn help-box []
-  (let [quick? (rgt/atom false)]
+  (let [quick? (rgt/atom false)
+        theme? (rgt/atom false)
+        theme (rgt/atom nil)]
     (fn []
       [h-box :gap "5px" :justify :end
        :children
        [[md-circle-icon-button
+         :md-icon-name "zmdi-brush" :size :smaller
+         :tooltip "Theme"
+         :on-click #(reset! theme? true)]
+        [md-circle-icon-button
          :md-icon-name "zmdi-help" :size :smaller
          :tooltip "Quick Help"
          :on-click #(reset! quick? true)]
@@ -283,6 +326,9 @@
          :tooltip "Doc Help"
          :on-click #()]
         (when @quick? [help-modal quick?])
+        (when @theme?
+          (reset! theme (keyword (get-ddb [:main :editor :theme])))
+          [theme-modal theme? theme])
         [gap :size "10px"]]])))
 
 
