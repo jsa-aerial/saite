@@ -338,8 +338,8 @@
 
 (defn doctab? []
   (let [tid (hmi/get-cur-tab :id)
-        edid (get-ddb [:tabs :extns tid :eid])]
-    (get-ddb [:editors edid :opts :rgap])))
+        opts  (hmi/get-tab-field tid :opts)]
+    (opts :rgap)))
 
 (defn enhanced-cut [cm]
   (if (not (doctab?))
@@ -656,6 +656,7 @@
           (.setValue inst @input)
           (when id (.setCursor inst @curpos))
           (set! (.-CB inst) cb)
+          (.setOption inst "theme" (get-ddb [:main :editor :theme]))
           (reset! cm inst)
           (reset! dbg-cm inst)
           (.on inst "change"
@@ -686,6 +687,12 @@
                     #_:style #_"flex: 0 0 auto; padding-right: 12px;"}])})))
 
 
+
+
+(defn set-theme [cm theme]
+  ;; editor.setOption("theme", choice)
+  (update-ddb [:main :editor :theme] theme)
+  (.setOption cm "theme" theme))
 
 
 (defn spinner??? []
