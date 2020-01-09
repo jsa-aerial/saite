@@ -269,10 +269,10 @@
   (let [{:keys [save-info editor interactive-tab doc]} (msg :data)
         choices (into {} save-info)
         dirs (-> choices keys sort)
-        {:keys [name mode key-bindings]} editor
+        {:keys [name mode theme key-bindings]} editor
         interactive-tab (xform-tab-defaults interactive-tab)
         key-bindings (cm/xform-kb-syms key-bindings)
-        editor {:name name :mode mode :key-bindings key-bindings}]
+        editor {:name name :mode mode :theme theme :key-bindings key-bindings}]
     (printchan :APP-INIT save-info editor)
     (printchan :CHOICES choices :DIRS dirs)
 
