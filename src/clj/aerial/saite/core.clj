@@ -244,6 +244,7 @@
   {:editor
    {:name "emacs",
     :mode "clojure"
+    :theme "zenburn"
     :key-bindings '{"Ctrl-F"         pe/forward-sexp
                     "Ctrl-B"         pe/backward-sexp
                     "Ctrl-Left"      pe/forward-barf-sexp
