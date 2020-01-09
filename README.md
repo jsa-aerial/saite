@@ -124,12 +124,13 @@ To try this, you can simply click the 'Add Interactive Tab' button, then click '
 ;;; use Ctrl-X J to get the server's value (they will be equal...)
 (def obsdist
   (clj
-   (def obsdist
-     (let [obs [[0 9] [1 78] [2 305] [3 752] [4 1150] [5 1166]
-                [6 899] [7 460] [8 644] [9 533] [10 504]]
-           totcnt (->> obs (mapv second) (apply +))
-           pdist (map (fn[[k cnt]] [k (double (/ cnt totcnt))]) obs)]
-       pdist))))
+   (deref
+     (def obsdist
+       (let [obs [[0 9] [1 78] [2 305] [3 752] [4 1150] [5 1166]
+                  [6 899] [7 460] [8 644] [9 533] [10 504]]
+             totcnt (->> obs (mapv second) (apply +))
+             pdist (map (fn[[k cnt]] [k (double (/ cnt totcnt))]) obs)]
+         pdist)))))
 
 ;;; Like above, use Ctrl-X Ctrl-C. The body will be run on the server and
 ;;; then the result will be handed to the client side (take 10 ...) form
