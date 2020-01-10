@@ -270,6 +270,7 @@
         choices (into {} save-info)
         dirs (-> choices keys sort)
         {:keys [name mode theme key-bindings]} editor
+        theme (if theme theme "zenburn")
         interactive-tab (xform-tab-defaults interactive-tab)
         key-bindings (cm/xform-kb-syms key-bindings)
         editor {:name name :mode mode :theme theme :key-bindings key-bindings}]
