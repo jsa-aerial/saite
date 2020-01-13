@@ -537,6 +537,19 @@
       "Cursor not on symbol")))
 
 
+(defn center-pos [cm]
+  (let [pos (.getCursor cm)
+        se (.getScrollerElement cm)
+        midh (/ se.offsetHeight 2)
+        coords (.charCoords cm pos "local")
+        top coords.top]
+    #_(console.log top midh)
+    (.scrollTo cm nil (- top midh 5))))
+
+(defn recenter-top-bottom [cm]
+  (center-pos cm))
+
+
 
 
 (def xtra-key-xref
@@ -554,7 +567,7 @@
            insert-frame delete-frame re-visualize
            evalxe evalcc eval-mixed-cc
            evaljvm-xe evaljvm-cc
-           clear-output show-doc show-source]
+           clear-output show-doc show-source recenter-top-bottom]
          [pe/forward-sexp pe/backward-sexp
           pe/splice-sexp
           pe/splice-sexp-killing-backward pe/splice-sexp-killing-forward
@@ -567,7 +580,7 @@
           insert-frame delete-frame re-visualize
           evalxe evalcc eval-mixed-cc
           evaljvm-xe evaljvm-cc
-          clear-output show-doc show-source])
+          clear-output show-doc show-source recenter-top-bottom])
    (into {})))
 
 (defn xform-kb-syms [kb-map]
@@ -618,15 +631,6 @@
     (get-ddb [:main :editor :key-bindings]))))
 
 
-
-(defn center-pos [cm]
-  (let [pos (.getCursor cm)
-        se (.getScrollerElement cm)
-        midh (/ se.offsetHeight 2)
-        coords (.charCoords cm pos "local")
-        top coords.top]
-    #_(console.log top midh)
-    (.scrollTo cm nil (- top midh 5))))
 
 (defn code-mirror
   "Create a code-mirror editor. The parameters:
