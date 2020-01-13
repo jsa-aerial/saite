@@ -619,6 +619,14 @@
 
 
 
+(defn center-pos [cm]
+  (let [pos (.getCursor cm)
+        se (.getScrollerElement cm)
+        midh (/ se.offsetHeight 2)
+        coords (.charCoords cm pos "local")
+        top coords.top]
+    #_(console.log top midh)
+    (.scrollTo cm nil (- top midh 5))))
 
 (defn code-mirror
   "Create a code-mirror editor. The parameters:
@@ -627,7 +635,7 @@
   options
   :js-cm-opts
     options passed into the CodeMirror constructor"
-  [input mode & {:keys [js-cm-opts cb id] :or {cb #(printchan %)}}]
+  [input mode & {:keys [js-cm-opts cb tid id] :or {cb #(printchan %)}}]
   (printchan "CODE-MIRROR called")
   (let [cm (atom nil)
         curpos (when id (get-ddb [:editors id :opts :curpos]))]
@@ -654,11 +662,15 @@
               inst (.fromTextArea js/CodeMirror (rgt/dom-node comp) opts)]
 
           (.setValue inst @input)
-          (when id (.setCursor inst @curpos))
           (set! (.-CB inst) cb)
           (.setOption inst "theme" (get-ddb [:main :editor :theme]))
           (reset! cm inst)
           (reset! dbg-cm inst)
+          (update-ddb [:tabs :extns tid :cms (if id :$ed :$ot)] inst)
+          (when-let [edcm (get-ddb [:tabs :extns tid :cms :$ed])] (.focus edcm))
+          (when id
+            (.setCursor inst @curpos)
+            (center-pos inst))
           (.on inst "change"
                (fn [_ _]
                  (let [value (.getValue inst)]
@@ -717,6 +729,7 @@
      :align (opts :justify :stretch)
      :child [code-mirror input (get-ddb [:main :editor :mode])
              :id (opts :id)
+             :tid (opts :tid)
              :cb (fn[m]
                    (let [oval (or (m :value) (m :error))
                          ostg (if (and (string? oval)
@@ -739,6 +752,7 @@
      :justify (opts :justify :start)
      :align (opts :justify :stretch)
      :child [code-mirror output (get-ddb [:main :editor :mode])
+             :tid (opts :tid)
              :js-cm-opts {:lineNumbers false,
                           :lineWrapping true}]]]])
 
