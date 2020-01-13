@@ -13,6 +13,12 @@
 
   * `Ctrl-End`  : Move cursor to last line and last character
 
+  * `Ctrl-L`    : Center current position
+
+  * `Ctrl-X D`  : Show doc string
+
+  * `Ctrl-X S   : Show source
+
   * `Ctrl-F` : Move forward sexpression
 
   * `Ctrl-B` : Move backward sexpression
