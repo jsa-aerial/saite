@@ -179,6 +179,8 @@
                (eval code))
          res (cond (instance? clojure.lang.Var res) (str res)
                    (instance? java.lang.Class res)  (str res)
+                   (fn? res) (str res)
+                   (isa? res java.lang.Class) (str res)
                    :else res)
          msg {:op :evalres :data {:chankey chankey :value res}}]
      (hmi/send-msg (uid :name) msg))))
@@ -254,6 +256,9 @@
 
                     "Ctrl-Home"      em/go-doc-start
                     "Ctrl-End"       em/go-doc-end
+                    "Ctrl-L"         recenter-top-bottom
+                    "Ctrl-X D"       show-doc
+                    "Ctrl-X S"       show-source
 
                     "Alt-W"          enhanced-cut
                     "Ctrl-Y"         enhanced-yank
