@@ -96,7 +96,7 @@
       :opts {:order :row, :eltsper 1, :size "auto"
              :wrapfn (fn[_]
                        [box
-                        :child [cmfn :id eid
+                        :child [cmfn :tid tid :id eid
                                 :width width
                                 :height height
                                 :out-height out-height
@@ -152,7 +152,7 @@
              :rgap rgap :cgap cgap :size size
              :wrapfn (fn[hcomp]
                        [hsfn
-                        :panel-1 [cmfn :id eid
+                        :panel-1 [cmfn :tid tid :id eid
                                   :width width
                                   :height height
                                   :out-height out-height
@@ -288,7 +288,8 @@
   (let [choices (->> themes (sort-by second)
                      (mapv (fn[[k v]] {:id k :label v})))
         cancelfn (fn[event] (reset! theme? false))
-        donefn #(let [cms [@cm/dbg-cm]]
+        donefn #(let [tid (hmi/get-cur-tab :id)
+                      cms (vals (get-ddb [:tabs :extns tid :cms]))]
                   (doseq [cm cms] (cm/set-theme cm (themes @theme)))
                   (reset! theme? false))]
     (fn[theme? theme]
@@ -1166,7 +1167,11 @@
         [line]
         [h-split
          :panel-1 [box :size "auto"
-                   :child [code-mirror input {:name "javascript", :json true}]]
+                   :child [code-mirror
+                           input {:name "javascript", :json true}
+                           :tid :xvgl]]
          :panel-2 [box :size "auto"
-                   :child [code-mirror output "clojure"]]
+                   :child [code-mirror
+                           output "clojure"
+                           :tid :xvgl]]
          :size    "auto", :width "1050px", :height "600px"]]])))
