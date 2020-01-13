@@ -10,6 +10,8 @@ Table of Contents
 
    * [saite](#saite)
       * [Installation](#installation)
+         * [Uberjar](#uberjar)
+         * [Library](#library)
       * [Features](#features)
       * [Usage](#usage)
       * [The [&lt;-&gt;] tab](#the---tab)
@@ -20,15 +22,43 @@ Table of Contents
 [toc](https://github.com/ekalinin/github-markdown-toc)
 # saite
 
+
+**Saite** is a Clojure(Script) mini "client/server" application for exploratory creation of interactive visualizations based in [Vega-Lite](https://vega.github.io/vega-lite/) (VGL) and/or [Vega](https://vega.github.io/vega/) (VG) specifications. These specifications are declarative and completely specified by _data_ (JSON maps). VGL compiles into the lower level grammar of VG which in turn compiles to a runtime format utilizting lower level runtime environments such as [D3](https://d3js.org/), HTML5 Canvas, and [WebGL](https://github.com/vega/vega-webgl-renderer).
+
+Visualizations are formed from parameterized [templates](https://github.com/jsa-aerial/hanami#templates-substitution-keys-and-transformations) which are recursively transformed into legal VGL or VG specifications. In Saite, creating and transforming these templates is generally done on the server side in typical REPL style development. Transformed templates (with their data or data source) are sent to one or more sessions (brower viewers) for rendering.
+
+In versions 0.2.19+, there is CodeMirror editor support for creating templates on the client side and rendering them via a modal panel popup. There are serveral [issues](https://github.com/jsa-aerial/saite/issues) concerning the expansion of this to support more full notebook oriented documents.
+
+Saite also functions as an example application built with [Hanami](https://github.com/jsa-aerial/hanami). As such it has all the capability of Hanami's _template_ system and recursive transformation of parameterized templates.
+
+Saite also uses of the [tab system](https://github.com/jsa-aerial/hanami#tabs) provided by Hanami for automatic tab construction and updates, plus the application specific tab capabilities of that system. Further, Saite makes use of Hanami's visualization [messaging system](https://github.com/jsa-aerial/hanami#messages), in particular, the `user-msg` multimethod with implementations for the `:app-init` user msg as well as the `:data` msg for streaming data plots/charts.
+
+In addition, Saite also makes use of [header support](https://github.com/jsa-aerial/hanami#header) via the `default-header-fn`. This creates a simple page header giving [session support](https://github.com/jsa-aerial/hanami#sessions): a 'session name' for a session as well as an input area to change the name of the session. Updating is based on session name - all sessions with the same name will get the same updates from the server.
+
+
+## Installation
+
+### Uberjar
+
 Saite has progressed a great deal even from the [Aug 29 presentation](https://www.youtube.com/watch?v=3Hx7kbub9YE). Loads of stuff mentioned in the futures there are now implemented, including server side code execution, mixing of server and client side code execution, loading from URLs, full paredit support for editors, and more.
 
-Release V0.3.0 summary:
+Release V0.3.3 summary:
 
 * Self-installing uberjar, which also is used to run the server
 
 * Uberjar now has an `--update` option that will install changed/new resource files (for example, config.edn) in `~/.saite/Update/<version>`
 
 * Themes are now available for editors (and output areas).  There are 62 available.  New `:theme` key and value in `:editor` section of config.edn.  Also dynamically change via the 'paintbrush` icon in upper right.
+
+* Remember cursor position between tab selections
+
+* Auto center cursor position between tab selections
+
+* `Ctrl-L` for `recenter-top-bottom` of current line
+
+* `Ctrl-X D` for show doc of function
+
+* `Ctrl-X S` for show source of function
 
 * **Breaking Change** : server side `def`s are no longer automatically dereferenced before sending result to client.  This turned out to be more trouble than it may have been worth. Especially when large data results are involved as well as unmarshallable data types (classes and such)
 
@@ -62,19 +92,19 @@ As indicated, there is now a full self-installing JAR, which will also install t
 
 For the self installing JAR, you can grab it with this (note, new versions are coming out fairly often and these versions will be reflected here):
 
-wget http://bioinformatics.bc.edu/~jsa/aerial.aerosaite-0.3.0-standalone.jar
+wget http://bioinformatics.bc.edu/~jsa/aerial.aerosaite-0.3.3-standalone.jar
 
 You need Java-8. At present it will **not** run properly on 9+ due to all the non backward compatible changes there (in particular dynamic dependencies do not yet work on 9+). But Java 8 seems to be the platform most (80% I think) JVM users still use. And in any case would be easy to get.
 
 Once you have the uberjar and Java 8, you can install with this command:
 
-`java -jar path-to-where-you-downloaded-it/aerial.aerosaite-0.3.0-standalone.jar --install`
+`java -jar path-to-where-you-downloaded-it/aerial.aerosaite-0.3.3-standalone.jar --install`
 
 You will be asked for the home/install directory with the default `~/.saite`. It is a good idea to take the default - otherwise you will need to always change directory to the install/home directory to run the server. A log of what happens is output to stdout. If you are on Linux or Mac, MKL libraries for Neanderthal will also be downloaded and installed under the `Libs` directory of the home/install directory.
 
 Once installed it is best to move the standalone.jar to the home/install directory. The run scripts are setup to expect the jar in ~/.saite.  However, you can also run it with (for example on Linux from a terminal session):
 
-`/usr/bin/nohup java -jar path-to-where-you-downloaded-it/aerial.aerosaite-0.3.0-standalone.jar --port 3000 --repl-port 4100 > start.log &`
+`/usr/bin/nohup java -jar path-to-where-you-downloaded-it/aerial.aerosaite-0.3.3-standalone.jar --port 3000 --repl-port 4100 > start.log &`
 
 There are also scripts `linux-runserver` (Linux) script and `mac-runserver` (Mac OS) that are installed. These scripts also setup the requirements for MKL use. To use the scripts the home/install directory should be `~/.saite`, **the jar should be in this directory**, and lastly you will need to `chmod a+x linux-runserver` or `chmod a+x mac-runserver`.
 
@@ -150,39 +180,25 @@ To try this, you can simply click the 'Add Interactive Tab' button, then click '
       y (clj (roundit x))]
   (+ x y))
 ```
-
-End of new preamble note
 _____________________________________________________________________________
 
 
 
-**Saite** is a Clojure(Script) mini "client/server" application for exploratory creation of interactive visualizations based in [Vega-Lite](https://vega.github.io/vega-lite/) (VGL) and/or [Vega](https://vega.github.io/vega/) (VG) specifications. These specifications are declarative and completely specified by _data_ (JSON maps). VGL compiles into the lower level grammar of VG which in turn compiles to a runtime format utilizting lower level runtime environments such as [D3](https://d3js.org/), HTML5 Canvas, and [WebGL](https://github.com/vega/vega-webgl-renderer).
-
-Typical work flow starts by requiring `aerial.saite.core` and running the `start` function which takes a port. This port is for the websocket messaging. Browsing to this port on localhost will open the viewer.
-
-Visualizations are formed from parameterized [templates](https://github.com/jsa-aerial/hanami#templates-substitution-keys-and-transformations) which are recursively transformed into legal VGL or VG specifications. In Saite, creating and transforming these templates is generally done on the server side in typical REPL style development. Transformed templates (with their data or data source) are sent to one or more sessions (brower viewers) for rendering.
-
-In versions 0.3.1+, there is CodeMirror editor support for creating templates on the client side and rendering them via a modal panel popup. There are serveral [issues](https://github.com/jsa-aerial/saite/issues) concerning the expansion of this to support more full notebook oriented documents.
-
-Saite also functions as an example application built with [Hanami](https://github.com/jsa-aerial/hanami). As such it has all the capability of Hanami's _template_ system and recursive transformation of parameterized templates.
-
-Saite also uses of the [tab system](https://github.com/jsa-aerial/hanami#tabs) provided by Hanami for automatic tab construction and updates, plus the application specific tab capabilities of that system. Further, Saite makes use of Hanami's visualization [messaging system](https://github.com/jsa-aerial/hanami#messages), in particular, the `user-msg` multimethod with implementations for the `:app-init` user msg as well as the `:data` msg for streaming data plots/charts.
-
-In addition, Saite also makes use of [header support](https://github.com/jsa-aerial/hanami#header) via the `default-header-fn`. This creates a simple page header giving [session support](https://github.com/jsa-aerial/hanami#sessions): a 'session name' for a session as well as an input area to change the name of the session. Updating is based on session name - all sessions with the same name will get the same updates from the server.
-
-
-## Installation
+### Library
 
 To install, add the following to your project `:dependencies`:
 
     [aerial.saite "0.18.0"]
 
 
+Typical work flow starts by requiring `aerial.saite.core` and running the `start` function which takes a port. This port is for the websocket messaging. Browsing to this port on localhost will open the viewer.
+
 ## Features
 
 * Hanami's parameterized templates with recursive transformations
-* Simple tab page structure
+* Sophisticated tab page structure
   * Uses Hanami's built in tabbing system
+  * Uses both 'extension tabs' and 'wrapping functions'
   * Each tab can have arbitrary number of _independent_ visulaizations
   * Tab layout is configurable - row/col and number of elements/(row/col)
   * Tabs can have names that make sense to you
