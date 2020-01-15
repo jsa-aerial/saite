@@ -21,8 +21,8 @@
 ;; The above copyright notice and this permission notice shall be included
 ;; in all copies or substantial portions of the Software.
 ;;
-;; Jon Anthony (2019):
-;; Many changes and fixes for working with newer codemirror releases 
+;; Jon Anthony (2019,2020):
+;; Many changes and fixes for working with newer codemirror releases
 ;;
 ;; ** PAREDI PROJECT CONVENTIONS **
 ;;
@@ -322,24 +322,14 @@
   "returns the cursor for the start of the current token"
   [cm cur]
   (let [{:keys [i line start ch type]} (get-info cm cur)]
-    (if (not= type "string")
-      (cursor cm (- i (- ch start)))
-      (let [newcur (cursor cm i)]
-        (set! newcur.line line)
-        (set! newcur.ch start)
-        (cursor cm (index cm newcur))))))
+    (cursor cm (- i (- ch start)))))
 
 (defn token-end
   "returns the cursor for the end of the current token"
   ([cm cur] (token-end cm cur 0))
   ([cm cur offset]
    (let [{:keys [i line end ch type]} (get-info cm cur)]
-     (if (not= type "string")
-       (cursor cm (+ i offset (- end ch)))
-       (let [newcur (cursor cm i)]
-         (set! newcur.line line)
-         (set! newcur.ch (if (= ch end) (+ end offset) end))
-         (cursor cm (index cm newcur)))))))
+     (cursor cm (+ i offset (- end ch))))))
 
 (defn token-end-index
   "take an index. get its token. return index of that token's end."
@@ -379,7 +369,8 @@
   [cm cur sp state n]
   (if (>= n 0)
     (let [{:keys [left-cur right-cur i start ch]} (get-info cm cur)
-          result (sp cm cur state)] #_(js/console.log result)
+          result (sp cm cur state)]
+      #_(js/console.log result)
       (case result
         :bof               nil
         :stop              nil
@@ -545,7 +536,7 @@
   [cm cur]
   (let [{:keys [string type start ch left-char]} (get-info cm cur)]
     #_(js/console.log right-char type string ch start)
-    (and #_(= left-char "\"")
+    (and (= left-char "\"")
          (= type "string")
          (= 1 (- ch start)))))
 
@@ -576,9 +567,10 @@
   (let [{:keys [string type eof ch end]} (get-info cm cur)
         stack-empty (zero? stack)
         one-left    (= 1 stack)
+        ;; for multi-line strings
         string-extends (or (not= "\"" (last string))
-                           (= "\\" (last (drop-last string))))] ; for multi-line
-    #_(js/console.log stack string type ch end cur
+                           (= "\\" (last (drop-last string))))]
+    (js/console.log stack stack-empty string type ch end cur string-extends
                     #_(escaped-char-to-right? cm cur)
                     (start-of-a-string? cm cur)
                     (end-of-a-string? cm cur))
@@ -599,11 +591,18 @@
 
       ;; strings ...............................................................
 
-      ;; our starting point is at beginning of a string
-      (and (start-of-a-string? cm cur) stack-empty), :end-of-this-token
+      ;; our starting point is at beginning of a string and it doesn't extend
+      (and (start-of-a-string? cm cur)
+           (and (not string-extends) stack-empty)), :end-of-this-token
 
-      ;; entering a string, push " onto stack
-      (start-of-a-string? cm cur), (inc stack)
+      ;; We are in a nested form, at start of string, but it doesn't extend
+      (and (start-of-a-string? cm cur)
+           (not stack-empty)
+           (not string-extends)), stack
+
+      ;; entering a multi-line string, push " onto stack
+      (and (start-of-a-string? cm cur)
+           string-extends), (inc stack)
 
       ;; at end of string and stack already empty, we must have started in the
       ;; middle of the string
@@ -613,19 +612,23 @@
       ;; the string -- handled before checking for eof above
 
       ;; in string, the end of this string is our goal ...
-      ;; ... but the end of this string might be on a different line:
-      (and (= type "string") one-left string-extends), stack
+      ;; ... but the end of this string is on a different line:
+      (and (= type "string")
+           #_(not stack-empty) #_one-left
+           string-extends), stack
+
+      (and (= type "string")
+           stack-empty
+           (not string-extends)), :end-of-this-token
 
       ;; in string, the end of this string is our goal ...
       ;; ... the end is on this line:
       (and (= type "string") one-left), :end-of-this-token
 
-      ;; in string which continues on next line. go to next line:
-
-      (and (= type "string") string-extends), stack
-
       ;; in string, need to get out of this form, pop stack
-      (= type "string"), (dec stack)
+      (and (= type "string")
+           (not stack-empty)), (dec stack)
+
 
       ;; escaped chars .........................................................
 
@@ -694,9 +697,9 @@
         stack-empty (zero? stack)
         one-left    (= 1 stack)
         string-extends (not= "\"" (first string))];; for multiline strings
-    #_(js/console.log stack string type ch start cur
-                    (escaped-char-to-left? cm cur)
-                    (escaped-char-to-right? cm cur)
+    (js/console.log stack stack-empty string type ch start cur string-extends
+                    ;;(escaped-char-to-left? cm cur)
+                    ;;(escaped-char-to-right? cm cur)
                     (start-of-a-string? cm cur)
                     (end-of-a-string? cm cur))
     (cond ;; we return a keyword when we know where to stop, stack otherwise.
@@ -717,7 +720,8 @@
 
       bof, :bof; reached beginning of file
 
-      (and (start-of-a-string2? cm cur) (> stack 1)), (dec stack)
+      (and (start-of-a-string2? cm cur)
+           (not stack-empty)), stack #_(dec stack)
 
       ;; at the start of an escaped char:
       (and (escaped-char-to-right? cm cur) stack-empty), stack ;:start-of-this-tok
@@ -731,30 +735,45 @@
 
       ;; strings ...............................................................
 
-      ;; our starting point is at end of a string
-      (and (end-of-a-string? cm cur) stack-empty), :start-of-this-tok
+      ;; our starting point is at end of a string and it doesn't extend
+      (and (end-of-a-string? cm cur)
+           (and (not string-extends) stack-empty)), :start-of-this-tok
 
-      ;; entering a string from the right; push " onto stack
-      (end-of-a-string? cm cur), (inc stack)
+      ;; We are in a nested form, at end of string, but it doesn't extend
+      (and (end-of-a-string? cm cur)
+           (not stack-empty)
+           (not string-extends)) stack
 
-      ;; at start of string and stack already empty, we must have started in the
-      ;; middle of the string. if it's a multi-line string, advance up:
-      (and (start-of-a-string? cm cur) stack-empty string-extends), stack
+      ;; entering a multi-line string from the right; push " onto stack
+      (and (end-of-a-string? cm cur)
+           string-extends), (inc stack)
 
-      ;; we're at the first line of the string, stop:
-      (and (start-of-a-string? cm cur) stack-empty), :stop
+      ;; at start of string and stack already empty, we must have started in
+      ;; the middle of the string.
+      (and (start-of-a-string? cm cur)
+           stack-empty), :stop
 
       ;; at start of string and stack about to be empty, we've found the end of
       ;; the string -- handled before check for bof above
 
-      ;; in string, the start of it is our goal. it's on a higher line:
-      (and (= type "string") one-left string-extends), stack
+      ;; in string, the start of it is our goal ...
+      ;; ... but the start of this string is on a higher line:
+      (and (= type "string")
+           #_(not stack-empty)
+           string-extends), stack
 
       ;; it's on this line:
-      (and (= type "string") one-left), :start-of-this-tok
+      (and (= type "string")
+           stack-empty
+           (not string-extends)), :start-of-this-tok
+
+      ;; in string, the start of this string is our goal ...
+      ;;; ... and the start is on this line:
+      (and (= type "string") one-left) :start-of-this-tok
 
       ;; in string, need to get out of this form, pop stack
-      (and (= type "string") string-extends), stack
+      (and (= type "string")
+           (not stack-empty)), (dec stack)
 
 
       ;; escaped chars .........................................................
@@ -791,7 +810,8 @@
       ;; push closer on stack
       (and (is-bracket-type? type) (closer? string)), (inc stack)
 
-      ;; we've reached the start of a form -- handled before check for bof above
+      ;; we've reached the start of a form -- handled before check for
+      ;; bof above
 
       ;; there was no prev sibling, avoid exiting the form
       (and (is-bracket-type? type) (opener? string) stack-empty), :stop
