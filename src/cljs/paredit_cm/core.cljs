@@ -578,7 +578,7 @@
         string-extends (or (not= dq (last string))
                            (= "\\" (last (drop-last string))))]
 
-    (js/console.log stack stack-empty string type ch end cur string-extends
+    #_(js/console.log stack stack-empty string type ch end cur string-extends
                     #_(escaped-char-to-right? cm cur)
                     start-of-stg?
                     end-of-stg?)
@@ -658,7 +658,6 @@
 
       ;; at end of an escaped char inside the next sibling
       (escaped-char-to-left? cm cur), stack
-
       ;; words .................................................................
 
       ;; reached the end of a word which was the next sibling -- handled before
@@ -727,7 +726,7 @@
                      (and (= tok.type "string")
                           (= tok.string "\"\"")))]
 
-    (js/console.log stack stack-empty string type ch start cur string-extends
+    #_(js/console.log stack stack-empty string type ch start cur string-extends
                     ;;(escaped-char-to-left? cm cur)
                     ;;(escaped-char-to-right? cm cur)
                     start-of-stg?
@@ -1925,12 +1924,18 @@
   slurped, the string of the bracket to move. nil if there is no such anscestor
   that can slurp."
   [cm cur n]
-  (when (>= n 0)
-    (let [parent (skip cm parent-closer-sp cur)
+  (if (and (in-string? cm cur)
+           (not (end-of-a-string? cm cur)))
+    (let [parent (end-of-next-sibling cm cur)
           sibling (end-of-next-sibling cm parent)]
-      (if sibling
-        [parent sibling (get-string cm parent)]
-        (fn [] (fwd-slurp cm parent (dec n)))))))
+      (when sibling
+        [parent sibling "\""]))
+    (when (>= n 0)
+      (let [parent (skip cm parent-closer-sp cur)
+            sibling (end-of-next-sibling cm parent)]
+        (if sibling
+          [parent sibling (get-string cm parent)]
+          (fn [] (fwd-slurp cm parent (dec n))))))))
 
 (defn ^:export forward-slurp-sexp
   "paredit forward-slurp-sexp exposed for keymap."
@@ -1938,6 +1943,7 @@
   ([cm cur]
    (when-let [[parent sibling bracket]
               (trampoline fwd-slurp cm cur (char-count cm))]
+     #_(js/console.log "FWD-SLURP" parent sibling bracket)
      (insert cm bracket 0 sibling);; put bracket in new spot
      (.replaceRange cm "" (cursor cm (- (index cm parent) (count bracket)))
                     parent));; remove bracket from old spot
