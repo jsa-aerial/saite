@@ -564,16 +564,25 @@
   stack) vs the beginning of a word (return token at the end of the
   word). assuming the cm has matched brackets for now."
   [cm cur stack]
-  (let [{:keys [string type eof ch end]} (get-info cm cur)
+  (let [dq "\""
+        info (get-info cm cur)
+        {:keys [string type eof ch end tok]} info
         stack-empty (zero? stack)
         one-left    (= 1 stack)
         ;; for multi-line strings
-        string-extends (or (not= "\"" (last string))
+        start-of-stg? (start-of-a-string? cm cur)
+        end-of-stg? (end-of-a-string? cm cur)
+        empty-stg? (when end-of-stg?
+                     (and (= tok.type "string")
+                          (= tok.string "\"\"")))
+        string-extends (or (not= dq (last string))
                            (= "\\" (last (drop-last string))))]
+
     (js/console.log stack stack-empty string type ch end cur string-extends
                     #_(escaped-char-to-right? cm cur)
-                    (start-of-a-string? cm cur)
-                    (end-of-a-string? cm cur))
+                    start-of-stg?
+                    end-of-stg?)
+
     (cond ;; we return a keyword when we know where to stop, stack otherwise.
 
       ;; skip whitespace
@@ -582,7 +591,7 @@
       (and (escaped-char-to-left? cm cur) stack-empty), :yes
       (and (word? type) stack-empty (= ch end)), :yes
       (and (is-bracket-type? type) (closer? string) one-left), :yes
-      (and (end-of-a-string? cm cur) one-left), :yes
+      (and end-of-stg? one-left), :yes
 
       eof, :eof
 
@@ -591,22 +600,24 @@
 
       ;; strings ...............................................................
 
+      empty-stg? :end-of-this-token
+
       ;; our starting point is at beginning of a string and it doesn't extend
-      (and (start-of-a-string? cm cur)
+      (and start-of-stg?
            (and (not string-extends) stack-empty)), :end-of-this-token
 
       ;; We are in a nested form, at start of string, but it doesn't extend
-      (and (start-of-a-string? cm cur)
+      (and start-of-stg?
            (not stack-empty)
            (not string-extends)), stack
 
       ;; entering a multi-line string, push " onto stack
-      (and (start-of-a-string? cm cur)
+      (and start-of-stg?
            string-extends), (inc stack)
 
       ;; at end of string and stack already empty, we must have started in the
       ;; middle of the string
-      (and (end-of-a-string? cm cur) stack-empty), :stop
+      (and end-of-stg? stack-empty), :stop
 
       ;; at end of string and stack about to be empty, we've found the end of
       ;; the string -- handled before checking for eof above
@@ -684,6 +695,18 @@
      (.setCursor cm cur)
      (skip cm end-of-next-sibling-sp))))
 
+#_(let [cm (get-ddb [:tabs :extns :ed3 :cms :$ed])
+      cur (.getCursor cm)
+      info (pe/get-info cm cur)
+      tok (info :tok)]
+  [(pe/start-of-a-string? cm cur) (pe/end-of-a-string? cm cur)
+   (info :left-char) (info :right-char) tok.string]
+  #_(console.log (pe/token-end cm cur 1))
+  #_(console.log (pe/cursor cm (+ 9 1 (- 8 8))))
+  #_(pe/get-info cm (pe/cursor cm (+ 9 1)))
+  #_(pe/end-of-a-string? cm cur))
+
+
 (defn start-of-prev-sibling-sp ;; -sp see 'skipping predicate'
   "returns the cursor at the start of the sibling to the left or nil
   if no sibling or eof. does not exit the containing form. does this
@@ -693,24 +716,32 @@
   beginning of a word (return token at the start of the
   word). assuming the cm has matched brackets for now."
   [cm cur stack]
-  (let [{:keys [string type bof ch start]} (get-info cm cur)
+  (let [info (get-info cm cur)
+        {:keys [string type bof ch start tok]} info
         stack-empty (zero? stack)
         one-left    (= 1 stack)
-        string-extends (not= "\"" (first string))];; for multiline strings
+        string-extends (not= "\"" (first string)) ; for multiline strings
+        start-of-stg? (start-of-a-string? cm cur)
+        end-of-stg? (end-of-a-string? cm cur)
+        empty-stg? (when start-of-stg?
+                     (and (= tok.type "string")
+                          (= tok.string "\"\"")))]
+
     (js/console.log stack stack-empty string type ch start cur string-extends
                     ;;(escaped-char-to-left? cm cur)
                     ;;(escaped-char-to-right? cm cur)
-                    (start-of-a-string? cm cur)
-                    (end-of-a-string? cm cur))
+                    start-of-stg?
+                    end-of-stg?)
+
     (cond ;; we return a keyword when we know where to stop, stack otherwise.
 
       ;; check these before checking for bof:
 
       ;; in a multi-line string, keep searching for the first line of it:
-      (and (start-of-a-string? cm cur) one-left string-extends), stack
+      (and start-of-stg? one-left string-extends), stack
 
       ;; at the first line of a string and we want its opening doublequote:
-      (and (start-of-a-string? cm cur) one-left), :yes
+      (and start-of-stg? one-left), :yes
 
       ;; at the start of a word:
       (and (word? type) stack-empty (= ch start)), :yes
@@ -724,7 +755,7 @@
            (not stack-empty)), stack #_(dec stack)
 
       ;; at the start of an escaped char:
-      (and (escaped-char-to-right? cm cur) stack-empty), stack ;:start-of-this-tok
+      (and (escaped-char-to-right? cm cur) stack-empty), stack
 
       ;; skip whitespace
       (or (nil? type) (and (= type "error") (= string ","))), stack
@@ -735,22 +766,24 @@
 
       ;; strings ...............................................................
 
+      empty-stg? :start-of-this-tok
+
       ;; our starting point is at end of a string and it doesn't extend
-      (and (end-of-a-string? cm cur)
+      (and end-of-stg?
            (and (not string-extends) stack-empty)), :start-of-this-tok
 
       ;; We are in a nested form, at end of string, but it doesn't extend
-      (and (end-of-a-string? cm cur)
+      (and end-of-stg?
            (not stack-empty)
            (not string-extends)) stack
 
       ;; entering a multi-line string from the right; push " onto stack
-      (and (end-of-a-string? cm cur)
+      (and end-of-stg?
            string-extends), (inc stack)
 
       ;; at start of string and stack already empty, we must have started in
       ;; the middle of the string.
-      (and (start-of-a-string? cm cur)
+      (and start-of-stg?
            stack-empty), :stop
 
       ;; at start of string and stack about to be empty, we've found the end of
