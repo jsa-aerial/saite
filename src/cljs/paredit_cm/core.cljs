@@ -2043,15 +2043,30 @@
 ;; paredit-forward-barf-sexp C-\} C-<left>
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defn find-first-ws [stg ch]
+  (let [cnt (count stg)]
+    (loop [ch ch]
+      (if (or (= (.charAt stg ch) " ") (= ch cnt))
+        ch
+        (recur (inc ch))))))
+
+(defn find-first-nonws [stg ch]
+  (let [cnt (count stg)]
+    (loop [ch ch]
+      (if (or (not= (.charAt stg ch) " ") (= ch cnt))
+        ch
+        (recur (inc ch))))))
+
 (defn rfind-blank-or-start [stg]
   (let [rstg (str/reverse stg)
-        cnt (count rstg)]
-    (js/console.log rstg cnt)
-    (loop [ch 0]
-      (cond
-        (= (.charAt stg ch) " ") ch
-        (= ch cnt) (- ch 2) ; -2 because of leading \"
-        :default (recur (inc ch))))))
+        cnt (count rstg)
+        bdq? (= (.charAt stg 0) "\"")
+        ch (->> 0 (find-first-ws rstg) (find-first-nonws rstg))]
+    #_(js/console.log rstg ch)
+    (cond
+      (not= ch cnt) (dec ch) ; found ws and nonws
+      bdq? (- ch 2)          ; has beg dq and at beg
+      :else ch)))
 
 (defn fwd-string-barf
   "String barffing consists of simply 'go to end of string, mark as
@@ -2065,7 +2080,7 @@
         {:keys [string i]} (get-info cm inside)
         ri (rfind-blank-or-start string)
         sibling (cursor cm (- i ri))]
-    #_(js/console.log (index cm cur) i (index cm sibling) (- i ri))
+    #_(js/console.log (index cm cur) i ri (- i ri))
     (when (and parent inside)
       [parent inside sibling "\"" (< (- i ri) (index cm cur))])))
 
