@@ -1917,6 +1917,17 @@
 ;; paredit-forward-slurp-sexp C-), C-<right>
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defn fwd-string-slurp
+  "String slurping consists of simply 'go to end of string, mark as
+  parent, go to next sibling end, mark as sibling'"
+  [cm cur]
+  (let [parent (if (start-of-a-string? cm cur)
+                 (end-of-next-sibling cm cur)
+                 (end-of-next-sibling cm (start-of-prev-sibling cm cur)))
+        sibling (end-of-next-sibling cm parent)]
+    (when sibling
+      [parent sibling "\""])))
+
 (defn fwd-slurp
   "trampoline-able that looks for an ancestor closing bracket (parent,
   grandparent, etc) that has a sibling to slurp. returns a vector of the cur to
@@ -1926,10 +1937,7 @@
   [cm cur n]
   (if (and (in-string? cm cur)
            (not (end-of-a-string? cm cur)))
-    (let [parent (end-of-next-sibling cm cur)
-          sibling (end-of-next-sibling cm parent)]
-      (when sibling
-        [parent sibling "\""]))
+    (fwd-string-slurp cm cur)
     (when (>= n 0)
       (let [parent (skip cm parent-closer-sp cur)
             sibling (end-of-next-sibling cm parent)]
@@ -2035,6 +2043,32 @@
 ;; paredit-forward-barf-sexp C-\} C-<left>
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defn rfind-blank-or-start [stg]
+  (let [rstg (str/reverse stg)
+        cnt (count rstg)]
+    (js/console.log rstg cnt)
+    (loop [ch 0]
+      (cond
+        (= (.charAt stg ch) " ") ch
+        (= ch cnt) (- ch 2) ; -2 because of leading \"
+        :default (recur (inc ch))))))
+
+(defn fwd-string-barf
+  "String barffing consists of simply 'go to end of string, mark as
+  parent, reverse look for non whitespace, reverse look for
+  whitespace, mark as sibling'"
+  [cm cur]
+  (let [parent (if (start-of-a-string? cm cur)
+                 (end-of-next-sibling cm cur)
+                 (end-of-next-sibling cm (start-of-prev-sibling cm cur)))
+        inside (cursor cm (dec (index cm parent)))
+        {:keys [string i]} (get-info cm inside)
+        ri (rfind-blank-or-start string)
+        sibling (cursor cm (- i ri))]
+    #_(js/console.log (index cm cur) i (index cm sibling) (- i ri))
+    (when (and parent inside)
+      [parent inside sibling "\"" (< (- i ri) (index cm cur))])))
+
 (defn fwd-barf
   "trampoline-able that looks for an ancestor closing bracket (parent,
   grandparent, etc) that has a sibling to barf. returns a vector of
@@ -2043,26 +2077,29 @@
   whether the operation causes the cursor to be moved. nil if there is
   no such anscestor that can barf"
   [cm cur n]
-  (when (>= n 0)
-    (let [parent (skip cm parent-closer-sp cur)
-          inside (cursor cm (dec (index cm parent)))
-          sibling (start-of-prev-sibling cm inside)
-          ;; prevsib: end of prev sibling if there is one:
-          prevsib (end-of-next-sibling cm (start-of-prev-sibling cm sibling))
-          ;; bracket-cur: where the new bracket should go:
-          bracket-cur (or prevsib
-                        (forward-down-cur cm (backward-up-cur cm sibling)))
-          ;; whether the cursor needs to change:
-          moved (and bracket-cur (< (index cm bracket-cur) (index cm cur)))
-          ;; text of the bracket, e.g. ")"
-          bracket (when parent
-                    (if moved
-                      (str (get-string cm parent) " ")
-                      (get-string cm parent)))]
-      (cond
-        (nil? parent) nil
-        (nil? bracket-cur) (fn [] (fwd-barf cm parent (dec n)))
-        :default [parent inside bracket-cur bracket moved]))))
+  (if (and (in-string? cm cur)
+           (not (end-of-a-string? cm cur)))
+    (fwd-string-barf cm cur)
+    (when (>= n 0)
+      (let [parent (skip cm parent-closer-sp cur)
+            inside (cursor cm (dec (index cm parent)))
+            sibling (start-of-prev-sibling cm inside)
+            ;; prevsib: end of prev sibling if there is one:
+            prevsib (end-of-next-sibling cm (start-of-prev-sibling cm sibling))
+            ;; bracket-cur: where the new bracket should go:
+            bracket-cur (or prevsib
+                            (forward-down-cur cm (backward-up-cur cm sibling)))
+            ;; whether the cursor needs to change:
+            moved (and bracket-cur (< (index cm bracket-cur) (index cm cur)))
+            ;; text of the bracket, e.g. ")"
+            bracket (when parent
+                      (if moved
+                        (str (get-string cm parent) " ")
+                        (get-string cm parent)))]
+        (cond
+          (nil? parent) nil
+          (nil? bracket-cur) (fn [] (fwd-barf cm parent (dec n)))
+          :default [parent inside bracket-cur bracket moved])))))
 
 (defn ^:export forward-barf-sexp
   "paredit forward-barf-sexp exposed for keymap."
@@ -2074,7 +2111,7 @@
          (.replaceRange cm "" inside parent)
          (insert cm bracket 0 sibling)
          (if moved
-           (.setCursor cm (cursor cm (+ (index cm cur) (count bracket))))
+           (.setCursor cm sibling)
            (.setCursor cm cur)))
      (.setCursor cm cur))))
 
