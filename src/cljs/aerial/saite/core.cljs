@@ -269,11 +269,14 @@
   (let [{:keys [save-info editor interactive-tab doc]} (msg :data)
         choices (into {} save-info)
         dirs (-> choices keys sort)
-        {:keys [name mode theme key-bindings]} editor
-        theme (if theme theme "zenburn")
         interactive-tab (xform-tab-defaults interactive-tab)
+        {:keys [name mode theme size key-bindings]} editor
+        theme (if theme theme "zenburn")
+        size {:edout (xform-tab-defaults (size :edout))
+              :eddoc (xform-tab-defaults (size :eddoc))}
         key-bindings (cm/xform-kb-syms key-bindings)
-        editor {:name name :mode mode :theme theme :key-bindings key-bindings}]
+        editor (assoc editor
+                      :theme theme :size size :key-bindings key-bindings)]
     (printchan :APP-INIT save-info editor)
     (printchan :CHOICES choices :DIRS dirs)
 
@@ -371,9 +374,12 @@
 (defn frame-callback
   ([]
    (go (async/>! mathjax-chan ::global)))
+  ([fid]
+   (go (async/>! mathjax-chan (name fid)))
+   fid)
   ([spec frame] #_(printchan :FRAME-CALLBACK :spec spec)
-   (let [id (frame :frameid)]
-     (go (async/>! mathjax-chan id))
+   (let [fid (frame :frameid)]
+     (go (async/>! mathjax-chan (name fid)))
      [spec frame])))
 
 
@@ -437,7 +443,7 @@
  aerial.saite.compiler/state 'aerial.saite.core
  (aerial.saite.analyzer/analyzer-state 'aerial.saite.core))
 
-(when-let [elem (js/document.querySelector "#app")]
+#_(when-let [elem (js/document.querySelector "#app")]
   (hc/update-defaults
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
               :frame {:top :TOP, :bottom :BOTTOM,
