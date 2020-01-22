@@ -233,7 +233,8 @@
        hmi/sv!))
 
 
-
+(hc/get-default :SESSION-NAME)
+(hc/get-default :USERDATA)
 (->>
  (hc/xform
   {:usermeta :USERDATA
@@ -242,10 +243,13 @@
    :encoding {:x {:field "Horsepower", :type "quantitative"},
               :y {:field "Miles_per_Gallon", :type "quantitative"},
               :color {:field "Origin", :type "nominal"}}}
+  :SESSION-NAME "Test1"
   :VID :scatter-1 :FID :f1
-  :LEFT `[[gap :size "10px"]
-          [cm :id "cm-scatter-1" :vid :VID
-           :width "700px"
+  :LEFT '[[gap :size "10px"]
+          [cm :id "cm-scatter-1" :vid :VID :tid :TID
+           :width "500px" :height "200px"
+           :out-width "500px" :out-height "100px"
+           :ed-out-order :first-last
            :src
 "(hmi/visualize
  (get-vspec :scatter-1)
@@ -375,9 +379,10 @@
 
 
 (let [data (->> (range 0.001 100.0 0.1)
-                (mapv #(do {:x (ac/roundit %)
-                            :y (-> % Math/sqrt ac/roundit)})))]
+                (mapv #(do {:x (roundit %)
+                            :y (-> % Math/sqrt roundit)})))]
   (->> (hc/xform ht/line-chart :VID :sqrt
+        :SESSION-NAME "Test1"
         :BOTTOM `[[gap :size "230px"]
                   [p {:style {:font-size "18px"}}
                    "\\(f(x) = \\sqrt x\\)"]]
