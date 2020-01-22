@@ -374,9 +374,6 @@
 (defn frame-callback
   ([]
    (go (async/>! mathjax-chan ::global)))
-  ([fid]
-   (go (async/>! mathjax-chan (name fid)))
-   fid)
   ([spec frame] #_(printchan :FRAME-CALLBACK :spec spec)
    (let [fid (frame :frameid)]
      (go (async/>! mathjax-chan (name fid)))
