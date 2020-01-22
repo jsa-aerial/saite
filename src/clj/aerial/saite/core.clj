@@ -247,6 +247,14 @@
    {:name "emacs",
     :mode "clojure"
     :theme "zenburn"
+    :size {:edout {:height 900
+                   :width  730
+                   :out-height 900
+                   :out-width 1000 }
+           :eddoc {:height 790
+                   :width  730
+                   :out-height 100
+                   :out-width 730}}
     :key-bindings '{"Ctrl-F"         pe/forward-sexp
                     "Ctrl-B"         pe/backward-sexp
                     "Ctrl-Left"      pe/forward-barf-sexp
@@ -281,9 +289,8 @@
                     "Ctrl-X Ctrl-M"  eval-mixed-cc}}
 
    :interactive-tab
-   {:edtype :interactive-doc
-    :order :row, :eltsper 1, :rgap 20, :cgap 20
-    :width 730, :height 600, :out-width 730 :out-height 100 :size "auto"
+   {:edtype :interactive-doc :nssym "doc.code"
+    :order :row, :eltsper 1, :rgap 20, :cgap 20 :size "auto"
     :layout :up-down, :ed-out-order :first-last}
 
    :saveloc (fs/join home-path "Doc")
