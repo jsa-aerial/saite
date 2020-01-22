@@ -751,7 +751,7 @@
    :children
    [[box
      :size (opts :size "auto")
-     :width (opts :width "500px")
+     :width (opts :out-width "900px")
      :height oh
      :justify (opts :justify :start)
      :align (opts :justify :stretch)
