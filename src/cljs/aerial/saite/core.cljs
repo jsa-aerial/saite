@@ -266,7 +266,8 @@
        (into {})))
 
 (defmethod user-msg :app-init [msg]
-  (let [{:keys [save-info editor interactive-tab doc]} (msg :data)
+  (let [{:keys [save-info editor interactive-tab locs doc]} (msg :data)
+        {:keys [save chart data downloads]} locs
         choices (into {} save-info)
         dirs (-> choices keys sort)
         interactive-tab (xform-tab-defaults interactive-tab)
@@ -290,6 +291,7 @@
                 [:main :files :save] (-> dirs first choices sort first)
                 [:main :files :load] (-> dirs first choices sort first)
 
+                [:main :locs] locs
                 [:main :editor] editor
                 [:main :interactive-tab] interactive-tab
                 [:main :doc] doc
@@ -312,10 +314,11 @@
   [data-maps]
   (printchan :UPDATE-DATA data-maps)
   #_(mapv (fn [{:keys [usermeta data]}]
-          (let [vid (usermeta :vid)
-                spec (dissoc (get-vspec vid) :data)]
-            (assoc-in spec [:data :values] data)))
-        data-maps))
+            (let [vid (usermeta :vid)
+                  tid (-> usermeta :tab :id)
+                  spec (dissoc (get-vspec tid vid) :data)]
+              (assoc-in spec [:data :values] data)))
+          data-maps))
 
 
 (defmethod user-msg :data [msg]
@@ -376,14 +379,66 @@
    (go (async/>! mathjax-chan ::global)))
   ([spec frame] #_(printchan :FRAME-CALLBACK :spec spec)
    (let [fid (frame :frameid)]
+     (update-ddb [:editors :tabs :curfid] fid)
      (go (async/>! mathjax-chan (name fid)))
      [spec frame])))
 
 
+
+
+(defn set-tbody-cm-defaults [optsmap]
+  (let [tid (hmi/get-cur-tab :id)]
+    (update-ddb [:tabs :cms tid :defaults] optsmap)
+    :ok))
+
+(defn calc-dimensions [tid opts]
+  (let [pxs-ch 9.125 ; (/ 730 90)
+        pxs-row 20   ; experimentation
+        tabdefs (or (get-ddb [:tabs :cms tid :defaults]) {})
+        src (opts :src "")
+        lines (cljstr/split-lines src)
+        lcnt (count lines)
+        lsiz (->> lines (mapv count) (sort >) first)
+        width-pxs (-> pxs-ch (* lsiz) Math/ceil (str "px"))
+        height-pxs (-> pxs-row (* lcnt) (+ 10) Math/ceil (str "px"))
+        width (opts :width (tabdefs :width width-pxs))
+        height (opts :height (tabdefs :height height-pxs))
+        out-width (opts :out-width
+                        (tabdefs :out-width
+                                 (if (not (opts :readonly)) width width-pxs)))
+        out-height (opts :out-height
+                         (tabdefs :out-height
+                                  (if (opts :readonly true) "0px" "50px")))]
+    [width height out-width out-height]))
+
+(defn mdcm [& opts]
+  (fn [& opts]
+    (let [optsmap (->> opts (partition-all 2) (mapv vec) (into {}))
+          cmfn (cm)
+          tinfo (hmi/get-cur-tab)
+          tid (tinfo :id)
+          vid (-> :specs tinfo first :usermeta :vid)
+          eid (or (optsmap :id)
+                  (-> "te-" (str (Math/floor (/ (.now js/Date) 10)))))
+          fid (get-ddb [:editors :tabs :curfid])
+          curtab-uinfo (get-ddb [:tabs :extns tid])
+          [width height out-width out-height] (calc-dimensions tid optsmap)
+          layout (optsmap :layout :up-down)
+          ed-out-order (optsmap :ed-out-order :first-last)
+          readonly (if (optsmap :readonly true) "nocursor" false)
+          src (optsmap :src "")]
+      (printchan :MDCM :FID fid)
+      [cmfn :id eid :tid tid :vid vid :fid fid
+       :width width :height height
+       :out-width out-width :out-height out-height
+       :layout layout :ed-out-order ed-out-order
+       :readonly readonly :tbody :true
+       :src src])))
+
 (defn symxlate-callback [sym]
   (let [snm (name sym)]
     (cond ;; (= snm "md") md
-          (= snm "cm") (cm)
+          (= snm "cm") (mdcm)
           :else sym)))
 
 
@@ -452,7 +507,7 @@
               :session-name :SESSION-NAME}
    :AT :end :POS :after
    :MSGOP :tabs, :SESSION-NAME "Exploring"
-   :TID :expl1, :TLBL #(-> :TID % name cljstr/capitalize)
+   :TID #(hmi/get-cur-tab :id), :TLBL #(-> ((% :TID)) name cljstr/capitalize)
    :OPTS (hc/default-opts :vgl), :TOPTS (hc/default-opts :tab))
   (start :elem elem
          :port js/location.port
@@ -479,7 +534,7 @@
                 :session-name :SESSION-NAME}
      :AT :end :POS :after
      :MSGOP :tabs, :SESSION-NAME "Exploring"
-     :TID :expl1, :TLBL #(-> :TID % name cljstr/capitalize)
+     :TID #(hmi/get-cur-tab :id), :TLBL #(-> ((% :TID)) name cljstr/capitalize)
      :OPTS (hc/default-opts :vgl), :TOPTS (hc/default-opts :tab))
     (start :elem elem
            :port 3000
