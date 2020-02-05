@@ -4,6 +4,7 @@
             [clojure.data.json :as json]
 
             [cemerick.pomegranate :as pom]
+            [me.raynes.fs.compression :as cmp]
             [com.rpl.specter :as sp]
 
             [aerial.fs :as fs]
@@ -194,7 +195,7 @@
          [_ & data] info
          {:keys [session file]} loc
          config (hmi/get-adb [:saite :cfg])
-         saveloc (config :saveloc)
+         saveloc (get-in config [:locs :save] (config :saveloc))
          dir (fs/join (fs/fullpath saveloc) session)
          filespec (fs/join dir file)]
      (hmi/printchan :Saving filespec)
@@ -203,11 +204,25 @@
        (io/with-out-writer filespec
          (prn (vec data)))))))
 
+(defmethod hmi/user-msg :save-charts [msg]
+  (try+ msg
+   (let [{:keys [uid archive]} (msg :data)
+         locs (hmi/get-adb [:saite :cfg :locs])
+         os (System/getProperty "os.name")
+         downloads (case os
+                     "Linux" (locs :linux)
+                     "Mac OS X" (locs :mac)
+                     "Windows 10" (locs :win))
+         archive (->> archive (fs/join downloads) fs/fullpath)
+         uziptgt (-> :chart locs fs/fullpath)]
+     (cmp/unzip archive uziptgt)
+     (fs/rm archive))))
+
 
 (defmethod hmi/user-msg :load-doc [msg]
   (try+ msg
    (let [config (hmi/get-adb [:saite :cfg])
-         saveloc (config :saveloc)
+         saveloc (get-in config [:locs :save] (config :saveloc))
          {:keys [uid location]} (msg :data)
          {:keys [session file url]} location
          dir (fs/join (fs/fullpath saveloc) session)
@@ -268,6 +283,9 @@
                     "Ctrl-X D"       show-doc
                     "Ctrl-X S"       show-source
 
+                    "Ctrl-Alt-T"     insert-txt-frame
+                    "Ctrl-Alt-C"     insert-cm-md
+                    "Ctrl-Alt-V"     insert-vis-frame
                     "Alt-W"          enhanced-cut
                     "Ctrl-Y"         enhanced-yank
                     "Alt-K"          em/kill-sexp
@@ -293,8 +311,14 @@
     :order :row, :eltsper 1, :rgap 20, :cgap 20 :size "auto"
     :layout :up-down, :ed-out-order :first-last}
 
-   :saveloc (fs/join home-path "Doc")
-   :dataloc (fs/join home-path "Data")})
+   :locs
+   {:save  (fs/join home-path "Docs")
+    :chart (fs/join home-path "Charts")
+    :data  (fs/join home-path "Data")
+    :downloads {:linux (fs/join home-path "Downloads")
+                :mac (fs/join home-path "Downloads")
+                :win (fs/join home-path "Downloads")}}
+   })
 
 
 (defn init [port]
@@ -323,7 +347,7 @@
 
 (defn config-info [data-map]
   (let [config (hmi/get-adb [:saite :cfg])
-        saveloc (config :saveloc)
+        saveloc (get-in config [:locs :save] (config :saveloc))
         sessions (-> saveloc fs/fullpath (fs/directory-files ""))
         port (config :port)
         quick-doc (slurp (format "http://localhost:%s/doc/quick.md" port))]
@@ -335,9 +359,10 @@
                                     (mapv (fn[f] (-> f fs/basename
                                                     (fs/replace-type ""))))))
                       sessions)
-     :doc {:quick quick-doc}
      :editor (config :editor)
-     :interactive-tab (config :interactive-tab))))
+     :interactive-tab (config :interactive-tab)
+     :locs (config :locs)
+     :doc {:quick quick-doc}) ))
 
 
 (defn start [port]
