@@ -97,6 +97,7 @@
   (let [tids (rest (mapv :id (tab-data)))
         $split (get-ddb [:tabs :extns :$split])]
     (doseq [tid tids] (hmi/del-tab tid))
+    (hmi/del-vgviews)
     (update-ddb [:editors] {}
                 [:main :chans] {}
                 [:tabs] {:extns {:$split $split}})
