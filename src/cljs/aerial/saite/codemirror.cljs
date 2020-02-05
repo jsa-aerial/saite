@@ -276,6 +276,88 @@
 
 
 
+
+;;; ----------------------------------------------------------------------- ;;;
+;;;               Insertion of 'various frame template code'                ;;;
+;;; ----------------------------------------------------------------------- ;;;
+
+
+(defn cminsert
+  "Modified version of pe/insert which does not understand multiline text."
+  ([cm text] (cminsert cm text 0))
+  ([cm text offset] (cminsert cm text offset (pe/cursor cm)))
+  ([cm text offset cur]
+   (let [i (pe/index cm cur)]
+     (.replaceRange cm text cur)
+     (.setCursor cm (pe/cursor cm (+ i (count text) offset)))
+     (pe/cursor cm))))
+
+(defn next-cmid []
+  (let [tid (hmi/get-cur-tab :id)
+        cmid (inc (or (get-ddb [:tabs :extns tid :cmfids :cm]) 0))]
+    (update-ddb [:tabs :extns tid :cmfids :cm] cmid)
+    cmid))
+
+(defn next-fid []
+  (let [tid (hmi/get-cur-tab :id)
+        fid (inc (or (get-ddb [:tabs :extns tid :cmfids :fm]) 0))]
+    (update-ddb [:tabs :extns tid :cmfids :fm] fid)
+    fid))
+
+(defn next-vid []
+  (let [tid (hmi/get-cur-tab :id)
+        vid (inc (or (get-ddb [:tabs :extns tid :cmfids :vis]) 0))]
+    (update-ddb [:tabs :extns tid :cmfids :vis] vid)
+    vid))
+
+(defn get-tab-default [param default]
+  (let [tid (hmi/get-cur-tab :id)]
+    (or (get-ddb [:tabs :cms tid :defaults param]) default)))
+
+
+(defn insert-cm-md [cm]
+  (let [cmmd (format "[cm :id \"cm%s\" :src \" \"]" (next-cmid))
+        #_cm #_(get-ddb [:tabs :cms :chap3 "ed-chap3" :$ed])]
+    (cminsert cm cmmd -2)))
+
+(defn insert-txt-frame [cm]
+  (let [lmargin (get-tab-default :lmargin "50px")
+        font-size (get-tab-default :font-size "16px")
+        form
+        (format "
+(hc/xform
+ ht/empty-chart
+ :FID %s
+ :LEFT '[[p {:style {:width \"%s\" :min-width \"%s\"}}]]
+ :TOP '[[gap :size \"%s\"]
+        [md {:style {:font-size \"%s\"}}
+\"
+
+ \"]])"
+                (next-fid) lmargin lmargin lmargin font-size)]
+    (cminsert cm form -6)))
+
+
+(defn insert-vis-frame [cm]
+  (let [lmargin (get-tab-default :lmargin "50px")
+        font-size (get-tab-default :font-size "16px")
+        form
+        (format "
+(hc/xform
+ ht/point-chart
+ :FID %s :VID %s
+ :LEFT '[[p {:style {:width \"%s\" :min-width \"%s\"}}]]
+ :TOP '[[gap :size \"%s\"]
+        ])"
+                (next-fid) (next-vid) lmargin lmargin lmargin)]
+    (cminsert cm form -2)))
+
+
+
+;;; ----------------------------------------------------------------------- ;;;
+;;;               Document frame insertion, deletion, edit                  ;;;
+;;; ----------------------------------------------------------------------- ;;;
+
 (def dbg-cm (atom nil))
 
 
@@ -373,6 +455,11 @@
             (.setCursor cm pos))))))
 
 
+
+
+;;; ----------------------------------------------------------------------- ;;;
+;;;               Code evaluation - client, server, mixed                   ;;;
+;;; ----------------------------------------------------------------------- ;;;
 
 ;;#(reset! expr* %)
 (defn evalxe [cm] (reset! dbg-cm cm)
@@ -508,10 +595,18 @@
     (eval-on-jvm src cb)))
 
 
+
+
+;;; ----------------------------------------------------------------------- ;;;
+;;;                       Misc. Editor Support                              ;;;
+;;; ----------------------------------------------------------------------- ;;;
+
 (defn clear-output [cm]
-  (let [eid (get-ddb [:tabs :extns (hmi/get-cur-tab :id) :eid])
+  (let [;;eid (get-ddb [:tabs :extns (hmi/get-cur-tab :id) :eid])
+        eid cm.EID
         output (get-ddb [:editors eid :ot])]
-    (reset! output "")))
+    (when output
+      (reset! output ""))))
 
 
 (defn get-sym-at-cursor [cm]
@@ -552,6 +647,10 @@
 
 
 
+;;; ----------------------------------------------------------------------- ;;;
+;;;                       Key Binding Support                               ;;;
+;;; ----------------------------------------------------------------------- ;;;
+
 (def xtra-key-xref
   (->>
    (mapv vector
@@ -567,7 +666,8 @@
            insert-frame delete-frame re-visualize
            evalxe evalcc eval-mixed-cc
            evaljvm-xe evaljvm-cc
-           clear-output show-doc show-source recenter-top-bottom]
+           clear-output show-doc show-source recenter-top-bottom
+           insert-cm-md insert-txt-frame insert-vis-frame]
          [pe/forward-sexp pe/backward-sexp
           pe/splice-sexp
           pe/splice-sexp-killing-backward pe/splice-sexp-killing-forward
@@ -580,7 +680,8 @@
           insert-frame delete-frame re-visualize
           evalxe evalcc eval-mixed-cc
           evaljvm-xe evaljvm-cc
-          clear-output show-doc show-source recenter-top-bottom])
+          clear-output show-doc show-source recenter-top-bottom
+          insert-cm-md insert-txt-frame insert-vis-frame])
    (into {})))
 
 (defn xform-kb-syms [kb-map]
@@ -632,6 +733,11 @@
 
 
 
+
+;;; ----------------------------------------------------------------------- ;;;
+;;;                CodeMirror Reagent/React Component Support               ;;;
+;;; ----------------------------------------------------------------------- ;;;
+
 (defn code-mirror
   "Create a code-mirror editor. The parameters:
   value-atom (reagent atom)
@@ -639,10 +745,12 @@
   options
   :js-cm-opts
     options passed into the CodeMirror constructor"
-  [input mode & {:keys [js-cm-opts cb tid id] :or {cb #(printchan %)}}]
+  [input mode
+   & {:keys [js-cm-opts cb tid id ed? tbody]
+      :or {cb #(printchan %)}}]
   (printchan "CODE-MIRROR called")
   (let [cm (atom nil)
-        curpos (when id (get-ddb [:editors id :opts :curpos]))]
+        curpos (when ed? (get-ddb [:editors id :opts :curpos]))]
     (rgt/create-class
      {:display-name "CMirror"
 
@@ -667,12 +775,17 @@
 
           (.setValue inst @input)
           (set! (.-CB inst) cb)
+          (set! (.-EID inst) id)
           (.setOption inst "theme" (get-ddb [:main :editor :theme]))
           (reset! cm inst)
           (reset! dbg-cm inst)
-          (update-ddb [:tabs :extns tid :cms (if id :$ed :$ot)] inst)
+
+          (when (not tbody)
+            (update-ddb [:tabs :extns tid :cms (if ed? :$ed :$ot)] inst))
+          (update-ddb [:tabs :cms tid id (if ed? :$ed :$ot)] inst)
+
           (when-let [edcm (get-ddb [:tabs :extns tid :cms :$ed])] (.focus edcm))
-          (when id
+          (when ed?
             (.setCursor inst @curpos)
             (center-pos inst))
           (.on inst "change"
@@ -732,8 +845,13 @@
      :justify (opts :justify :start)
      :align (opts :justify :stretch)
      :child [code-mirror input (get-ddb [:main :editor :mode])
+             :js-cm-opts (when (opts :readonly)
+                           {:readOnly (opts :readonly)
+                            :lineNumbers false})
              :id (opts :id)
              :tid (opts :tid)
+             :ed? true
+             :tbody (opts :tbody)
              :cb (fn[m]
                    (let [oval (or (m :value) (m :error))
                          ostg (if (and (string? oval)
@@ -756,9 +874,12 @@
      :justify (opts :justify :start)
      :align (opts :justify :stretch)
      :child [code-mirror output (get-ddb [:main :editor :mode])
+             :id (opts :id)
              :tid (opts :tid)
+             :tbody (opts :tbody)
              :js-cm-opts {:lineNumbers false,
-                          :lineWrapping true}]]]])
+                          :lineWrapping true,
+                          :readOnly (opts :readonly false)}]]]])
 
 (defn cm-hiccup [opts input output]
   (let [id (opts :id)
@@ -766,27 +887,33 @@
         layout (if (= (opts :layout) :up-down) v-box h-box)
         ed-pos (if (= (opts :ed-out-order) :first-last) :first :last)
         ch (opts :height "400px")
-        oh (opts :out-height "100px")
+        oh (opts :out-height (cond (opts :readonly) "0px"
+                                   (opts :tbody) "50px"
+                                   :else "100px"))
         esratom (opts :$esratom)]
     [h-box :gap "5px" :attr {:id id}
      :children
      [[gap :size "3px"]
-      [v-box :gap "5px"
-       :children
-       [[md-circle-icon-button
-         :md-icon-name "zmdi-circle-o"
-         :tooltip "Clear"
-         :on-click
-         #(do (reset! output ""))]
-        (when (deref (opts :throbber))
-          [spinner])]]
+      (when (not (opts :readonly))
+        [v-box :gap "5px"
+         :children
+         [[md-circle-icon-button
+           :md-icon-name "zmdi-circle-o"
+           :tooltip "Clear"
+           :on-click #(do (reset! output ""))]
+          (when (deref (opts :throbber))
+            [spinner])]])
       [layout :gap "5px"
        :width (opts :width "500px")
        :height (+ ch oh 50)
        :children
-       (if (= ed-pos :first)
+       (cond
+         (#{0 "0" "0px"} oh)
+         [[editor-hiccup opts input output]]
+         (= ed-pos :first)
          [[editor-hiccup opts input output]
           [output-hiccup opts oh output]]
+         :else
          [[output-hiccup opts oh output]
           [editor-hiccup opts input output]])]
       [gap :size "10px"]]]))
@@ -799,6 +926,7 @@
     (fn [& opts]
       (let [opts (->> opts (partition-all 2) (mapv vec) (into {}))
             kwid (name (opts :id (gensym "cm-")))
+            tid (opts :tid)
             opts (or (get-ddb [:editors kwid :opts])
                      (merge {:id kwid, :size "auto"
                              :layout :up-down :ed-out-order :last-first
@@ -820,6 +948,7 @@
 
 
 (comment
+
 
   (defn vis! [vid picid]
     (hmi/visualize
