@@ -21,6 +21,9 @@
     :as hc
     :refer [RMV]]
 
+   [aerial.saite.savrest
+    :refer [update-ddb get-ddb]]
+
    [com.rpl.specter :as sp]
 
    [reagent.core :as rgt]
@@ -95,8 +98,13 @@
 (defn remove-frame [fid]
   (when fid
     (let [tid (hmi/get-cur-tab :id)
-          x (sp/select-one [sp/ATOM :tabs :active sp/ATOM] hmi/app-db)]
+          x (sp/select-one [sp/ATOM :tabs :active sp/ATOM] hmi/app-db)
+          eids (keep (fn[[k v]] (when (= fid (-> v :opts :fid)) k))
+                     (get-ddb [:editors]))]
       (push-undo x)
+      (doseq [eid eids]
+        (update-ddb [:editors eid] :rm)
+        (update-ddb [:tabs :cms tid eid] :rm))
       (hmi/remove-from-tab-body tid fid))))
 
 
