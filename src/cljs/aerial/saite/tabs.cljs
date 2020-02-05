@@ -113,7 +113,7 @@
 (defn ^:export interactive-doc-tab
   [tid label src & {:keys [width height out-width out-height
                            ed-out-order $split
-                           ns specs order eltsper rgap cgap size]
+                           ns cmfids specs order eltsper rgap cgap size]
                     :or {width "730px"
                          height "700px"
                          out-width "730px"
@@ -121,6 +121,7 @@
                          ed-out-order :last-first
                          $split (get-ddb [:tabs :extns :$split])
                          ns 'aerial.saite.usercode
+                         cmfids {:cm 0 :fm 0}
                          specs []
                          order :row eltsper 1 :rgap "20px" :cgap "20px"
                          size "auto"}}]
@@ -138,6 +139,7 @@
                :$split $split
                :$sratom sratom
                :ns ns
+               :cmfids cmfids
                :src src}
         hsfn (ass/h-split
               :panel-1 "fake p1"
@@ -297,7 +299,9 @@
                      (mapv (fn[[k v]] {:id k :label v})))
         cancelfn (fn[event] (reset! theme? false))
         donefn #(let [tid (hmi/get-cur-tab :id)
-                      cms (vals (get-ddb [:tabs :extns tid :cms]))]
+                      cms (->> (get-ddb [:tabs :cms tid])
+                               vals (mapv vec) flatten
+                               rest (take-nth 2))]
                   (doseq [cm cms] (cm/set-theme cm (themes @theme)))
                   (reset! theme? false))]
     (fn[theme? theme]
@@ -351,6 +355,7 @@
     (push-undo x)
     (update-ddb [:tabs :extns tid] :rm
                 [:editors eid] :rm)
+    (hmi/del-vgviews tid)
     (hmi/del-tab tid)))
 
 (defn add-interactive-tab [info-map]
@@ -387,10 +392,13 @@
         ctid (hmi/get-cur-tab :id)
         uinfo (or (get-ddb [:tabs :extns ctid]) {:fn [:_ :NA]})
         eid (str "ed-" (name tid))
-        {:keys [width height out-width out-height layout ed-out-order]} uinfo
+        {:keys [width height out-width out-height
+                layout ed-out-order cmfids]} uinfo
+        cmfids (if cmfids cmfids {:cm 0 :fm 0})
         src (deref (get-ddb [:editors (uinfo :eid) :in]))
         tabval (hmi/get-tab-field ctid)
         {:keys [specs opts]} tabval
+        specs (mapv #(update-in %1 [:usermeta :tab :id] (fn[_] tid)) specs)
         {:keys [order eltsper size rgap cgap]} opts
         edtype (second (uinfo :fn))]
     (case edtype
@@ -407,7 +415,7 @@
 
       interactive-doc-tab
       (interactive-doc-tab
-       tid label src :ns nssym
+       tid label src :ns nssym :cmfids cmfids
        :width width :height height
        :out-width out-width :out-height out-height
        :ed-out-order ed-out-order
