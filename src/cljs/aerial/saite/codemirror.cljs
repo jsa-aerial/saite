@@ -302,13 +302,13 @@
   (let [tid (hmi/get-cur-tab :id)
         fid (inc (or (get-ddb [:tabs :extns tid :cmfids :fm]) 0))]
     (update-ddb [:tabs :extns tid :cmfids :fm] fid)
-    fid))
+    (keyword (str "f" fid))))
 
 (defn next-vid []
   (let [tid (hmi/get-cur-tab :id)
         vid (inc (or (get-ddb [:tabs :extns tid :cmfids :vis]) 0))]
     (update-ddb [:tabs :extns tid :cmfids :vis] vid)
-    vid))
+    (keyword (str "v" vid))))
 
 (defn get-tab-default [param default]
   (let [tid (hmi/get-cur-tab :id)]
@@ -346,11 +346,12 @@
 (hc/xform
  ht/point-chart
  :FID %s :VID %s
+ :DATA (mapv (fn[i] {:x i :y i}) (range 50)) ; change to your data source
  :LEFT '[[p {:style {:width \"%s\" :min-width \"%s\"}}]]
  :TOP '[[gap :size \"%s\"]
         ])"
                 (next-fid) (next-vid) lmargin lmargin lmargin)]
-    (cminsert cm form -2)))
+    (cminsert cm form -161)))
 
 
 
