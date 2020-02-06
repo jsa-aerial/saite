@@ -22,6 +22,7 @@
 
    [aerial.saite.splits :as ass]
    [aerial.saite.savrest
+    :as sr
     :refer [update-ddb get-ddb]]
    [aerial.saite.codemirror
     :as cm
@@ -472,6 +473,14 @@
                :on-change #(reset! file-name %)]
               [ok-cancel donefn cancelfn]]])
 
+(defn save-charts [donefn cancelfn]
+  [v-box
+   :gap "10px"
+   :children [[label
+               :style {:font-size "18px"}
+               :label "Save all visualizations as PNGs?"]
+              [ok-cancel donefn cancelfn]]])
+
 (defn urldoc [url donefn cancelfn]
   [v-box
    :gap "10px"
@@ -484,12 +493,18 @@
                :on-change #(reset! url %)]
               [ok-cancel donefn cancelfn]]])
 
-(defn file-modal [choices session-name file-name mode url donefn cancelfn]
+(defn file-modal
+  [choices session-name file-name mode url charts donefn cancelfn]
   (let [sessions (->> choices deref keys sort (mapv (fn[k] {:id k :label k})))
         doc-files  (rgt/atom (->> session-name deref (#(@choices %))
                                   (mapv (fn[k] {:id k :label k}))))
         url? (rgt/atom false)
         urldonefn (fn[event] (reset! url? false) (donefn event))
+
+        charts? (rgt/atom false)
+        chartdonefn (fn [event]
+                      (reset! charts true)
+                      (reset! charts? false) (donefn event))
 
         new? (rgt/atom false)
         newdonefn (fn[event]
@@ -502,7 +517,7 @@
                                              @session-name (vec names)))
                       (printchan @doc-files)
                       (reset! new? false)))]
-    (fn [choices session-name file-name mode url donefn cancelfn]
+    (fn [choices session-name file-name mode url charts donefn cancelfn]
       [modal-panel
        :backdrop-color   "grey"
        :backdrop-opacity 0.4
@@ -510,10 +525,16 @@
                :gap "10px"
                :children
                [(when (= (deref mode) :save)
-                  [checkbox
-                   :model new?
-                   :label "New location"
-                   :on-change #(reset! new? %)])
+                  [h-box :gap "10px"
+                   :children [(when (not @charts?)
+                                [checkbox
+                                 :model new?
+                                 :label "New location"
+                                 :on-change #(reset! new? %)])
+                              [checkbox
+                               :model charts?
+                               :label "Visualizations"
+                               :on-change #(reset! charts? %)]]])
                 (when (not= (deref mode) :save)
                   [checkbox
                    :model url?
@@ -523,6 +544,8 @@
                   @new? [file-new session-name file-name newdonefn cancelfn]
 
                   @url? [urldoc url urldonefn cancelfn]
+
+                  @charts? [save-charts chartdonefn cancelfn]
 
                   :else
                   [v-box
