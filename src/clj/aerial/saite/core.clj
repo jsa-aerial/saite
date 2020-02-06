@@ -208,13 +208,31 @@
   (try+ msg
    (let [{:keys [uid archive]} (msg :data)
          locs (hmi/get-adb [:saite :cfg :locs])
+         {:keys [linux mac win]} (locs :downloads)
          os (System/getProperty "os.name")
          downloads (case os
-                     "Linux" (locs :linux)
-                     "Mac OS X" (locs :mac)
-                     "Windows 10" (locs :win))
+                     "Linux" linux
+                     "Mac OS X" mac
+                     "Windows 10" win)
          archive (->> archive (fs/join downloads) fs/fullpath)
          uziptgt (-> :chart locs fs/fullpath)]
+     #_(hmi/printchan :MSG msg :ARCHIVE archive :TGT uziptgt)
+
+     ;; This totally sucks, but the current fileserverjs saveAs
+     ;; function fires and forgets with no way of informing the caller
+     ;; when it completes. So, the :save-charts msg is sent to the
+     ;; server 'immediately' and so we have to wait for the download
+     ;; to finish.  It probably would make the most sense to move to
+     ;; the fileserverjs _streaming_ API save which _does_ have all
+     ;; this information.
+     (loop [sz -1
+            cnt 60]
+       (when (and (> cnt 0)
+                  (or (not (fs/file? archive))
+                      (< sz (fs/size archive))))
+         (Thread/sleep 1000)
+         (recur (if (fs/file? archive) (fs/size archive) -1) (dec cnt))))
+
      (cmp/unzip archive uziptgt)
      (fs/rm archive))))
 
