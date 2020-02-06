@@ -28,6 +28,7 @@
     :refer [editor-repl-tab interactive-doc-tab extns-xref
             alert-panel file-modal editor-box tab-box help-box tab<->]]
    [aerial.saite.savrest
+    :as sr
     :refer [update-ddb get-ddb get-tab-data xform-tab-data load-doc]]
 
    [cljsjs.mathjax]
@@ -109,12 +110,14 @@
        session-name (rgt/atom "")
        file-name (rgt/atom "")
        url (rgt/atom "")
+       charts (rgt/atom false)
        choices (rgt/atom nil)
        mode (rgt/atom nil)
        donefn (fn[event]
                 (go (async/>!
                      (hmi/get-adb [:main :chans :com])
-                     {:session @session-name :file @file-name :url @url}))
+                     {:session @session-name :file @file-name
+                      :url @url :charts @charts}))
                 (reset! show? false))
        cancelfn (fn[event]
                   (go (async/>! (hmi/get-adb [:main :chans :com]) :cancel))
@@ -174,28 +177,31 @@
                      (js/console.log "download clicked")
                      (reset! session-name (get-ddb [:main :files :dir]))
                      (reset! file-name (get-ddb [:main :files :save]))
+                     (reset! charts false)
                      (reset! mode :save)
                      (reset! show? true)
                      (let [location (async/<! ch)]
                        (when (not= :cancel location)
-                         (let [fname (location :file)
-                               dname (location :session)
-                               location (assoc
-                                         location
-                                         :file (str fname ".clj"))]
-                           (update-ddb [:main :files :save] fname
-                                       [:main :files :dir] dname)
-                           (let [spec-info (xform-tab-data
-                                            (get-tab-data))]
-                             (hmi/send-msg
-                              {:op :save-doc
-                               :data {:loc location
-                                      :info spec-info}})))))))]
+                         (if (location :charts)
+                           (sr/gen-chart-zip)
+                           (let [fname (location :file)
+                                 dname (location :session)
+                                 location (assoc
+                                           location
+                                           :file (str fname ".clj"))]
+                             (update-ddb [:main :files :save] fname
+                                         [:main :files :dir] dname)
+                             (let [spec-info (xform-tab-data
+                                              (get-tab-data))]
+                               (hmi/send-msg
+                                {:op :save-doc
+                                 :data {:loc location
+                                        :info spec-info}}))))))))]
 
              (when @show?
                (when (nil? @choices)
                  (reset! choices ((get-ddb [:main :files]) :choices)))
-               [file-modal choices session-name file-name mode url
+               [file-modal choices session-name file-name mode url charts
                 donefn cancelfn])] ]]
 
           [gap :size "20px"]
