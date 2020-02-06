@@ -1,4 +1,4 @@
-(defproject aerial.saite "0.18.7"
+(defproject aerial.saite "0.19.7"
   :description "Interactive document and visualization system - exploration, presentation, publication"
   :url "https://github.com/jsa-aerial/saite"
   :license {:name "MIT"
@@ -8,14 +8,16 @@
                  [org.clojure/core.async "0.4.474"]
                  [org.clojure/data.csv "0.1.3"]
 
-                 [com.cemerick/pomegranate "0.3.1"]  ; dynamic loader
-
+                 [com.cemerick/pomegranate "0.3.1"] ; dynamic loader
+                 [me.raynes/fs "1.4.6"]             ; zip/tar
                  [com.rpl/specter "1.1.1"]
 
-                 [aerial.hanami "0.10.12"]
+                 [aerial.hanami "0.11.1"]
                  [cljsjs/codemirror "5.40.2-1"]
                  [cljsjs/highlight "9.12.0-2"]
                  [cljsjs/mathjax "2.7.5-0"]
+                 [cljsjs/filesaverjs "1.3.3-0"]
+                 [cljsjs/jszip "3.1.3-0"]
 
                  [net.apribase/clj-dns "0.1.0"]
                  [aerial.fs "1.1.6"]
