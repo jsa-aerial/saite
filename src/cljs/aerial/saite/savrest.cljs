@@ -1,6 +1,7 @@
 (ns aerial.saite.savrest
   (:require
 
+   [clojure.string :as cljstr]
    [clojure.set :refer [map-invert]]
 
    [aerial.hanasu.common
@@ -10,6 +11,9 @@
     :refer [printchan]]
 
    [com.rpl.specter :as sp]
+
+   [cljsjs.jszip :as jsz]
+   [cljsjs.filesaverjs]
    ))
 
 
@@ -31,6 +35,65 @@
   ([] (get-db data-db []))
   ([key-path]
    (get-db data-db key-path)))
+
+
+
+
+;;; Static chart saving =================================================== ;;;
+
+#_(require '[cljsjs.jszip :as jsz])
+#_(require  'cljsjs.filesaverjs)
+
+#_(-> (.toImageURL (hmi/get-vgview :scatter-1) "png")
+      (.then (fn[url]
+               (let [link (js/document.createElement "a")]
+                 (.setAttribute link "href" url)
+                 (.setAttribute link "target" "_blank")
+                 (.setAttribute link "download" "My-Scatter-1.png")
+                 (.dispatchEvent link (new js/MouseEvent "click")))))
+      (.catch (fn[err] (printchan err))))
+
+
+(defn zipvis [tabvgviews views zip dir zipfolder]
+  (cond
+    (and (not (seq tabvgviews))
+         (not (seq views)))
+    (let [archive-name (-> zipfolder (cljstr/split #"/") vec
+                           (conj "Charts.zip")
+                           (->> (cljstr/join "-")))]
+      (-> (.generateAsync zip #js{:type "blob"})
+          (.then (fn[blob]
+                   (js/saveAs blob archive-name)
+                   (hmi/send-msg {:op :save-charts
+                                  :data {:uid (hmi/get-adb [:main :uid])
+                                         :archive archive-name}})))
+          (.catch (fn[err] (printchan err)))))
+
+    (not (seq views))
+    (let [[tid views] (first tabvgviews)]
+      (zipvis (rest tabvgviews) views zip
+              (str zipfolder "/" (name tid)) zipfolder))
+
+    :else
+    (let [[nm view] (first views)]
+      (-> (.toImageURL view "png")
+          (.then (fn[url]
+                   (.file zip
+                          (str dir "/" (name nm) ".png")
+                          (.slice url 22)
+                          #js{:base64 true})
+                   (zipvis tabvgviews (rest views) zip
+                           dir zipfolder)))))))
+
+(defn gen-chart-zip []
+  (let [dir (get-ddb [:main :files :dir])
+        file (get-ddb [:main :files :load])
+        archive-name (cljstr/join "-" [dir file "Charts.zip"])
+        zipfolder (str dir "/" file)
+        tab-vgviews (hmi/get-vgviews)
+        zip (new js/JSZip)]
+    #_(.folder zip (str dir "/" file))
+    (zipvis tab-vgviews [] zip "" zipfolder)))
 
 
 
