@@ -501,7 +501,7 @@
  aerial.saite.compiler/state 'aerial.saite.core
  (aerial.saite.analyzer/analyzer-state 'aerial.saite.core))
 
-#_(when-let [elem (js/document.querySelector "#app")]
+(when-let [elem (js/document.querySelector "#app")]
   (hc/update-defaults
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
               :frame {:top :TOP, :bottom :BOTTOM,
@@ -513,7 +513,9 @@
               :session-name :SESSION-NAME}
    :AT :end :POS :after
    :MSGOP :tabs, :SESSION-NAME "Exploring"
-   :TID #(hmi/get-cur-tab :id), :TLBL #(-> ((% :TID)) name cljstr/capitalize)
+   :TID #(hmi/get-cur-tab :id)
+   :TLBL #(-> (let [tid (% :TID)] (if (fn? tid) (tid) tid))
+              name cljstr/capitalize)
    :OPTS (hc/default-opts :vgl), :TOPTS (hc/default-opts :tab))
   (start :elem elem
          :port js/location.port
@@ -540,7 +542,9 @@
                 :session-name :SESSION-NAME}
      :AT :end :POS :after
      :MSGOP :tabs, :SESSION-NAME "Exploring"
-     :TID #(hmi/get-cur-tab :id), :TLBL #(-> ((% :TID)) name cljstr/capitalize)
+     :TID #(hmi/get-cur-tab :id)
+     :TLBL #(-> (let [tid (% :TID)] (if (fn? tid) (tid) tid))
+                name cljstr/capitalize)
      :OPTS (hc/default-opts :vgl), :TOPTS (hc/default-opts :tab))
     (start :elem elem
            :port 3000
