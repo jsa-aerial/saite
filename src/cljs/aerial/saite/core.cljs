@@ -385,7 +385,6 @@
    (go (async/>! mathjax-chan ::global)))
   ([spec frame] #_(printchan :FRAME-CALLBACK :spec spec)
    (let [fid (frame :frameid)]
-     (update-ddb [:editors :tabs :curfid] fid)
      (go (async/>! mathjax-chan (name fid)))
      [spec frame])))
 
@@ -426,7 +425,7 @@
           vid (-> :specs tinfo first :usermeta :vid)
           eid (or (optsmap :id)
                   (-> "te-" (str (Math/floor (/ (.now js/Date) 10)))))
-          fid (get-ddb [:editors :tabs :curfid])
+          fid (optsmap :fid)
           curtab-uinfo (get-ddb [:tabs :extns tid])
           [width height out-width out-height] (calc-dimensions tid optsmap)
           layout (optsmap :layout :up-down)
@@ -443,9 +442,9 @@
 
 (defn symxlate-callback [sym]
   (let [snm (name sym)]
-    (cond ;; (= snm "md") md
-          (= snm "cm") (mdcm)
-          :else sym)))
+    (cond
+      (= snm "cm") (mdcm)
+      :else sym)))
 
 
 

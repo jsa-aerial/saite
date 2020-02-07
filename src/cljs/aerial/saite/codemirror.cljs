@@ -316,7 +316,7 @@
 
 
 (defn insert-cm-md [cm]
-  (let [cmmd (format "[cm :id \"cm%s\" :src \" \"]" (next-cmid))
+  (let [cmmd (format "[cm :id \"cm%s\" :fid FID :src \" \"]" (next-cmid))
         #_cm #_(get-ddb [:tabs :cms :chap3 "ed-chap3" :$ed])]
     (cminsert cm cmmd -2)))
 
