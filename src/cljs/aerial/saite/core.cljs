@@ -433,7 +433,7 @@
           ed-out-order (optsmap :ed-out-order :first-last)
           readonly (if (optsmap :readonly true) "nocursor" false)
           src (optsmap :src "")]
-      (printchan :MDCM :FID fid)
+      #_(printchan :MDCM :FID fid :ED-OUT-ORDER ed-out-order :LAYOUT layout)
       [cmfn :id eid :tid tid :vid vid :fid fid
        :width width :height height
        :out-width out-width :out-height out-height
