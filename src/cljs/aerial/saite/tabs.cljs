@@ -128,6 +128,8 @@
                          size "auto"}}]
   (let [cmfn (cm)
         eid (str "ed-" (name tid))
+        maxh (or (get-ddb [:main :interactive-tab :doc :max-height]) "850px")
+        maxw (or (get-ddb [:main :interactive-tab :doc :max-width]) "2000px")
         sratom (rgt/atom $split)
         uinfo {:fn ''interactive-doc-tab
                :tid tid
@@ -170,8 +172,8 @@
                                   :ed-out-order ed-out-order
                                   :src src]
                         :panel-2 [scroller
-                                  :max-height "800px"
-                                  :max-width "1800px"
+                                  :max-height maxh
+                                  :max-width maxw
                                   :align :start
                                   :child hcomp]])}})
     (let [opts (hmi/get-tab-field tid :opts)
