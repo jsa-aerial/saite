@@ -865,7 +865,10 @@
         ed-out-order (rgt/atom (opts :ed-out-order))
 
         {:keys [width height
-                out-width out-height]} (get-ddb [:tabs :extns curtid])
+                out-width out-height]} (or (get-ddb [:tabs :extns curtid])
+                                           ;; Incase this is a std tab!!
+                                           {:width "0px" :height "0px"
+                                            :out-width "0px" :out-height "0px"})
         width (rgt/atom (cljstr/replace width #"px$" ""))
         height (rgt/atom (cljstr/replace height #"px$" ""))
         out-width (rgt/atom (cljstr/replace out-width #"px$" ""))
