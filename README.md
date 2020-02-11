@@ -1,9 +1,10 @@
 # saite
-Exploratory graphics and visualization system. 咲いて (in bloom). Built on top of [Hanami](https://github.com/jsa-aerial/hanami) Vega/Vega-Lite library
+Interactive documents with editor support (emacs, vim, sublime, and paredit), graphics and visualization, markdown, and LaTex. 咲いて (in bloom). Built on top of [Hanami](https://github.com/jsa-aerial/hanami) Vega/Vega-Lite library, [CodeMiror](https://codemirror.net), [MathJax](https://www.mathjax.org), amd [Specter](https://www.mathjax.org).
 
 <a href="https://jsa-aerial.github.io/aerial.saite/index.html"><img src="https://github.com/jsa-aerial/saite/blob/master/resources/public/images/in-bloom.png" align="left" hspace="10" vspace="6" alt="saite logo" width="150px"></a>
 
-**Saite** is a Clojure(Script) mini "client/server" application for exploratory creation of interactive visualizations based in [Vega-Lite](https://vega.github.io/vega-lite/) (VGL) and/or [Vega](https://vega.github.io/vega/) (VG) specifications. These specifications are declarative and completely specified by _data_ (JSON maps). VGL compiles into the lower level grammar of VG which in turn compiles to a runtime format utilizting lower level runtime environments such as [D3](https://d3js.org/), HTML5 Canvas, and [WebGL](https://github.com/vega/vega-webgl-renderer).
+**Saite** is a Clojure(Script) client/server application for the creation and sharing of interactive documents.  Documents fully support creation of interactive visualizations, coupled with editors, markdown and LaTex.  They may be saved and shared via any number of means, as the external format is simply text. End user creation of documents is highly declarative in form and nature.
+
 
 Table of Contents
 =================
@@ -11,6 +12,9 @@ Table of Contents
    * [saite](#saite)
       * [Installation](#installation)
          * [Uberjar](#uberjar)
+            * [Release V0.5.0 summary:](#release-v050-summary)
+            * [Release V0.3.3 summary:](#release-v033-summary)
+            * [Obtaining and installing server](#obtaining-and-installing-server)
          * [Library](#library)
       * [Features](#features)
       * [Usage](#usage)
@@ -23,7 +27,9 @@ Table of Contents
 # saite
 
 
-**Saite** is a Clojure(Script) mini "client/server" application for exploratory creation of interactive visualizations based in [Vega-Lite](https://vega.github.io/vega-lite/) (VGL) and/or [Vega](https://vega.github.io/vega/) (VG) specifications. These specifications are declarative and completely specified by _data_ (JSON maps). VGL compiles into the lower level grammar of VG which in turn compiles to a runtime format utilizting lower level runtime environments such as [D3](https://d3js.org/), HTML5 Canvas, and [WebGL](https://github.com/vega/vega-webgl-renderer).
+**Saite** is a Clojure(Script) client/server application for the creation and sharing of interactive documents.  Documents fully support creation of interactive visualizations, coupled with editors, markdown and LaTex.  They may be saved and shared via any number of means, as the external format is simply text. End user creation of documents is highly declarative in form and nature.
+
+[Vega-Lite](https://vega.github.io/vega-lite/) (VGL) and/or [Vega](https://vega.github.io/vega/) (VG) specifications. These specifications are declarative and completely specified by _data_ (JSON maps). VGL compiles into the lower level grammar of VG which in turn compiles to a runtime format utilizting lower level runtime environments such as [D3](https://d3js.org/), HTML5 Canvas, and [WebGL](https://github.com/vega/vega-webgl-renderer).
 
 Visualizations are formed from parameterized [templates](https://github.com/jsa-aerial/hanami#templates-substitution-keys-and-transformations) which are recursively transformed into legal VGL or VG specifications. In Saite, creating and transforming these templates is generally done on the server side in typical REPL style development. Transformed templates (with their data or data source) are sent to one or more sessions (brower viewers) for rendering.
 
@@ -40,9 +46,45 @@ In addition, Saite also makes use of [header support](https://github.com/jsa-aer
 
 ### Uberjar
 
-Saite has progressed a great deal even from the [Aug 29 presentation](https://www.youtube.com/watch?v=3Hx7kbub9YE). Loads of stuff mentioned in the futures there are now implemented, including server side code execution, mixing of server and client side code execution, loading from URLs, full paredit support for editors, and more.
+Saite is now a full on quite complete interactive document creation tool.  An over view of an earlier state can be found here: [Aug 29 presentation](https://www.youtube.com/watch?v=3Hx7kbub9YE). Loads of stuff mentioned in the futures there are now implemented, including server side code execution, mixing of server and client side code execution, loading from URLs, full paredit support for editors, automated bulk plot/chart static saves, etc.
 
-Release V0.3.3 summary:
+#### Release V0.5.0 summary:
+
+* Added full editor panel support to picture frame elements
+  - Add any number / combination to :left, :right, :up, and/or :down
+  - May be either _live_ or _static_. Latter is for typical code markdown
+  - Live editors are fully functional with code execution and may also explicitly update any associated frame visualization
+  - Static can be neither focused nor editable
+  - Theming works for all these editors
+  - Add per tab capabile user defined defaults for editor options (sizing, etc)
+
+* Added automated code 'starter' inserts for
+  - Text only (empty) frames (for straight markdown and/or editor panels)
+  - CodeMirror editor elements for picture frames
+  - Visualization frames with starting default template and data source
+  - These also include automatic and automated frame (fid), visualization (vid) and editor (eid) ids.
+
+* Added bulk static image saves
+  - Will automatically save all images in a document
+  - Saved per tab as `session>docname>tabname>vid(s).png``
+  - Supports bulk creation by server or client.
+  - Simple fast implementation - no 'headless browsers' or other extras required
+  - New default 'chart' option in config.edn for where to save
+
+* Added new example documents:
+  - `cm-example-picframes.clj`, showing editor support in picture frames
+  - `bulk-vis-save.clj`, showing bulk visualization creation and saving
+
+* Added (fwd) slurping and barfing to strings
+
+* Fix several issues with strings in paredit.
+
+* Added main editor panel default sizing to config.edn
+
+* Added main doc (scroller) area defaul max size for width and height
+
+
+#### Release V0.3.3 summary:
 
 * Self-installing uberjar, which also is used to run the server
 
@@ -88,35 +130,44 @@ Release V0.3.3 summary:
 
 ______________________________________________________________________________
 
-As indicated, there is now a full self-installing JAR, which will also install the MKL libraries necessary for [Neanderthal](https://clojars.org/uncomplicate/neanderthal) as well as a default config.edn file. For the MKL libs, at the time of this note (13-Oct-2019), Linux 64bit and MacOS 10.11+ 64bit are supported.  Windows is intended.
+#### Obtaining and installing server
+
+As indicated, there is now a full self-installing JAR, which will also install the MKL libraries necessary for [Neanderthal](https://clojars.org/uncomplicate/neanderthal) as well as a default config.edn file. For the MKL libs, at the time of this note (11-Feb-2020), Linux 64bit and MacOS 10.11+ 64bit, and  Win10 are supported.
 
 For the self installing JAR, you can grab it with this (note, new versions are coming out fairly often and these versions will be reflected here):
 
-wget http://bioinformatics.bc.edu/~jsa/aerial.aerosaite-0.3.3-standalone.jar
+wget http://bioinformatics.bc.edu/~jsa/aerial.aerosaite-0.5.0-standalone.jar
 
 You need Java-8. At present it will **not** run properly on 9+ due to all the non backward compatible changes there (in particular dynamic dependencies do not yet work on 9+). But Java 8 seems to be the platform most (80% I think) JVM users still use. And in any case would be easy to get.
 
-Once you have the uberjar and Java 8, you can install with this command:
+Once you have the uberjar and Java 8, you can **install** with this command:
 
-`java -jar path-to-where-you-downloaded-it/aerial.aerosaite-0.3.3-standalone.jar --install`
+`java -jar path-to-where-you-downloaded-it/aerial.aerosaite-0.5.0-standalone.jar --install`
 
-You will be asked for the home/install directory with the default `~/.saite`. It is a good idea to take the default - otherwise you will need to always change directory to the install/home directory to run the server. A log of what happens is output to stdout. If you are on Linux or Mac, MKL libraries for Neanderthal will also be downloaded and installed under the `Libs` directory of the home/install directory.
+You will be asked for the home/install directory with the default `~/.saite`. It is a good idea to take the default - as this is needed for the scripts and other things to work without changes. Optionally you could specify a different location, but then make a _link_ to it as `~/.saite`.  A log of what happens is output to stdout.  MKL libraries for Neanderthal will also be downloaded and installed under the `Libs` directory of the home/install directory.
 
-Once installed it is best to move the standalone.jar to the home/install directory. The run scripts are setup to expect the jar in ~/.saite.  However, you can also run it with (for example on Linux from a terminal session):
+Optionally (if you have previously installed an earlier version) **update** with this command:
 
-`/usr/bin/nohup java -jar path-to-where-you-downloaded-it/aerial.aerosaite-0.3.3-standalone.jar --port 3000 --repl-port 4100 > start.log &`
+`java -jar path-to-where-you-downloaded-it/aerial.aerosaite-0.5.0-standalone.jar --update`
 
-There are also scripts `linux-runserver` (Linux) script and `mac-runserver` (Mac OS) that are installed. These scripts also setup the requirements for MKL use. To use the scripts the home/install directory should be `~/.saite`, **the jar should be in this directory**, and lastly you will need to `chmod a+x linux-runserver` or `chmod a+x mac-runserver`.
+This will use a manifest file to create a set of updated resources under the version update directory: `~/.saite/Updates<the-version>`.  These resources are _not_ automatically placed in their default locations (for example `~/.saite/config.edn`) because you may have made your own personal changes to such resources. However, it would be a good idea to rename any changed documents and move them.  More important is to merge updated changes in `config.edn` to your version. This is important as there can be several new expected fields for defaults that, if missing, can cause issues.
+
+
+Once installed or updated **move the downloaded standalone.jar to the home/install directory**, if that was not its download location. The run scripts are setup to expect the jar to be in ~/.saite. There are scripts `linux-runserver` (Linux) script and `mac-runserver` (Mac OS) that are installed. These scripts also setup the requirements for MKL use. To use the scripts the home/install directory should be `~/.saite`, **the jar should be in this directory**, and lastly you will need to `chmod a+x linux-runserver` or `chmod a+x mac-runserver`. Win10 bat file script is not yet available.
+
+You can also run the server with (for example on Linux from a terminal session):
+
+`/usr/bin/nohup java -jar path-to-where-you-downloaded-it/aerial.aerosaite-0.5.0-standalone.jar --port 3000 --repl-port 4100 > start.log &`
 
 As you probably know, `nohup` just keeps the app running if you exit the terminal session. `--port` is where the web server is listening. `--repl-port` is where you could connect emacs / cider, but it uses `nrepl 0.2.13` so you would need something compatible with that. In any case, you don't really need to connect to the nrepl (and I find myself never doing that actually...), especially as you can execute server code from the client.
 
 Connect by pointing your browser at `localhost:3000`. Once in, next click on the 'Upload Document' button (standard icon for this - and all the buttons have tooltips). Then click the URL checkbox. Then put this URL in:
 
-https://raw.githubusercontent.com/jsa-aerial/saite/master/examples/Docs/Scicloj/present.clj
+https://raw.githubusercontent.com/jsa-aerial/saite/master/examples/Docs/Scicloj/BosCljMeetup.clj
 
-and click the check/OK button. This will load a new version of the document I presented. There is expanded walk through commentary in the 'Templates', 'Tabs', and 'Picture Frames' tabs. Additionally some of the commentary (especially in the 'saite' tabs) has been updated. Finally there is a new 'Gallery' tab with full walk through comments in the code.
+and click the check/OK button. This will load an updated version of the document I presented at a recent Boston Clojure Meetup. There is expanded walk through commentary in the 'Templates', 'Tabs', and 'Picture Frames' tabs. Additionally some of the commentary (especially in the 'saite' tabs) has been updated. The 'Gallery' tab shows a good collection f various visualizations with full walk through comments in the code.
 
-Also, there is now a simple example document showing Neanderthal and Kixi Stats usage (via dynamic dependencies). URL:
+There is also a simple example document showing Neanderthal and Kixi Stats usage (via dynamic dependencies). URL:
 
 https://raw.githubusercontent.com/jsa-aerial/saite/master/examples/Docs/Test/neanderthal-et-al.clj
 
@@ -188,7 +239,9 @@ _____________________________________________________________________________
 
 To install, add the following to your project `:dependencies`:
 
-    [aerial.saite "0.18.0"]
+    [aerial.saite "0.19.15"]
+
+All the features and capabilities mentioned for the uberjar are available from this as well. Except for self contained execution and such.
 
 
 Typical work flow starts by requiring `aerial.saite.core` and running the `start` function which takes a port. This port is for the websocket messaging. Browsing to this port on localhost will open the viewer.
