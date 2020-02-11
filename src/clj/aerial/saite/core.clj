@@ -233,6 +233,7 @@
          (Thread/sleep 1000)
          (recur (if (fs/file? archive) (fs/size archive) -1) (dec cnt))))
 
+     (fs/mkdirs uziptgt)
      (cmp/unzip archive uziptgt)
      (fs/rm archive))))
 
