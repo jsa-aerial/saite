@@ -49,7 +49,11 @@
   * `Ctrl-X Ctrl-J` : Evaluate outer sexpession _on the JVM_
 
 
-### Frame visualization
+### Frame Editing and visualization
+
+  * `Ctrl-Alt-T` : Insert skeleton of a text only (empty) frame
+  * `Ctrl-Alt-C` : Insert skeleton of a CodeMirror markdown element
+  * `Ctrl-Alt-V` : Insert skeleton of a visualization frame
 
   * `Ctrl-X Ctrl-I` : Insert frame defined by outer sexpression at cursor
   * `Insert` : synonym for `ctrl-x ctrl-i`
