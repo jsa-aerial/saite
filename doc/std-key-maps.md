@@ -14,6 +14,9 @@ Anything listed here will override the defaults from Base Emacs, otherwise you g
 
 * "Ctrl-Home"          `em/go-doc-start`
 * "Ctrl-End"           `em/go-doc-end`
+* "Ctrl-L"             `recenter-top-bottom`
+* "Ctrl-X D"           `show-doc`
+* "Ctrl-X S"           `show-source`
 
 * "Alt-W"              `enhanced-cut`
 * "Ctrl-Y"             `enhanced-yank`
@@ -21,6 +24,9 @@ Anything listed here will override the defaults from Base Emacs, otherwise you g
 * "Ctrl-X R"           `em/query-replace`
 * "Ctrl-X Ctrl-B"      `clear-output`
 
+* "Ctrl-Alt-T"         `insert-txt-frame`
+* "Ctrl-Alt-C"         `insert-cm-md`
+* "Ctrl-Alt-V"         `insert-vis-frame`
 * "Ctrl-Alt-W"         `enhanced-cut`
 * "Ctrl-Alt-Y"         `enhanced-yank`
 * "Ctrl-X Ctrl-I"      `insert-frame`
