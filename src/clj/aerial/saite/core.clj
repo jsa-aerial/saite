@@ -128,6 +128,7 @@
 
 (defn deps [coords]
   (pom/add-dependencies
+   ;;:classloader (.getParent @Compiler/LOADER)
    :coordinates coords
    :repositories (merge cemerick.pomegranate.aether/maven-central
                         {"clojars" "https://clojars.org/repo"}))
@@ -304,6 +305,7 @@
 
                     "Ctrl-Alt-T"     insert-txt-frame
                     "Ctrl-Alt-C"     insert-cm-md
+                    "Ctrl-Alt-m"     insert-md
                     "Ctrl-Alt-V"     insert-vis-frame
                     "Alt-W"          enhanced-cut
                     "Ctrl-Y"         enhanced-yank
@@ -328,7 +330,16 @@
    :interactive-tab
    {:edtype :interactive-doc :nssym "doc.code"
     :order :row, :eltsper 1, :rgap 20, :cgap 20 :size "auto"
-    :layout :up-down, :ed-out-order :first-last}
+    :layout :up-down, :ed-out-order :first-last
+    :md-defaults {:md {:vmargin "50px"
+                       :margin  "200px"
+                       :width "800px"
+                       :font-size "16px"}
+                  :cm {:width "500px" ;;:height "30px"
+                       :out-width "500px" ;; :out-height "0px"
+                       :ed-out-order :first-last}}
+    :doc {:max-height "850px"
+          :max-width "2000px"}}
 
    :locs
    {:save  (fs/join home-path "Docs")
