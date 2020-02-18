@@ -131,7 +131,7 @@
       (js/alert (str "Check for miss-matched parens / brackets\n\n" e))
       '(:bad-code))))
 
-#_(get-ddb [:editors ~eid :opts :throbber])
+#_(get-ddb [:editors ~tid ~eid :opts :throbber])
 (defn xform-clj [clj? nssym code eid clj-forms-atom]
   (sp/transform
    sp/ALL
@@ -282,6 +282,21 @@
 ;;; ----------------------------------------------------------------------- ;;;
 
 
+(defn get-md-defaults
+  ([] (or (get-ddb [:tabs :md-defaults (hmi/get-cur-tab :id)])
+          (get-ddb [:main :interactive-tab :md-defaults])
+          {}))
+  ([k] (let [m (get-md-defaults)] (m k {}))))
+
+(defn set-md-defaults [optsmap]
+  (let [tid (hmi/get-cur-tab :id)
+        {:keys [md cm]} (get-ddb [:main :md-defaults])
+        optsmap {:md (merge md (optsmap :md {}))
+                 :cm (merge cm (optsmap :cm {}))}]
+    (update-ddb [:tabs :md-defaults tid] optsmap)
+    :ok))
+
+
 (defn cminsert
   "Modified version of pe/insert which does not understand multiline text."
   ([cm text] (cminsert cm text 0))
@@ -310,19 +325,23 @@
     (update-ddb [:tabs :extns tid :cmfids :vis] vid)
     (keyword (str "v" vid))))
 
-(defn get-tab-default [param default]
-  (let [tid (hmi/get-cur-tab :id)]
-    (or (get-ddb [:tabs :cms tid :defaults param]) default)))
-
 
 (defn insert-cm-md [cm]
-  (let [cmmd (format "[cm :id \"cm%s\" :fid FID :src \" \"]" (next-cmid))
-        #_cm #_(get-ddb [:tabs :cms :chap3 "ed-chap3" :$ed])]
+  (let [cmmd (format "[cm :id \"cm%s\" :fid :FID :src \" \"]" (next-cmid))]
     (cminsert cm cmmd -2)))
 
+(defn insert-md [cm]
+  (let [{:keys [width font-size]} (get-md-defaults :md)
+        mdfm (format "[md {:style {:font-size \"%s\" :width \"%s\"}}
+\"
+
+\"]"
+                     font-size width)]
+    (cminsert cm mdfm -3)))
+
+
 (defn insert-txt-frame [cm]
-  (let [lmargin (get-tab-default :lmargin "50px")
-        font-size (get-tab-default :font-size "16px")
+  (let [{:keys [vmargin margin width font-size]} (get-md-defaults :md)
         form
         (format "
 (hc/xform
@@ -330,17 +349,20 @@
  :FID %s
  :LEFT '[[p {:style {:width \"%s\" :min-width \"%s\"}}]]
  :TOP '[[gap :size \"%s\"]
-        [md {:style {:font-size \"%s\"}}
+        [v-box :gap \"10px\"
+         :children
+         [[md {:style {:font-size \"%s\" :width \"%s\"}}
 \"
 
- \"]])"
-                (next-fid) lmargin lmargin lmargin font-size)]
-    (cminsert cm form -6)))
+\"]
+
+]]])"
+                (next-fid) vmargin vmargin margin font-size width)]
+    (cminsert cm form -9)))
 
 
 (defn insert-vis-frame [cm]
-  (let [lmargin (get-tab-default :lmargin "50px")
-        font-size (get-tab-default :font-size "16px")
+  (let [{:keys [vmargin margin width font-size]} (get-md-defaults :md)
         form
         (format "
 (hc/xform
@@ -350,8 +372,8 @@
  :LEFT '[[p {:style {:width \"%s\" :min-width \"%s\"}}]]
  :TOP '[[gap :size \"%s\"]
         ])"
-                (next-fid) (next-vid) lmargin lmargin lmargin)]
-    (cminsert cm form -161)))
+                (next-fid) (next-vid) vmargin vmargin margin)]
+    (cminsert cm form -162)))
 
 
 
@@ -482,12 +504,12 @@
 
 ;;; Server side execution
 ;;;
-(defn eval-inner-on-jvm [nssym code eid]
+(defn eval-inner-on-jvm [nssym code tid eid]
   (let [src (if (string? code) code (prn-str code))
         ch (async/chan)
         chankey (keyword (gensym "chan-"))
         res (volatile! nil)
-        spinr (get-ddb [:editors eid :opts :throbber])]
+        spinr (get-ddb [:editors tid eid :opts :throbber])]
     (update-ddb [:main :chans chankey] ch)
     (hmi/send-msg {:op :eval-clj
                    :data {:uid (hmi/get-adb [:main :uid])
@@ -518,6 +540,7 @@
 
 (defn eval-mixed-cc [cm & {:keys [cb]}]
   (go (let [cb (if cb cb cm.CB)
+            tid cm.TID
             [nssym cljfms cljscode] (get-mixed-cc cm)
             syms? (->> cljfms keys (filter #(-> % keyword? not)) empty? not)
             resfms (atom cljfms)]
@@ -540,8 +563,8 @@
                           subs (assoc @resfms
                                       :aerial.hanami.common/use-defaults? false)
                           code (hc/xform code subs)
-                          res (async/<! (eval-inner-on-jvm nssym code eid))]
-                      (reset! (get-ddb [:editors eid :opts :throbber]) false)
+                          res (async/<! (eval-inner-on-jvm nssym code tid eid))]
+                      (reset! (get-ddb [:editors tid eid :opts :throbber])false)
                       (swap! resfms (fn[m] (assoc m k (res :value))))
                       #_(cb res)
                       (recur (rest fms))))))
@@ -569,7 +592,7 @@
         tid (hmi/get-cur-tab :id)
         nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler)
         eid (get-ddb [:tabs :extns tid :eid])
-        throbber (get-ddb [:editors eid :opts :throbber])]
+        throbber (get-ddb [:editors tid eid :opts :throbber])]
     (update-ddb [:main :chans chankey] ch)
     (hmi/send-msg {:op :eval-clj
                    :data {:uid (hmi/get-adb [:main :uid])
@@ -604,8 +627,9 @@
 
 (defn clear-output [cm]
   (let [;;eid (get-ddb [:tabs :extns (hmi/get-cur-tab :id) :eid])
+        tid cm.TID
         eid cm.EID
-        output (get-ddb [:editors eid :ot])]
+        output (get-ddb [:editors tid eid :ot])]
     (when output
       (reset! output ""))))
 
@@ -668,7 +692,7 @@
            evalxe evalcc eval-mixed-cc
            evaljvm-xe evaljvm-cc
            clear-output show-doc show-source recenter-top-bottom
-           insert-cm-md insert-txt-frame insert-vis-frame]
+           insert-cm-md insert-md insert-txt-frame insert-vis-frame]
          [pe/forward-sexp pe/backward-sexp
           pe/splice-sexp
           pe/splice-sexp-killing-backward pe/splice-sexp-killing-forward
@@ -682,7 +706,7 @@
           evalxe evalcc eval-mixed-cc
           evaljvm-xe evaljvm-cc
           clear-output show-doc show-source recenter-top-bottom
-          insert-cm-md insert-txt-frame insert-vis-frame])
+          insert-cm-md insert-md insert-txt-frame insert-vis-frame])
    (into {})))
 
 (defn xform-kb-syms [kb-map]
@@ -747,11 +771,11 @@
   :js-cm-opts
     options passed into the CodeMirror constructor"
   [input mode
-   & {:keys [js-cm-opts cb tid id ed? tbody]
+   & {:keys [js-cm-opts cb tid eid ed? tbody]
       :or {cb #(printchan %)}}]
   (printchan "CODE-MIRROR called")
   (let [cm (atom nil)
-        curpos (when ed? (get-ddb [:editors id :opts :curpos]))]
+        curpos (when ed? (get-ddb [:editors tid eid :opts :curpos]))]
     (rgt/create-class
      {:display-name "CMirror"
 
@@ -771,19 +795,20 @@
                               :value @input
                               :mode mode}
                              js-cm-opts))
-              pos (get-ddb [:editors id :opts :curpos])
+              ;;pos (get-ddb [:editors tid eid :opts :curpos])
               inst (.fromTextArea js/CodeMirror (rgt/dom-node comp) opts)]
 
           (.setValue inst @input)
           (set! (.-CB inst) cb)
-          (set! (.-EID inst) id)
+          (set! (.-EID inst) eid)
+          (set! (.-TID inst) tid)
           (.setOption inst "theme" (get-ddb [:main :editor :theme]))
           (reset! cm inst)
           (reset! dbg-cm inst)
 
           (when (not tbody)
             (update-ddb [:tabs :extns tid :cms (if ed? :$ed :$ot)] inst))
-          (update-ddb [:tabs :cms tid id (if ed? :$ed :$ot)] inst)
+          (update-ddb [:tabs :cms tid eid (if ed? :$ed :$ot)] inst)
 
           (when-let [edcm (get-ddb [:tabs :extns tid :cms :$ed])] (.focus edcm))
           (when ed?
@@ -849,7 +874,7 @@
              :js-cm-opts (when (opts :readonly)
                            {:readOnly (opts :readonly)
                             :lineNumbers false})
-             :id (opts :id)
+             :eid (opts :id)
              :tid (opts :tid)
              :ed? true
              :tbody (opts :tbody)
@@ -875,7 +900,7 @@
      :justify (opts :justify :start)
      :align (opts :justify :stretch)
      :child [code-mirror output (get-ddb [:main :editor :mode])
-             :id (opts :id)
+             :eid (opts :id)
              :tid (opts :tid)
              :tbody (opts :tbody)
              :js-cm-opts {:lineNumbers false,
@@ -928,7 +953,8 @@
       (let [opts (->> opts (partition-all 2) (mapv vec) (into {}))
             kwid (name (opts :id (gensym "cm-")))
             tid (opts :tid)
-            opts (or (get-ddb [:editors kwid :opts])
+            path [:editors tid kwid]
+            opts (or (get-ddb (conj path :opts))
                      (merge {:id kwid, :size "auto"
                              :layout :up-down :ed-out-order :last-first
                              :height "300px", :out-height "100px"
@@ -937,11 +963,11 @@
                              :throbber (rgt/atom false)}
                             opts))
             _ (if (and (opts :src) (= @input "")) (reset! input (opts :src)))
-            input (or (get-ddb [:editors kwid :in]) input)
-            output (or (get-ddb [:editors kwid :ot]) output)]
-        (when-not (get-ddb [:editors kwid])
+            input (or (get-ddb (conj path :in)) input)
+            output (or (get-ddb (conj path :ot)) output)]
+        (when-not (get-ddb path)
           (assoc opts :$esratom (rgt/atom (opts :$esplit)))
-          (update-ddb [:editors kwid] {:in input, :ot output, :opts opts})
+          (update-ddb path {:in input, :ot output, :opts opts})
           (printchan :CM kwid :called :OPTS opts))
         [cm-hiccup opts input output]))))
 
