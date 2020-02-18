@@ -305,7 +305,7 @@
 
                     "Ctrl-Alt-T"     insert-txt-frame
                     "Ctrl-Alt-C"     insert-cm-md
-                    "Ctrl-Alt-m"     insert-md
+                    "Ctrl-Alt-M"     insert-md
                     "Ctrl-Alt-V"     insert-vis-frame
                     "Alt-W"          enhanced-cut
                     "Ctrl-Y"         enhanced-yank
