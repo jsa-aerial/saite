@@ -100,10 +100,10 @@
     (let [tid (hmi/get-cur-tab :id)
           x (sp/select-one [sp/ATOM :tabs :active sp/ATOM] hmi/app-db)
           eids (keep (fn[[k v]] (when (= fid (-> v :opts :fid)) k))
-                     (get-ddb [:editors]))]
+                     (get-ddb [:editors tid]))]
       (push-undo x)
       (doseq [eid eids]
-        (update-ddb [:editors eid] :rm)
+        (update-ddb [:editors tid eid] :rm)
         (update-ddb [:tabs :cms tid eid] :rm))
       (hmi/remove-from-tab-body tid fid))))
 

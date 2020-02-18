@@ -110,7 +110,7 @@
   (let [m (get-ddb [:tabs :extns tid])
         m (dissoc m :cms) ; editor object instances can't be saved!!
         eid (m :eid)
-        src (get-ddb [:editors eid :in])
+        src (get-ddb [:editors tid eid :in])
         src (if src (deref src) (m :src))
         sratom (m :$sratom)
         sratom-val (when sratom (deref sratom))

@@ -357,7 +357,8 @@
         eid (get-ddb [:tabs :extns tid :eid])]
     (push-undo x)
     (update-ddb [:tabs :extns tid] :rm
-                [:editors eid] :rm)
+                [:tabs :cms tid]
+                [:editors tid eid] :rm)
     (hmi/del-vgviews tid)
     (hmi/del-tab tid)))
 
