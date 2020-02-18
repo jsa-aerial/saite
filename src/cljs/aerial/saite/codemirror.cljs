@@ -283,16 +283,17 @@
 
 
 (defn get-md-defaults
-  ([] (or (get-ddb [:tabs :md-defaults (hmi/get-cur-tab :id)])
-          (get-ddb [:main :interactive-tab :md-defaults])
-          {}))
+  ([]
+   (let [tid (hmi/get-cur-tab :id)
+         custopts (or (get-ddb [:tabs :md-defaults tid]) {})
+         {:keys [md cm]} (get-ddb [:main :interactive-tab :md-defaults])
+         opts {:md (merge md (custopts :md {}))
+               :cm (merge cm (custopts :cm {}))}]
+     opts))
   ([k] (let [m (get-md-defaults)] (m k {}))))
 
 (defn set-md-defaults [optsmap]
-  (let [tid (hmi/get-cur-tab :id)
-        {:keys [md cm]} (get-ddb [:main :interactive-tab :md-defaults])
-        optsmap {:md (merge md (optsmap :md {}))
-                 :cm (merge cm (optsmap :cm {}))}]
+  (let [tid (hmi/get-cur-tab :id)]
     (update-ddb [:tabs :md-defaults tid] optsmap)
     :ok))
 
