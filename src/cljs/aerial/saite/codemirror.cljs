@@ -290,7 +290,7 @@
 
 (defn set-md-defaults [optsmap]
   (let [tid (hmi/get-cur-tab :id)
-        {:keys [md cm]} (get-ddb [:main :md-defaults])
+        {:keys [md cm]} (get-ddb [:main :interactive-tab :md-defaults])
         optsmap {:md (merge md (optsmap :md {}))
                  :cm (merge cm (optsmap :cm {}))}]
     (update-ddb [:tabs :md-defaults tid] optsmap)
