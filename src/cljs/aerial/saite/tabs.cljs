@@ -113,7 +113,7 @@
 
 (defn ^:export interactive-doc-tab
   [tid label src & {:keys [width height out-width out-height
-                           ed-out-order $split
+                           ed-out-order $split md-defaults
                            ns cmfids specs order eltsper rgap cgap size]
                     :or {width "730px"
                          height "700px"
@@ -156,6 +156,7 @@
               :width "2048px")]
     (set-namespace ns)
     (update-ddb [:tabs :extns tid] uinfo)
+    (when md-defaults (update-ddb [:tabs :md-defaults tid] md-defaults))
     (add-tab
      {:id tid
       :label label

@@ -109,6 +109,8 @@
 (defn get-extn-info [tid]
   (let [m (get-ddb [:tabs :extns tid])
         m (dissoc m :cms) ; editor object instances can't be saved!!
+        md-defaults (get-ddb [:tabs :md-defaults tid])
+        m (assoc m :md-defaults md-defaults)
         eid (m :eid)
         src (get-ddb [:editors tid eid :in])
         src (if src (deref src) (m :src))
