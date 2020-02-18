@@ -341,7 +341,7 @@
         data (volatile! nil)
         tid (hmi/get-cur-tab :id)
         eid (get-ddb [:tabs :extns tid :eid])
-        throbber (get-ddb [:editors eid :opts :throbber])]
+        throbber (get-ddb [:editors tid eid :opts :throbber])]
     (update-ddb [:main :chans chankey] ch)
     (hmi/send-msg {:op :read-data
                    :data {:uid (hmi/get-adb [:main :uid])
@@ -391,15 +391,14 @@
 
 
 
-(defn set-tbody-cm-defaults [optsmap]
-  (let [tid (hmi/get-cur-tab :id)]
-    (update-ddb [:tabs :cms tid :defaults] optsmap)
-    :ok))
+(defn set-md-defaults [optsmap]
+  (cm/set-md-defaults optsmap))
+
 
 (defn calc-dimensions [tid opts]
   (let [pxs-ch 9.125 ; (/ 730 90)
         pxs-row 20   ; experimentation
-        tabdefs (or (get-ddb [:tabs :cms tid :defaults]) {})
+        tabdefs (cm/get-md-defaults :cm)
         src (opts :src "")
         lines (cljstr/split-lines src)
         lcnt (count lines)
@@ -598,32 +597,6 @@
   (defn app []
     [:div {:class (when @loaded? "class-name")}])
 
-
-
-
-  (def CM-VALS
-    (sp/recursive-path
-     [] p
-     (sp/cond-path #(and (vector? %)
-                         (and (-> % first symbol?)
-                              (= (-> % first name) "cm")))
-                   sp/STAY
-                   vector? [sp/ALL p])))
-
-  (let [hiccup (sp/transform
-                [sp/ALL CM-VALS]
-                (fn[cm]
-                  (let [m (->> cm rest (partition-all 2) (mapv vec) (into {}))
-                        id (m :id)
-                        ed (get-ddb [:editors id])
-                        instg (deref (ed :in))
-                        otstg (deref (ed :ot))
-                        opts (merge (ed :opts) {:instg instg :otstg otstg} m)]
-                    [(-> cm first name symbol) ::opts opts]))
-                '[[aerial.saite.examples/gap :size "10px"]
-                  [aerial.saite.examples/cm :id "cm-scatter-1"]])]
-    [(->> hiccup second first (= 'cm))
-     (->> hiccup second second (= ::opts))])
 
   (sp/select [sp/ALL CM-VALS] '[[aerial.saite.examples/gap :size "10px"]
                                 [aerial.saite.examples/cm :id "cm-scatter-1"]])
