@@ -31,8 +31,6 @@
 ;;; :BACKGROUND "mintcream"
 ;;; :BACKGROUND "oldlace"
 
-![img](http://localhost:3000/Himeji_sakura.jpg \"TXT\")
-
 (saite/start 3000)
 (saite/stop)
 
@@ -44,6 +42,9 @@
 (defn roundit [r & {:keys [places] :or {places 4}}]
   (let [n (Math/pow 10.0 places)]
     (-> r (* n) Math/round (/ n))))
+
+
+;;; ![img](http://localhost:3000/Himeji_sakura.jpg \"TXT\")
 
 
 
