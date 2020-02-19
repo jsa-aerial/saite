@@ -499,7 +499,8 @@
 
 (defn file-modal
   [choices session-name file-name mode url charts donefn cancelfn]
-  (let [sessions (->> choices deref keys sort (mapv (fn[k] {:id k :label k})))
+  (let [sessions (rgt/atom (->> choices deref keys sort
+                                (mapv (fn[k] {:id k :label k}))))
         doc-files  (rgt/atom (->> session-name deref (#(@choices %))
                                   (mapv (fn[k] {:id k :label k}))))
         url? (rgt/atom false)
@@ -513,13 +514,19 @@
         new? (rgt/atom false)
         newdonefn (fn[event]
                     (let [fname @file-name
-                          names (->> doc-files deref (map :id) (cons fname))
+                          newsession? (some (fn[x] (= (x :label) @session-name))
+                                            @sessions)
+                          names (if newsession?
+                                  [fname]
+                                  (->> doc-files deref (map :id) (cons fname)))
                           newdfs (->> names sort
                                       (mapv (fn[k] {:id k :label k})))]
                       (reset! doc-files newdfs)
                       (reset! choices (assoc @choices
                                              @session-name (vec names)))
-                      (printchan @doc-files)
+                      (reset! sessions (->> choices deref keys sort
+                                            (mapv (fn[k] {:id k :label k}))))
+                      (printchan @doc-files @choices)
                       (reset! new? false)))]
     (fn [choices session-name file-name mode url charts donefn cancelfn]
       [modal-panel
@@ -559,7 +566,7 @@
                      :style {:font-size "18px"}
                      :label "Session"]
                     [single-dropdown
-                     :choices sessions
+                     :choices @sessions
                      :model session-name
                      :width "300px"
                      :on-change (fn[nm]
