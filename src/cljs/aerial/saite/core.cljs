@@ -160,6 +160,7 @@
                                          location
                                          :file (str fname ".clj"))]
                            (update-ddb [:main :files :load] fname
+                                       [:main :files :save] fname
                                        [:main :files :dir] dname)
                            (when (not= @session-name
                                        (hmi/get-adb [:main :uid :name]))
@@ -293,7 +294,7 @@
 
     (update-ddb [:main :files :choices] choices
                 [:main :files :dirs] dirs
-                [:main :files :dir]  (hmi/get-adb [:main :uid :name])
+                [:main :files :dir]  (first dirs)
                 [:main :files :save] (-> dirs first choices sort first)
                 [:main :files :load] (-> dirs first choices sort first)
 
@@ -499,7 +500,7 @@
  aerial.saite.compiler/state 'aerial.saite.core
  (aerial.saite.analyzer/analyzer-state 'aerial.saite.core))
 
-(when-let [elem (js/document.querySelector "#app")]
+#_(when-let [elem (js/document.querySelector "#app")]
   (hc/update-defaults
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
               :frame {:top :TOP, :bottom :BOTTOM,
