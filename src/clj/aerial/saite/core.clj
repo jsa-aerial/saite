@@ -126,13 +126,19 @@
 
 
 
-(defn deps [coords]
-  (pom/add-dependencies
-   ;;:classloader (.getParent @Compiler/LOADER)
-   :coordinates coords
-   :repositories (merge cemerick.pomegranate.aether/maven-central
-                        {"clojars" "https://clojars.org/repo"}))
-  :success)
+(defn deps [coords & {:keys [repos]}]
+  (let [thread (Thread/currentThread)
+        cl (.getContextClassLoader thread)
+        repos-map (apply merge repos)]
+    #_(when-not (instance? DynamicClassLoader cl)
+      (.setContextClassLoader thread (DynamicClassLoader. cl)))
+    (pom/add-dependencies
+     :classloader (.getParent @Compiler/LOADER) ; pom 1.2.0
+     :coordinates coords
+     :repositories (merge cemerick.pomegranate.aether/maven-central
+                          {"clojars" "https://clojars.org/repo"}
+                          repos-map))
+    :success))
 
 (defmethod hmi/user-msg :set-namespace [msg]
   (let [nsinfo (msg :data)
