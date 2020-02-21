@@ -400,7 +400,7 @@
         {:keys [width height out-width out-height
                 layout ed-out-order cmfids]} uinfo
         cmfids (if cmfids cmfids {:cm 0 :fm 0})
-        src (deref (get-ddb [:editors (uinfo :eid) :in]))
+        src (deref (get-ddb [:editors ctid (uinfo :eid) :in]))
         tabval (hmi/get-tab-field ctid)
         {:keys [specs opts]} tabval
         specs (mapv #(update-in %1 [:usermeta :tab :id] (fn[_] tid)) specs)
