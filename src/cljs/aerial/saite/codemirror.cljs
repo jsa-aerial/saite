@@ -99,13 +99,17 @@
 
 (defn find-outer-sexpr [cm]
   (let [f em/backward-up-list
-        b em/backward-sexp]
+        b em/backward-sexp
+        startpos (.getCursor cm)]
     (loop [pos (do (f cm) (.getCursor cm))
-           lastpos :na]
+           lastpos startpos
+           cnt 20] ; crazy big guard
+      #_(js/console.log pos)
       (cond
+        (<= cnt 0) pos
         (= 0 pos.ch) pos
-        (= lastpos pos) (recur (do (b cm) (.getCursor cm)) pos)
-        :else (recur (do (f cm) (.getCursor cm)) pos)))))
+        (= lastpos pos) (recur (do (b cm) (.getCursor cm)) pos (dec cnt))
+        :else (recur (do (f cm) (.getCursor cm)) pos (dec cnt))))))
 
 (defn get-outer-sexpr-src [cm]
   (let [pos (.getCursor cm)
