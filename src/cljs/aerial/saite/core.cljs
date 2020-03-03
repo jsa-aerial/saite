@@ -307,6 +307,9 @@
                 [:main :chans] {}
                 [:tabs :extns :$split] 29.0)
 
+    (update-ddb [:tabs :extns :xvgl]
+                {:width "0px" :height "0px"
+                 :out-width "0px" :out-height "0px"})
     (add-tab {:id :xvgl
               :label "<->"
               :opts {:extfn (tab<-> :NA)}})))

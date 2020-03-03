@@ -900,96 +900,98 @@
                    (reset! show? false))]
 
     (fn [show?]
-      [modal-panel
-       :backdrop-color   "grey"
-       :backdrop-opacity 0.4
-       :child [v-box
-               :gap "10px"
-               :children
-               [[h-box
+      (if (= curtid :xvgl)
+        (alert-panel "Cannot edit <-> tab" cancelfn)
+        [modal-panel
+         :backdrop-color   "grey"
+         :backdrop-opacity 0.4
+         :child [v-box
                  :gap "10px"
                  :children
-                 [(when @rgap
-                    [h-box :gap "10px"
-                     :children
-                     [[v-box :gap "15px"
-                       :children
-                       [[label :style {:font-size "18px"} :label "Ordering"]
-                        [radio-button
-                         :label "Row Ordered"
-                         :value :row
-                         :model order
-                         :label-style (when (= :row @order)
-                                        {:font-weight "bold"})
-                         :on-change #(do (reset! size "auto")
-                                         (reset! order %))]
-                        [radio-button
-                         :label "Column Ordered"
-                         :value :col
-                         :model order
-                         :label-style (when (= :col @order)
-                                        {:font-weight "bold"})
-                         :on-change #(do (reset! size "none")
-                                         (reset! order %))]
-                        [h-box :gap "10px"
-                         :children [[input-text
-                                     :model eltsper
-                                     :width "40px" :height "20px"
-                                     :on-change #(reset! eltsper %)]
-                                    [label :label (str "Elts/"
-                                                       (if (= @order :row)
-                                                         "row" "col"))]]]]]
-                      [v-box :gap "10px"
-                       :children
-                       [[label :style {:font-size "18px"} :label "Gapping"]
-                        [input-area "Row Gap" rgap]
-                        [input-area "Col Gap" cgap]
-                        [input-area "Flex size" size]]]
-                      [v-box :gap "10px"
-                       :children
-                       [[label
-                         :style {:font-size "18px"}
-                         :label "Editor / Output"]
-                        [radio-button
-                         :label "First-Last"
-                         :value :first-last
-                         :model ed-out-order
-                         :label-style (when (= :first-last @ed-out-order)
-                                        {:font-weight "bold"})
-                         :on-change #(reset! ed-out-order %)]
-                        [radio-button
-                         :label "Last-First"
-                         :value :last-first
-                         :model ed-out-order
-                         :label-style (when (= :last-first @ed-out-order)
-                                        {:font-weight "bold"})
-                         :on-change #(reset! ed-out-order %)]]]]])
-
-                  [v-box :gap "10px"
+                 [[h-box
+                   :gap "10px"
                    :children
-                   [[input-area "Editor Width" width]
-                    [input-area "Editor Height" height]
-                    [input-area "Output Width" out-width]
-                    [input-area "Output Height" out-height]]]]]
+                   [(when @rgap
+                      [h-box :gap "10px"
+                       :children
+                       [[v-box :gap "15px"
+                         :children
+                         [[label :style {:font-size "18px"} :label "Ordering"]
+                          [radio-button
+                           :label "Row Ordered"
+                           :value :row
+                           :model order
+                           :label-style (when (= :row @order)
+                                          {:font-weight "bold"})
+                           :on-change #(do (reset! size "auto")
+                                           (reset! order %))]
+                          [radio-button
+                           :label "Column Ordered"
+                           :value :col
+                           :model order
+                           :label-style (when (= :col @order)
+                                          {:font-weight "bold"})
+                           :on-change #(do (reset! size "none")
+                                           (reset! order %))]
+                          [h-box :gap "10px"
+                           :children [[input-text
+                                       :model eltsper
+                                       :width "40px" :height "20px"
+                                       :on-change #(reset! eltsper %)]
+                                      [label :label (str "Elts/"
+                                                         (if (= @order :row)
+                                                           "row" "col"))]]]]]
+                        [v-box :gap "10px"
+                         :children
+                         [[label :style {:font-size "18px"} :label "Gapping"]
+                          [input-area "Row Gap" rgap]
+                          [input-area "Col Gap" cgap]
+                          [input-area "Flex size" size]]]
+                        [v-box :gap "10px"
+                         :children
+                         [[label
+                           :style {:font-size "18px"}
+                           :label "Editor / Output"]
+                          [radio-button
+                           :label "First-Last"
+                           :value :first-last
+                           :model ed-out-order
+                           :label-style (when (= :first-last @ed-out-order)
+                                          {:font-weight "bold"})
+                           :on-change #(reset! ed-out-order %)]
+                          [radio-button
+                           :label "Last-First"
+                           :value :last-first
+                           :model ed-out-order
+                           :label-style (when (= :last-first @ed-out-order)
+                                          {:font-weight "bold"})
+                           :on-change #(reset! ed-out-order %)]]]]])
 
-                [h-box :gap "10px"
-                 :children [[label
-                             :style {:font-size "18px"}
-                             :label "Label"]
-                            [input-text
-                             :model tlabel
-                             :width "200px" :height "26px"
-                             :on-change #(reset! tlabel %)]]]
-                [h-box :gap "10px"
-                 :children [[label
-                             :style {:font-size "18px"}
-                             :label "Namespace"]
-                            [input-text
-                             :model nssym
-                             :width "200px" :height "26px"
-                             :on-change
-                             #(reset! nssym %)]]]
-                [ok-cancel donefn cancelfn]]]])))
+                    [v-box :gap "10px"
+                     :children
+                     [[input-area "Editor Width" width]
+                      [input-area "Editor Height" height]
+                      [input-area "Output Width" out-width]
+                      [input-area "Output Height" out-height]]]]]
+
+                  [h-box :gap "10px"
+                   :children [[label
+                               :style {:font-size "18px"}
+                               :label "Label"]
+                              [input-text
+                               :model tlabel
+                               :width "200px" :height "26px"
+                               :on-change #(reset! tlabel %)]]]
+                  [h-box :gap "10px"
+                   :children [[label
+                               :style {:font-size "18px"}
+                               :label "Namespace"]
+                              [input-text
+                               :model nssym
+                               :width "200px" :height "26px"
+                               :on-change
+                               #(reset! nssym %)]]]
+                  [ok-cancel donefn cancelfn]]]]))))
 
 
 
