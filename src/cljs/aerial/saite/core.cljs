@@ -445,13 +445,12 @@
 
 
 
-(def symxlate-cb-map (atom {}))
 
 (defn add-symxlate [sym val]
-  (swap! symxlate-cb-map #(assoc % (name sym) val)))
+  (sr/add-symxlate sym val))
 
 (defn get-symxlate [sym]
-  (get @symxlate-cb-map (name sym) sym))
+  (sr/get-symxlate sym))
 
 (defn symxlate-callback [sym]
   (let [snm (name sym)]
@@ -513,7 +512,7 @@
  aerial.saite.compiler/state 'aerial.saite.core
  (aerial.saite.analyzer/analyzer-state 'aerial.saite.core))
 
-(when-let [elem (js/document.querySelector "#app")]
+#_(when-let [elem (js/document.querySelector "#app")]
   (hc/update-defaults
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
               :frame {:top :TOP, :bottom :BOTTOM,

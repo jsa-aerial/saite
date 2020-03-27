@@ -37,6 +37,14 @@
    (get-db data-db key-path)))
 
 
+(def symxlate-cb-map (atom {}))
+
+(defn add-symxlate [sym val]
+  (swap! symxlate-cb-map #(assoc % (name sym) val)))
+
+(defn get-symxlate [sym]
+  (get @symxlate-cb-map (name sym) sym))
+
 
 
 ;;; Static chart saving =================================================== ;;;
@@ -173,7 +181,7 @@
              (sp/setval
               [(sp/nthpath (inc i))]
               (fn[& a]
-                (let [f (aerial.saite.core/get-symxlate updtfnsym)]
+                (let [f (get-symxlate updtfnsym)]
                   (if (fn? f)
                     (apply f a)
                     (js/alert
