@@ -158,9 +158,36 @@
    x))
 
 
+
+(defn xform-recom-fns [specs recom-syms]
+  (sp/transform
+   sp/ALL
+   (fn[v]
+     (cond (and (vector? v)
+                (->> v first recom-syms)
+                ((set v) :on-change))
+           (let [[i _] (sp/select-one
+                        [sp/INDEXED-VALS #(-> % second (= :on-change))]
+                        v)
+                 updtfnsym (sp/select-one [(sp/nthpath (inc i))] v)]
+             (sp/setval
+              [(sp/nthpath (inc i))]
+              (fn[& a]
+                (let [f (aerial.saite.core/get-symxlate updtfnsym)]
+                  (if (fn? f)
+                    (apply f a)
+                    (js/alert
+                     (str ":on-change value " updtfnsym " not registered")))))
+                v))
+           (coll? v)
+           (xform-recom-fns v recom-syms)
+           :else v))
+   specs))
+
 (defn load-doc [doc-data extns-xref]
   (let [tids (rest (mapv :id (tab-data)))
-        $split (get-ddb [:tabs :extns :$split])]
+        $split (get-ddb [:tabs :extns :$split])
+        recom-syms (-> hmi/re-com-xref keys set)]
     (doseq [tid tids] (hmi/del-tab tid))
     (hmi/del-vgviews)
     (update-ddb [:editors] {}
@@ -177,7 +204,7 @@
                                          :ed-out-order :first-last}
                                         oopts)
                            label (tm :label)
-                           specs (tm :specs)
+                           specs (xform-recom-fns (tm :specs) recom-syms)
                            args (->> (merge oopts (dissoc info :fn :tid :src))
                                      seq (cons [:specs specs])
                                      (apply concat))]

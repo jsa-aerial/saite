@@ -443,11 +443,21 @@
        :readonly readonly :tbody :true
        :src src])))
 
+
+
+(def symxlate-cb-map (atom {}))
+
+(defn add-symxlate [sym val]
+  (swap! symxlate-cb-map #(assoc % (name sym) val)))
+
+(defn get-symxlate [sym]
+  (get @symxlate-cb-map (name sym) sym))
+
 (defn symxlate-callback [sym]
   (let [snm (name sym)]
     (cond
       (= snm "cm") (mdcm)
-      :else sym)))
+      :else (get-symxlate sym))))
 
 
 
