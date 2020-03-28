@@ -37,13 +37,19 @@
    (get-db data-db key-path)))
 
 
-(def symxlate-cb-map (atom {}))
+(def symxlate-cb-map (atom {:vars {} :fns {}}))
 
 (defn add-symxlate [sym val]
-  (swap! symxlate-cb-map #(assoc % (name sym) val)))
+  (let [k (-> sym name keyword)
+        kfn (fn [& args]
+              (let [thefn (get-in @symxlate-cb-map [:fns k])]
+                (apply thefn args)))]
+    (when-not (get-in @symxlate-cb-map [:vars (name sym)])
+      (swap! symxlate-cb-map #(assoc-in % [:vars (name sym)] kfn)))
+    (swap! symxlate-cb-map #(assoc-in % [:fns k] val))))
 
 (defn get-symxlate [sym]
-  (get @symxlate-cb-map (name sym) sym))
+  (get-in @symxlate-cb-map [:vars (name sym)] sym))
 
 
 
@@ -177,18 +183,15 @@
            (let [[i _] (sp/select-one
                         [sp/INDEXED-VALS #(-> % second (= :on-change))]
                         v)
-                 updtfnsym (sp/select-one [(sp/nthpath (inc i))] v)]
-             (sp/setval
-              [(sp/nthpath (inc i))]
-              (fn[& a]
-                (let [f (get-symxlate updtfnsym)]
-                  (if (fn? f)
-                    (apply f a)
-                    (js/alert
-                     (str ":on-change value " updtfnsym " not registered")))))
-                v))
-           (coll? v)
-           (xform-recom-fns v recom-syms)
+                 updtfnsym (sp/select-one [(sp/nthpath (inc i))] v)
+                 symfn (get-symxlate updtfnsym)
+                 xfn (fn[& a]
+                       (js/alert
+                        (str ":on-change value " updtfnsym " not registered")))]
+             (when-not (fn? symfn) (add-symxlate updtfnsym xfn))
+             v)
+
+           (coll? v) (xform-recom-fns v recom-syms)
            :else v))
    specs))
 
