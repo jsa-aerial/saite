@@ -909,7 +909,7 @@
              :tid (opts :tid)
              :tbody (opts :tbody)
              :js-cm-opts {:lineNumbers false,
-                          :lineWrapping true,
+                          :lineWrapping false,
                           :readOnly (opts :readonly false)}]]]])
 
 (defn cm-hiccup [opts input output]
