@@ -189,6 +189,10 @@
                    (instance? java.lang.Class res)  (str res)
                    (fn? res) (str res)
                    (isa? res java.lang.Class) (str res)
+                   (->> res class parents str
+                        (re-find #"tech\.")) (str res)
+                   (->> res class parents str
+                        (re-find #"uncomplicate\.")) (print-str res)
                    :else res)
          msg {:op :evalres :data {:chankey chankey :value res}}]
      (hmi/send-msg (uid :name) msg))))
