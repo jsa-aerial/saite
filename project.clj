@@ -1,4 +1,4 @@
-(defproject aerial.saite "0.19.17"
+(defproject aerial.saite "0.23.0"
   :description "Interactive document and visualization system - exploration, presentation, publication"
   :url "https://github.com/jsa-aerial/saite"
   :license {:name "MIT"
@@ -8,18 +8,22 @@
                  [org.clojure/core.async "0.4.474"]
                  [org.clojure/data.csv "0.1.3"]
 
+                 ;;; These are needed due to ensure correct versions
+                 ;;; w/o actually requiring full lib stacks in uberjar
+                 [techascent/tech.jna "3.23"]
+
                  ;;[com.cemerick/pomegranate "0.3.1"] ; dynamic loader
                  [clj-commons/pomegranate "1.2.0"]
-                 [me.raynes/fs "1.4.6"]             ; zip/tar
+                 [clj-commons/fs "1.5.2"]             ; zip/tar
                  [com.rpl/specter "1.1.3"]
 
-                 [aerial.hanami "0.12.1"]
+                 [aerial.hanami "0.12.3"]
                  [cljsjs/codemirror "5.40.2-1"]
                  [cljsjs/highlight "9.12.0-2"]
                  [cljsjs/mathjax "2.7.5-0"]
                  [cljsjs/filesaverjs "1.3.3-0"]
                  [cljsjs/jszip "3.1.3-0"]
-                 [techascent/tech.jna "3.23"]
+
 
                  [net.apribase/clj-dns "0.1.0"]
                  [aerial.fs "1.1.6"]
