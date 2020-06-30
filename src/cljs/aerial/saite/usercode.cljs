@@ -1,5 +1,5 @@
 (ns aerial.saite.usercode
-  (:require-macros
+  #_(:require-macros
    [aerial.saite.analyzer :refer [analyzer-state]])
 
   (:require
@@ -10,7 +10,7 @@
    [cljs.js :refer [empty-state eval js-eval eval-str require]]
 
    [aerial.saite.core]
-   [aerial.saite.compiler
+   #_[aerial.saite.compiler
     :as comp
     :refer [format state load-analysis-cache!]]
 
@@ -51,14 +51,14 @@
 
 #_(load-analysis-cache!)
 
-(cljs.js/load-analysis-cache!
+#_(cljs.js/load-analysis-cache!
  state 'aerial.saite.core
  (analyzer-state 'aerial.saite.core))
 
-(cljs.js/load-analysis-cache!
+#_(cljs.js/load-analysis-cache!
  state 'com.rpl.specter
  (analyzer-state 'com.rpl.specter))
 
-(cljs.js/load-analysis-cache!
+#_(cljs.js/load-analysis-cache!
  state 'aerial.saite.usercode
  (analyzer-state 'aerial.saite.usercode))
