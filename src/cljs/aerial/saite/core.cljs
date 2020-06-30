@@ -339,7 +339,7 @@
 
 
 ;;; "~/Clojure/Projects/saite/Nano/rRNA-dist.clj"
-(defn read-data [path]
+(defn read-data-orig [path]
   (let [ch (async/chan)
         chankey (keyword (gensym "chan-"))
         data (volatile! nil)
@@ -358,6 +358,40 @@
         (update-ddb [:main :chans chankey] :rm))
     data))
 
+(defn read-data [path]
+  (js/Promise.
+   (fn[resolve reject]
+     (let [ch (async/chan)
+           chankey (keyword (gensym "chan-"))
+           data (volatile! nil)
+           tid (hmi/get-cur-tab :id)
+           eid (get-ddb [:tabs :extns tid :eid])
+           throbber (get-ddb [:editors tid eid :opts :throbber])]
+       (update-ddb [:main :chans chankey] ch)
+       (hmi/send-msg {:op :read-data
+                      :data {:uid (hmi/get-adb [:main :uid])
+                             :chankey chankey
+                             :path path
+                             :from :file}})
+       (reset! throbber true)
+       (go (vreset! data (async/<! ch))
+           (reset! throbber false)
+           (update-ddb [:main :chans chankey] :rm)
+           (resolve @data))))))
+
+(defn selfhost-jvm-eval [code]
+  (let [tid (hmi/get-cur-tab :id)
+        nssym (get-ddb [:tabs :extns tid :ns])
+        eid (get-ddb [:tabs :extns tid :eid])]
+    (cm/selfhost-eval-on-jvm nssym code tid eid)))
+
+(defn get-cur-cm []
+  (let [tid (hmi/get-cur-tab :id)
+        eid (get-ddb [:tabs :extns tid :eid])]
+    (get-ddb [:tabs :cms tid eid :$ed])))
+
+(defn get-cm-cb []
+  (let [cm (get-cur-cm)] cm.CB))
 
 
 ;;; Call Backs ============================================================ ;;;
@@ -446,6 +480,14 @@
 
 
 
+(defn add-ratom [id val]
+  (sr/add-ratom id val))
+
+(defn get-ratom [id]
+  (sr/get-ratom id))
+
+
+
 (defn add-symxlate [sym val]
   (sr/add-symxlate sym val))
 
@@ -512,7 +554,8 @@
  aerial.saite.compiler/state 'aerial.saite.core
  (aerial.saite.analyzer/analyzer-state 'aerial.saite.core))
 
-(when-let [elem (js/document.querySelector "#app")]
+
+#_(when-let [elem (js/document.querySelector "#app")]
   (hc/update-defaults
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
               :frame {:top :TOP, :bottom :BOTTOM,
