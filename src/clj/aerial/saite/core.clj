@@ -24,7 +24,8 @@
 (defmacro try+ [msg & body]
   `(let [name#  (get-in ~msg [:data :uid :name])
          eval?# (get-in ~msg [:data :eval])
-         chkey# (get-in ~msg [:data :chankey])]
+         chkey# (get-in ~msg [:data :chankey])
+         ~'tryres (volatile! :TRYRES)]
      (try
        ~@body
        (catch Error e#
@@ -43,12 +44,20 @@
            :data {:error (str (type e#)), :eval eval?#, :chankey chkey#
                   :msg (str (.getMessage e#) ": " (.getData e#))}}))
        (catch Exception e#
-         (hmi/send-msg
-          name#
-          {:op :error
-           :data {:error (str (type e#)), :eval eval?#, :chankey chkey#
-                  :cause (str ((Throwable->map e#) :cause))
-                  :msg (-> e# Throwable->map :via first :message)}})))))
+         (let [msg# (-> e# Throwable->map :via first :message)]
+           #_(prn :MSGBITS msg#)
+           ;; For msgpack unmarshallable results, auto print-str them
+           (if (re-find #"No imp.+packable-pack.+msgpack" msg#)
+             (hmi/send-msg
+              name#
+              {:op :evalres
+               :data {:chankey chkey# :value (print-str @~'tryres)}})
+             (hmi/send-msg
+              name#
+              {:op :error
+               :data {:error (str (type e#)), :eval eval?#, :chankey chkey#
+                      :cause (str ((Throwable->map e#) :cause))
+                      :msg (-> e# Throwable->map :via first :message)}})))))))
 
 
 
@@ -185,6 +194,7 @@
          code (if (string? code) (read-string code) code)
          res (binding [*ns* (find-ns nssym)]
                (eval code))
+         _ (vswap! tryres (fn[_] res)) ;_ (hmi/printchan :CODE code :RES res)
          res (cond (instance? clojure.lang.Var res) (str res)
                    (instance? java.lang.Class res)  (str res)
                    (fn? res) (str res)
@@ -195,6 +205,26 @@
                         (re-find #"uncomplicate\.")) (print-str res)
                    :else res)
          msg {:op :evalres :data {:chankey chankey :value res}}]
+     (hmi/send-msg (uid :name) msg))))
+
+
+(defmethod hmi/user-msg :cljs-require [msg]
+  "Experimental - was intended for Andare core.async, but Andare does
+  not work in self hosted Cljs in the browser.  No longer used."
+  (hmi/printchan :CLJS-REQUIRE msg)
+  (try+ msg
+   (let [{:keys [uid chankey path]} (msg :data)
+         port (hmi/get-adb [:saite :cfg :port])
+         jspath "/"
+         prefix (str "http://localhost:" port jspath path)
+         async? (re-find #"async$" path)
+         file   ".cljc"
+         fpath (str prefix file)
+         ;;cache (str prefix "/.cljc.cache.json")
+         source (slurp fpath)
+         ;;cache (slurp cache)
+         msg {:op :evalres
+              :data {:chankey chankey :value source}}]
      (hmi/send-msg (uid :name) msg))))
 
 
