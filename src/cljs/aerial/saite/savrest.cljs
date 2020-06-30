@@ -10,6 +10,7 @@
     :as hmi
     :refer [printchan]]
 
+   [reagent.core :as rgt]
    [com.rpl.specter :as sp]
 
    [cljsjs.jszip :as jsz]
@@ -50,6 +51,23 @@
 
 (defn get-symxlate [sym]
   (get-in @symxlate-cb-map [:vars (name sym)] sym))
+
+
+(def ratom-map (atom {}))
+
+(defn add-ratom [id val]
+  (let [k (if (keyword? id) id (-> id str keyword))
+        ratom  (get @ratom-map k (rgt/atom nil))]
+    (reset! ratom val)
+    (swap! ratom-map #(assoc % k ratom ratom k))
+    ratom))
+
+(defn get-ratom [id]
+  (let [k (if (or (keyword? id)
+                  (instance? reagent.ratom/RAtom id))
+            id
+            (-> id str keyword))]
+    (get @ratom-map k)))
 
 
 
@@ -136,26 +154,51 @@
     (printchan :TID tid :EID eid)
     m))
 
+(defn out-xform-recom-specs [specs recom-syms]
+  (sp/transform
+   sp/ALL
+   (fn[v]
+     (cond (and (vector? v)
+                (->> v first recom-syms)
+                ((set v) :model))
+           (let [[i _] (sp/select-one
+                        [sp/INDEXED-VALS #(-> % second (= :model))]
+                        v)
+                 modval (sp/select-one [(sp/nthpath (inc i))] v)
+                 modval (if (or (= reagent.ratom/RAtom (type modval))
+                                (= cljs.core/Atom (type modval)))
+                          {:RATOM @modval :id (get-ratom modval)}
+                          modval)
+                 v (sp/setval [(sp/nthpath (inc i))] modval v)]
+             v)
+
+           (coll? v) (out-xform-recom-specs v recom-syms)
+           :else v))
+   specs))
+
 (defn get-tab-data []
-  (->> (tab-data)
-       rest
-       (map (fn[m]
-              (let [tid (m :id)]
-                {tid (->> [:label :opts :specs]
-                          (mapv (fn[k]
-                                  (let [v (m k)
-                                        v (cond
-                                            (and (= k :opts) (v :wrapfn))
-                                            (assoc v :wrapfn
-                                                   (get-extn-info tid))
+  (let [recom-syms (-> hmi/re-com-xref keys set)]
+    (->> (tab-data)
+         rest
+         (map (fn[m]
+                (let [tid (m :id)]
+                  {tid (->> [:label :opts :specs]
+                            (mapv (fn[k]
+                                    (let [v (m k)
+                                          v (cond
+                                              (and (= k :opts) (v :wrapfn))
+                                              (assoc v :wrapfn
+                                                     (get-extn-info tid))
 
-                                            (= k :specs) (vec v)
+                                              (= k :specs)
+                                              (vec (out-xform-recom-specs
+                                                    v recom-syms))
 
-                                            :else v)]
-                                    (vector k v))))
-                          (into {}))})))
-       (cons (hmi/get-adb [:main :uid :name]))
-       vec))
+                                              :else v)]
+                                      (vector k v))))
+                            (into {}))})))
+         (cons (hmi/get-adb [:main :uid :name]))
+         vec)))
 
 (def invert-re-com-xref
   (map-invert hmi/re-com-xref))
@@ -173,25 +216,44 @@
 
 
 
-(defn xform-recom-fns [specs recom-syms]
+(defn in-xform-recom-specs [specs recom-syms]
   (sp/transform
    sp/ALL
    (fn[v]
      (cond (and (vector? v)
-                (->> v first recom-syms)
-                ((set v) :on-change))
-           (let [[i _] (sp/select-one
-                        [sp/INDEXED-VALS #(-> % second (= :on-change))]
-                        v)
-                 updtfnsym (sp/select-one [(sp/nthpath (inc i))] v)
-                 symfn (get-symxlate updtfnsym)
-                 xfn (fn[& a]
-                       (js/alert
-                        (str ":on-change value " updtfnsym " not registered")))]
-             (when-not (fn? symfn) (add-symxlate updtfnsym xfn))
-             v)
+                (->> v first recom-syms))
 
-           (coll? v) (xform-recom-fns v recom-syms)
+           (do
+             (when ((set v) :on-change)
+               (let [[i _] (sp/select-one
+                            [sp/INDEXED-VALS #(-> % second (= :on-change))]
+                            v)
+                     updtfnsym (sp/select-one [(sp/nthpath (inc i))] v)
+                     symfn (get-symxlate updtfnsym)
+                     xfn (fn[& a]
+                           (js/alert
+                            (str ":on-change value "
+                                 updtfnsym
+                                 " not registered")))]
+                 (when-not (fn? symfn) (add-symxlate updtfnsym xfn))))
+
+             (if ((set v) :model)
+               (let [_ (printchan "MODEL" v)
+                     [i _] (sp/select-one
+                            [sp/INDEXED-VALS #(-> % second (= :model))]
+                            v)
+                     modval (sp/select-one [(sp/nthpath (inc i))] v)
+                     _ (js/console.log i "MODVAL" modval (map? modval))
+                     modval (if (and (map? modval) (modval :RATOM))
+                              (add-ratom (modval :id) (modval :RATOM))
+                              modval)
+                     v (sp/setval [(sp/nthpath (inc i))] modval v)]
+                 (printchan "MODEL AFTER" v)
+                 v)
+               (in-xform-recom-specs v recom-syms)))
+
+           (coll? v) (in-xform-recom-specs v recom-syms)
+
            :else v))
    specs))
 
@@ -215,12 +277,14 @@
                                          :ed-out-order :first-last}
                                         oopts)
                            label (tm :label)
-                           specs (xform-recom-fns (tm :specs) recom-syms)
+                           specs (in-xform-recom-specs (tm :specs) recom-syms)
                            args (->> (merge oopts (dissoc info :fn :tid :src))
                                      seq (cons [:specs specs])
                                      (apply concat))]
                        (printchan :ARGS oopts)
                        (apply f tid label src args)
                        [tid :done])
-                     (do (->> m vals first :specs hmi/update-tabs)
+                     (do (-> m vals first :specs
+                             (in-xform-recom-specs recom-syms)
+                             hmi/update-tabs)
                          [(-> m keys first) :done]))))))))
