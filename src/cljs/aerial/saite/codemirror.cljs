@@ -80,6 +80,7 @@
 
 
 
+
 (defn get-cm-sexpr [cm]
   (let [end (.getCursor cm)
         start (do (em/backward-sexp cm)
@@ -135,33 +136,216 @@
       (js/alert (str "Check for miss-matched parens / brackets\n\n" e))
       '(:bad-code))))
 
-#_(get-ddb [:editors ~tid ~eid :opts :throbber])
-(defn xform-clj [clj? nssym code eid clj-forms-atom]
+
+
+(defn xform-clj [clj? nssym code eid clj-data]
+  #_(js/console.log "CODE" code #_(type code))
   (sp/transform
    sp/ALL
-   (fn[v]
+   (fn[v] #_(printchan v (@clj-data :in-clj))
      (cond
+       (and (or (list? v) (= (type v) LazySeq))
+            (list? (first v)) (-> v ffirst (= 'clj)))
+       (let [clj-fm (xform-clj clj? nssym [(first v)] eid clj-data)
+             tail (cons 'do (xform-clj clj? nssym (rest v) eid clj-data))]
+         (hc/xform (first clj-fm) :tail tail))
+
+
        (and (list? v) (= (first v) 'clj))
-       (let [body (cons 'do (rest v))
+       (let [_ (swap! clj-data
+                      (fn[m] (assoc m :in-clj true :jvm-syms #{} :%s [])))
+             body (if (list? (last v))
+                    (xform-clj clj? nssym (last v) eid clj-data)
+                    (last v))
+             jvm-syms (@clj-data :%s)
+             body (if (seq jvm-syms)
+                    `(~'apply ~'format ~(pr-str body) ~(@clj-data :%s))
+                    (pr-str body))
+             _ (swap! clj-data (fn[m] (dissoc m :in-clj :jvm-syms)))
+             body (hc/xform '(-> (sc/selfhost-jvm-eval :body)
+                                 (.then (fn[res]
+                                          (vswap! state
+                                                  (fn[s] (assoc s 'res res)))
+                                          :tail)))
+                            :aerial.hanami.common/use-defaults? false
+                            :body body)
              fmkey (keyword (gensym "cljcode-"))
-             newforms (assoc @clj-forms-atom fmkey [nssym body eid])]
+             newforms (-> @clj-data
+                          (assoc-in [:fms fmkey] [nssym body eid])
+                          (dissoc :in-clj))]
          (vreset! clj? true)
-         (reset! clj-forms-atom newforms)
-         fmkey)
+         (reset! clj-data newforms)
+         #_(println :CLJBODY body)
+         body)
 
-       (and (list? v) (= (first v) 'let))
-       (let [bindings (xform-clj clj? nssym (second v) eid clj-forms-atom)
-             cljbindings (->> bindings (partition-all 2)
-                              (filter (fn[[k v]] (@clj-forms-atom v)))
-                              (mapv vec) (into {}))
-             body (xform-clj clj? nssym (drop 2 v) eid clj-forms-atom)]
-         (swap! clj-forms-atom (fn[m] (merge m cljbindings)))
-         `(let ~bindings ~@body))
+       (and (list? v) (= (first v) 'let) (get @clj-data :in-clj))
+       (let [bindvec (second v)
+             jvm-syms (@clj-data :jvm-syms)]
+         (swap! clj-data
+                (fn[m] (assoc m :jvm-syms
+                              (reduce (fn[jsyms [k fm]]
+                                        (conj jsyms k))
+                                      jvm-syms (partition-all 2 bindvec)))))
+         `(~'let ~bindvec
+           ~@(xform-clj clj? nssym (drop 2 v) eid clj-data)))
 
-       (coll? v) (xform-clj clj? nssym v eid clj-forms-atom)
+
+       (and (list? v) (= (first v) 'let) (not (@clj-data :in-clj)))
+       (let [_ (reset! clj-data
+                       (assoc @clj-data
+                              :syms (reduce (fn[syms [k _]]
+                                              (assoc syms k true))
+                                            (get @clj-data :syms {})
+                                            (->> v second (partition-all 2)))))
+             bindvec (second v)
+             clj-keys (->> bindvec
+                           (partition-all 2)
+                           (keep (fn[[k fm]]
+                                   (when (and (list? fm)
+                                              (-> fm first (= 'clj)))
+                                     k)))
+                           (into #{}))
+             ;;_ (printchan :CLJ-KEYS clj-keys)
+             bindings (xform-clj clj? nssym bindvec eid clj-data)
+             bindpairs (->> bindings
+                            (partition-all 2))
+             cljpairs (->> bindpairs (filter (fn[[k _]] (clj-keys k)))
+                           (map (fn[[k v]] `('~k ~v))))
+             bindpairs (->> bindpairs
+                            (filter (fn[[k _]] (-> k clj-keys not))))
+             ;;_ (println :BINDPAIRS (apply concat bindpairs))
+             ;;_ (printchan :CLJPAIRS cljpairs)
+             addstate `(~'vswap! ~'state
+                        (~'fn[~'s]
+                         (~'apply ~'assoc ~'s
+                          ~(cons 'list
+                                 (->> bindpairs
+                                      (map (fn[[k v]] `('~k ~k)))
+                                      (apply concat))))))
+             body (xform-clj clj? nssym (drop 2 v) eid clj-data)]
+         ;;(printchan :BODY body)
+         (swap! clj-data
+                (fn[m] (assoc m :bindings (cons bindings (m :bindings ())))))
+         (if (seq clj-keys)
+           `(do
+              (~'let ~(vec (apply concat bindpairs))
+               ~addstate
+               ~(reduce (fn[FM fm]
+                          (hc/xform
+                           fm
+                           :aerial.hanami.common/spec {}
+                           :aerial.hanami.common/use-defaults? false
+                           :tail FM))
+                        (cons 'do body)
+                        (->> cljpairs
+                             (map (fn[[k fm]]
+                                    (hc/xform
+                                     fm
+                                     :aerial.hanami.common/spec {}
+                                     :aerial.hanami.common/use-defaults? false
+                                     'res (second k))))
+                             reverse))))
+           `(~'let ~bindings ~addstate ~@body)))
+
+
+       (and (list? v) (= (first v) 'defn))
+       (let [name (second v)
+             _ (reset! clj-data
+                       (assoc @clj-data
+                              :syms (reduce (fn[syms k]
+                                              (assoc syms k true))
+                                            (get @clj-data :syms {})
+                                            (-> v rest second))))
+             bindings (xform-clj clj? nssym (-> v rest second) eid clj-data)
+             bindpairs (cons 'list
+                             (apply concat
+                                    (map (fn[s] `('~s ~s)) bindings)))
+             ;;_ (println :BINDPAIRS bindpairs)
+             addstate `(~'vswap! ~'state
+                                (~'fn[~'s] (~'apply ~'assoc ~'s ~bindpairs)))
+             body (xform-clj clj? nssym (drop 3 v) eid clj-data)]
+         `(~'defn ~name ~bindings ~addstate ~@body))
+
+
+       (and (list? v) (= (first v) 'def) (not (@clj-data :in-clj)))
+       (let [name (second v)
+             body (xform-clj clj? nssym (drop 2 v) eid clj-data)
+             ;;_ (js/console.log "BODY" body)
+             body (if (and (coll? body) (coll? (first body))
+                           (= 1 (count body)) @clj?)
+                    (first body)
+                    body)]
+         (if @clj?
+           (hc/xform
+            body {:aerial.hanami.common/use-defaults? false
+                  :aerial.hanami.common/spec {}
+                  :tail `(do (~'def ~name ~'res) '~name)})
+           `(~'def ~name ~@body)))
+
+
+       (coll? v)
+       (let [fm1 (first v)
+             fm2 (second v)
+             fm3 (-> v rest second)]
+         (cond
+           ;; *** NYI *** DOES NOT WORK. SEEMS CRAZY ANYWAY
+           ;; vectors of intermixed clj and client forms
+           (and (list? fm1) (-> fm1 first (= 'clj)))
+           (let [cljfm (first (xform-clj clj? nssym (take 1 v) eid clj-data))
+                 tailfms (xform-clj clj? nssym (rest v) eid clj-data)
+                 fms (mapv #(vector (gensym "c-") %) (cons cljfm tailfms))]
+             (reduce
+              (fn[FM [k fm]] (printchan FM fm)
+                (hc/xform
+                 (hc/xform fm 'res k)
+                 {:aerial.hanami.common/use-defaults? false
+                  :aerial.hanami.common/spec {}
+                  :tail FM :next k}))
+              (let [[k fm] (first fms)]
+                [k (hc/xform
+                    fm {:aerial.hanami.common/use-defaults? false
+                        :aerial.hanami.common/spec {}
+                        'res k
+                        :tail [k :next]})])
+              (rest fms)))
+
+           ;; Things like `(rest (clj ...))`
+           (and (list? fm2) (-> fm2 first (= 'clj)))
+           (let [cljfm (xform-clj clj? nssym (rest v) eid clj-data)]
+             (hc/xform
+              (first cljfm)
+              {:aerial.hanami.common/use-defaults? false
+               :aerial.hanami.common/spec {}
+               :tail `(~fm1 ~'res)}))
+
+           ;; Things like `(take 10 (clj ...))`
+           (and (list? fm3) (-> fm3 first (= 'clj)))
+           (let [cljfm (xform-clj clj? nssym (drop 2 v) eid clj-data)]
+             (hc/xform
+              (first cljfm)
+              {:aerial.hanami.common/use-defaults? false
+               :aerial.hanami.common/spec {}
+               :tail `(~fm1 ~fm2 ~'res)}))
+           :else
+           (xform-clj clj? nssym v eid clj-data)))
+
+
+       (and (symbol? v) (get @clj-data :in-clj))
+       (cond
+         (get-in @clj-data [:jvm-syms v]) v
+
+         (get-in @clj-data [:syms v])
+         (do
+           (swap! clj-data
+                  (fn[m] (assoc m :%s (conj (m :%s) `((deref ~'state) '~v)))))
+           '%s)
+
+         :else v)
 
        :else v))
    code))
+
+
 
 
 (defn get-cm-frame-ids [cm]
@@ -396,39 +580,35 @@
    {:frame {:fid (if fid fid (keyword (gensym "ERR")))
             :top [[p {:style {:font-size "20px" :color "red"}} msg]]}}})
 
-(defn insert-frame [cm]
-  (go
-    (let [tid (hmi/get-cur-tab :id)
-          nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler)
-          {:keys [fid locid tabfid]} (current-cm-frame-info cm)
-          src (get-outer-sexpr-src cm)
-          pos (if (= locid :beg) :same :after)
-
-          ;;res (volatile! nil)
-          ;;_ (evaluate nssym src (fn[v] (vswap! res #(do v))))
-          ;;res (deref res)
-          resch (chan)
-          _ (eval-mixed-cc cm :cb (fn[v] (go (async/>! resch v))))
-          res (async/<! resch)
-
-          e (js->clj (res :error))
-          err (cond e e.cause.message
-                    (= (res :value) hc/xform) "Error : Missing closing paren!"
-                    :else nil)
-          undefined (when err (re-find #"undefined" err))
-          errmsg (if undefined
-                   (str err "'undefined' is usually due to undeclared var")
-                   err)
-          value (res :value)
-          picframe (if err (make-error-frame fid errmsg) value)]
-
+(defn insert-handle-return [cm res]
+  (let [tid (hmi/get-cur-tab :id)
+        nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler)
+        {:keys [fid locid tabfid]} (current-cm-frame-info cm)
+        pos (if (= locid :beg) :same :after)
+        e (js->clj (res :error))
+        err (cond e e.cause.message
+                  (= (res :value) hc/xform) "Error : Missing closing paren!"
+                  :else nil)
+        undefined (when err (re-find #"undefined" err))
+        errmsg (if undefined
+                 (str err "'undefined' is usually due to undeclared var")
+                 err)
+        value (res :value)
+        picframe (if err (make-error-frame fid errmsg) value)]
       #_(printchan :IF fid err tabfid)
       (when (or fid err)
         (if (not tabfid)
           (tops/add-frame picframe locid pos)
-          (tops/update-frame :frame picframe)))
-      #_(when (and (or fid err) (not tabfid))
-        (tops/add-frame picframe locid pos)))))
+          (tops/update-frame :frame picframe)))))
+
+(defn insert-frame [cm]
+  (go
+    (let [resch (chan)
+          _ (eval-mixed-cc cm :cb (fn[v] (go (async/>! resch v))))
+          res (async/<! resch)]
+      (if (instance? js/Promise (res :value))
+        (.then (res :value) (fn[val] (insert-handle-return cm {:value val})))
+        (insert-handle-return cm res)))))
 
 (defn delete-frame [cm]
   (let [{:keys [fid locid tabfid]} (current-cm-frame-info cm)]
@@ -525,6 +705,27 @@
     (reset! spinr true)
     ch))
 
+(defn selfhost-eval-on-jvm [nssym code tid eid]
+  (js/Promise.
+   (fn[resolve reject]
+     (let [src (if (string? code) code (prn-str code))
+           ch (async/chan)
+           chankey (keyword (gensym "chan-"))
+           spinr (or (get-ddb [:editors tid eid :opts :throbber]) (atom false))]
+       (update-ddb [:main :chans chankey] ch)
+       (hmi/send-msg {:op :eval-clj
+                      :data {:uid (hmi/get-adb [:main :uid])
+                             :eval true
+                             :chankey chankey
+                             :nssym nssym
+                             :code src}})
+       (reset! spinr true)
+       (go (let [data (async/<! ch)]
+             (update-ddb [:main :chans chankey] :rm)
+             (reset! spinr false)
+             (resolve (data :value))))))))
+
+
 (defn get-mixed-cc [cm]
   (let [cb cm.CB
         src (get-outer-sexpr-src cm)
@@ -532,21 +733,53 @@
         nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler)
         eid (get-ddb [:tabs :extns tid :eid])
         clj? (volatile! false)
-        clj-forms (atom {})
+        clj-data (atom {})
         srccd (read-string src)
         srccd (if (and (list? srccd) (= (first srccd)))
                 (list 'do srccd)
                 srccd)
-        code (xform-clj clj? nssym srccd eid clj-forms)
+        code (xform-clj clj? nssym srccd eid clj-data)
+        submap {:aerial.hanami.common/use-defaults? false
+                :aerial.hanami.common/spec {}
+                :body code
+                :tail 'res}
+        code (hc/xform '(let [state (volatile! {})] :body) submap)
         code (if @clj?
-               [nssym @clj-forms code]
+               [nssym @clj-data code]
                [nssym nil code])]
     code))
 
 (defn eval-mixed-cc [cm & {:keys [cb]}]
+  (let [cb (if cb cb cm.CB)
+        tid cm.TID
+        [nssym clj-data cljscode] (get-mixed-cc cm)
+        cljfms (and clj-data (clj-data :fms))]
+    #_(printchan :CLJSCODE cljscode)
+    (cond
+      (and cljscode cljfms)
+      (evaluate nssym cljscode cb)
+
+      cljscode
+      (evaluate nssym cljscode cb)
+
+      cljfms
+      (do
+        (update-ddb [:alert :txt]
+                    "Error : Clojure only in mixed request")
+        (reset! (get-ddb [:alert :show?]) true))
+
+      :else
+      (do
+        (update-ddb [:alert :txt]
+                    "Error : Unable to determine or unknown code sequence")
+        (reset! (get-ddb [:alert :show?]) true)))))
+
+
+(defn eval-mixed-cc-orig [cm & {:keys [cb]}]
   (go (let [cb (if cb cb cm.CB)
             tid cm.TID
-            [nssym cljfms cljscode] (get-mixed-cc cm)
+            [nssym clj-data cljscode] (get-mixed-cc cm)
+            cljfms (clj-data :fms)
             syms? (->> cljfms keys (filter #(-> % keyword? not)) empty? not)
             resfms (atom cljfms)]
         (cond (and cljscode cljfms)
@@ -884,16 +1117,24 @@
              :ed? true
              :tbody (opts :tbody)
              :cb (fn[m]
-                   (let [oval (or (m :value) (m :error))
-                         ostg (if (and (string? oval)
-                                       (re-find #"\n" oval))
-                                oval
-                                (with-out-str
-                                  (cljs.pprint/pprint
-                                   (or (m :value) (m :error)))))]
-                     (reset! output (str @output
-                                         "=> " ostg))
-                     (printchan :output @output)))]]]])
+                   (let [oval (or (m :value) (m :error))]
+                     (if (instance? js/Promise oval)
+                       (.then oval
+                              (fn[res]
+                                (reset! output
+                                        (str @output "=> "
+                                             (with-out-str
+                                               (cljs.pprint/pprint res))))))
+
+                       (let [ostg (if (and (string? oval)
+                                           (re-find #"\n" oval))
+                                    oval
+                                    (with-out-str
+                                      (cljs.pprint/pprint
+                                       (or (m :value) (m :error)))))]
+                         (reset! output (str @output
+                                             "=> " ostg))
+                         (printchan :output @output)))))]]]])
 
 (defn output-hiccup [opts oh output]
   [v-box
