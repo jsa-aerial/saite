@@ -781,52 +781,6 @@
         (reset! (get-ddb [:alert :show?]) true)))))
 
 
-(defn eval-mixed-cc-orig [cm & {:keys [cb]}]
-  (go (let [cb (if cb cb cm.CB)
-            tid cm.TID
-            [nssym clj-data cljscode] (get-mixed-cc cm)
-            cljfms (clj-data :fms)
-            syms? (->> cljfms keys (filter #(-> % keyword? not)) empty? not)
-            resfms (atom cljfms)]
-        (cond (and cljscode cljfms)
-              (when (seq cljfms)
-                (loop [fms (->> cljfms (filter (fn[[k v]] (keyword? k)))
-                                (sort-by #(-> % first name)))]
-
-                  (if (not (seq fms)) ; done
-                    (let [subs (->> resfms deref
-                                    (filter (fn[[k v]] (keyword? k)))
-                                    (mapv vec)
-                                    (into {:aerial.hanami.common/use-defaults?
-                                           false}))
-                          cljsxcode (hc/xform cljscode subs)]
-                      (evaluate nssym cljsxcode cb))
-
-                    (let [[k v] (first fms)
-                          [nssym code eid] v
-                          subs (assoc @resfms
-                                      :aerial.hanami.common/use-defaults? false)
-                          code (hc/xform code subs)
-                          res (async/<! (eval-inner-on-jvm nssym code tid eid))]
-                      (reset! (get-ddb [:editors tid eid :opts :throbber])false)
-                      (swap! resfms (fn[m] (assoc m k (res :value))))
-                      #_(cb res)
-                      (recur (rest fms))))))
-
-              cljscode
-              (evaluate nssym cljscode cb)
-
-              cljfms
-              (do
-                (update-ddb [:alert :txt]
-                            "Error : Clojure only in mixed request")
-                (reset! (get-ddb [:alert :show?]) true))))))
-
-#_(let [ch (eval-mixed-cc @dbg-cm)
-        v (volatile! nil)]
-    (go (vreset! v (async/<! ch)))
-    v)
-
 
 
 (defn eval-on-jvm [src cb]
