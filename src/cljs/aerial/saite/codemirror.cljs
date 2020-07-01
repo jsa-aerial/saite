@@ -164,7 +164,7 @@
              _ (swap! clj-data (fn[m] (dissoc m :in-clj :jvm-syms)))
              body (hc/xform '(-> (sc/selfhost-jvm-eval :body)
                                  (.then (fn[res]
-                                          (vswap! state
+                                          (vswap! $state$
                                                   (fn[s] (assoc s 'res res)))
                                           :tail)))
                             :aerial.hanami.common/use-defaults? false
@@ -215,7 +215,7 @@
                             (filter (fn[[k _]] (-> k clj-keys not))))
              ;;_ (println :BINDPAIRS (apply concat bindpairs))
              ;;_ (printchan :CLJPAIRS cljpairs)
-             addstate `(~'vswap! ~'state
+             addstate `(~'vswap! ~'$state$
                         (~'fn[~'s]
                          (~'apply ~'assoc ~'s
                           ~(cons 'list
@@ -261,7 +261,7 @@
                              (apply concat
                                     (map (fn[s] `('~s ~s)) bindings)))
              ;;_ (println :BINDPAIRS bindpairs)
-             addstate `(~'vswap! ~'state
+             addstate `(~'vswap! ~'$state$
                                 (~'fn[~'s] (~'apply ~'assoc ~'s ~bindpairs)))
              body (xform-clj clj? nssym (drop 3 v) eid clj-data)]
          `(~'defn ~name ~bindings ~addstate ~@body))
@@ -281,6 +281,12 @@
                   :aerial.hanami.common/spec {}
                   :tail `(do (~'def ~name ~'res) '~name)})
            `(~'def ~name ~@body)))
+
+       #_(and (list? v) (#{'and 'or} (first v)) (not (@clj-data :in-clj)))
+       #_(if (some #(and (list? %) (= (first %) 'clj)) (rest v))
+         (let [op (first v)
+               sym-exprs (mapv #(vector (gensym "boo-") %) (rest v))]
+           ))
 
 
        (coll? v)
@@ -337,7 +343,7 @@
          (get-in @clj-data [:syms v])
          (do
            (swap! clj-data
-                  (fn[m] (assoc m :%s (conj (m :%s) `((deref ~'state) '~v)))))
+                  (fn[m] (assoc m :%s (conj (m :%s) `((deref ~'$state$) '~v)))))
            '%s)
 
          :else v)
@@ -743,7 +749,7 @@
                 :aerial.hanami.common/spec {}
                 :body code
                 :tail 'res}
-        code (hc/xform '(let [state (volatile! {})] :body) submap)
+        code (hc/xform '(let [$state$ (volatile! {})] :body) submap)
         code (if @clj?
                [nssym @clj-data code]
                [nssym nil code])]
