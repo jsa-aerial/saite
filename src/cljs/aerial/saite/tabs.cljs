@@ -458,12 +458,12 @@
 
 
 
-(defn file-new [session-name file-name donefn cancelfn]
+(defn file-new [code? session-name file-name donefn cancelfn]
   [v-box
    :gap "10px"
    :children [[label
                :style {:font-size "18px"}
-               :label "Session"]
+               :label (if code? "Directory" "Session")]
               [input-text
                :model session-name
                :width "300px" :height "26px"
@@ -506,6 +506,10 @@
         url? (rgt/atom false)
         urldonefn (fn[event] (reset! url? false) (donefn event))
 
+        docmodes #{:load :save}
+        codemodes #{:getcode :savecode}
+        savemodes #{:save :savecode}
+
         charts? (rgt/atom false)
         chartdonefn (fn [event]
                       (reset! charts true)
@@ -514,8 +518,9 @@
         new? (rgt/atom false)
         newdonefn (fn[event]
                     (let [fname @file-name
-                          newsession? (some (fn[x] (= (x :label) @session-name))
-                                            @sessions)
+                          newsession? (not (some (fn[x]
+                                                   (= (x :label) @session-name))
+                                                 @sessions))
                           names (if newsession?
                                   [fname]
                                   (->> doc-files deref (map :id) (cons fname)))
@@ -535,24 +540,26 @@
        :child [v-box
                :gap "10px"
                :children
-               [(when (= (deref mode) :save)
+               [(when (savemodes @mode)
                   [h-box :gap "10px"
                    :children [(when (not @charts?)
                                 [checkbox
                                  :model new?
                                  :label "New location"
                                  :on-change #(reset! new? %)])
-                              [checkbox
-                               :model charts?
-                               :label "Visualizations"
-                               :on-change #(reset! charts? %)]]])
-                (when (not= (deref mode) :save)
+                              (when (docmodes @mode)
+                                [checkbox
+                                 :model charts?
+                                 :label "Visualizations"
+                                 :on-change #(reset! charts? %)])]])
+                (when (not (savemodes @mode))
                   [checkbox
                    :model url?
                    :label "URL"
                    :on-change #(reset! url? %)])
                 (cond
-                  @new? [file-new session-name file-name newdonefn cancelfn]
+                  @new? [file-new (codemodes @mode) session-name file-name
+                         newdonefn cancelfn]
 
                   @url? [urldoc url urldonefn cancelfn]
 
@@ -564,7 +571,7 @@
                    :children
                    [[label
                      :style {:font-size "18px"}
-                     :label "Session"]
+                     :label (if (codemodes @mode) "Directory" "Session")]
                     [single-dropdown
                      :choices @sessions
                      :model session-name
