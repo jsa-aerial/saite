@@ -18,6 +18,9 @@
     :refer [update-ddb get-ddb]]
    [aerial.saite.compiler
     :refer [format evaluate load-analysis-cache!]]
+   [aerial.saite.cdxform
+    :refer [get-all-cm-as-code xform-clj
+            eval-on-jvm eval-all on-load-eval]]
    [aerial.saite.tabops :as tops
     :refer [push-undo undo redo]]
    [aerial.saite.splits :as ass]
@@ -81,6 +84,36 @@
 
 
 
+(defn cminsert
+  "Modified version of pe/insert which does not understand multiline text."
+  ([cm text] (cminsert cm text 0))
+  ([cm text offset] (cminsert cm text offset (pe/cursor cm)))
+  ([cm text offset cur]
+   (let [i (pe/index cm cur)]
+     (.replaceRange cm text cur)
+     (.setCursor cm (pe/cursor cm (+ i (count text) offset)))
+     (pe/cursor cm))))
+
+(defn get-cur-src []
+  (let [tid (hmi/get-cur-tab :id)
+        eid (get-ddb [:tabs :extns tid :eid])
+        cm (get-ddb [:tabs :cms tid eid :$ed])]
+    (.getValue cm)))
+
+(defn insert-src-cur [srctxt]
+  (let [tid (hmi/get-cur-tab :id)
+        eid (get-ddb [:tabs :extns tid :eid])
+        cm (get-ddb [:tabs :cms tid eid :$ed])
+        offset (- (count srctxt))]
+    (cminsert cm srctxt offset)))
+
+
+(defn eval-code-after-load []
+  (on-load-eval))
+
+
+
+
 (defn get-cm-sexpr [cm]
   (let [end (.getCursor cm)
         start (do (em/backward-sexp cm)
@@ -126,230 +159,6 @@
    [] p
    (sp/if-path
     list? (sp/continue-then-stay sp/ALL p))))
-
-
-#_(let [cm @dbg-cm] (read-string (str \( (.getValue cm) "\n" \))))
-(defn get-all-cm-as-code [cm]
-  (try
-    (read-string (str \( (.getValue cm) "\n" \)))
-    (catch js/Error e
-      (js/alert (str "Check for miss-matched parens / brackets\n\n" e))
-      '(:bad-code))))
-
-
-
-(defn xform-clj [clj? nssym code eid clj-data]
-  #_(js/console.log "CODE" code #_(type code))
-  (sp/transform
-   sp/ALL
-   (fn[v] #_(printchan v (@clj-data :in-clj))
-     (cond
-       (and (or (list? v) (= (type v) LazySeq))
-            (list? (first v)) (-> v ffirst (= 'clj)))
-       (let [clj-fm (xform-clj clj? nssym [(first v)] eid clj-data)
-             tail (cons 'do (xform-clj clj? nssym (rest v) eid clj-data))]
-         (hc/xform (first clj-fm) :tail tail))
-
-
-       (and (list? v) (= (first v) 'clj))
-       (let [_ (swap! clj-data
-                      (fn[m] (assoc m :in-clj true :jvm-syms #{} :%s [])))
-             body (if (list? (last v))
-                    (xform-clj clj? nssym (last v) eid clj-data)
-                    (last v))
-             jvm-syms (@clj-data :%s)
-             body (if (seq jvm-syms)
-                    `(~'apply ~'format ~(pr-str body) ~(@clj-data :%s))
-                    (pr-str body))
-             _ (swap! clj-data (fn[m] (dissoc m :in-clj :jvm-syms)))
-             body (hc/xform '(-> (sc/selfhost-jvm-eval :body)
-                                 (.then (fn[res]
-                                          (vswap! $state$
-                                                  (fn[s] (assoc s 'res res)))
-                                          :tail)))
-                            :aerial.hanami.common/use-defaults? false
-                            :body body)
-             fmkey (keyword (gensym "cljcode-"))
-             newforms (-> @clj-data
-                          (assoc-in [:fms fmkey] [nssym body eid])
-                          (dissoc :in-clj))]
-         (vreset! clj? true)
-         (reset! clj-data newforms)
-         #_(println :CLJBODY body)
-         body)
-
-       (and (list? v) (= (first v) 'let) (get @clj-data :in-clj))
-       (let [bindvec (second v)
-             jvm-syms (@clj-data :jvm-syms)]
-         (swap! clj-data
-                (fn[m] (assoc m :jvm-syms
-                              (reduce (fn[jsyms [k fm]]
-                                        (conj jsyms k))
-                                      jvm-syms (partition-all 2 bindvec)))))
-         `(~'let ~bindvec
-           ~@(xform-clj clj? nssym (drop 2 v) eid clj-data)))
-
-
-       (and (list? v) (= (first v) 'let) (not (@clj-data :in-clj)))
-       (let [_ (reset! clj-data
-                       (assoc @clj-data
-                              :syms (reduce (fn[syms [k _]]
-                                              (assoc syms k true))
-                                            (get @clj-data :syms {})
-                                            (->> v second (partition-all 2)))))
-             bindvec (second v)
-             clj-keys (->> bindvec
-                           (partition-all 2)
-                           (keep (fn[[k fm]]
-                                   (when (and (list? fm)
-                                              (-> fm first (= 'clj)))
-                                     k)))
-                           (into #{}))
-             ;;_ (printchan :CLJ-KEYS clj-keys)
-             bindings (xform-clj clj? nssym bindvec eid clj-data)
-             bindpairs (->> bindings
-                            (partition-all 2))
-             cljpairs (->> bindpairs (filter (fn[[k _]] (clj-keys k)))
-                           (map (fn[[k v]] `('~k ~v))))
-             bindpairs (->> bindpairs
-                            (filter (fn[[k _]] (-> k clj-keys not))))
-             ;;_ (println :BINDPAIRS (apply concat bindpairs))
-             ;;_ (printchan :CLJPAIRS cljpairs)
-             addstate `(~'vswap! ~'$state$
-                        (~'fn[~'s]
-                         (~'apply ~'assoc ~'s
-                          ~(cons 'list
-                                 (->> bindpairs
-                                      (map (fn[[k v]] `('~k ~k)))
-                                      (apply concat))))))
-             body (xform-clj clj? nssym (drop 2 v) eid clj-data)]
-         ;;(printchan :BODY body)
-         (swap! clj-data
-                (fn[m] (assoc m :bindings (cons bindings (m :bindings ())))))
-         (if (seq clj-keys)
-           `(do
-              (~'let ~(vec (apply concat bindpairs))
-               ~addstate
-               ~(reduce (fn[FM fm]
-                          (hc/xform
-                           fm
-                           :aerial.hanami.common/spec {}
-                           :aerial.hanami.common/use-defaults? false
-                           :tail FM))
-                        (cons 'do body)
-                        (->> cljpairs
-                             (map (fn[[k fm]]
-                                    (hc/xform
-                                     fm
-                                     :aerial.hanami.common/spec {}
-                                     :aerial.hanami.common/use-defaults? false
-                                     'res (second k))))
-                             reverse))))
-           `(~'let ~bindings ~addstate ~@body)))
-
-
-       (and (list? v) (= (first v) 'defn))
-       (let [name (second v)
-             _ (reset! clj-data
-                       (assoc @clj-data
-                              :syms (reduce (fn[syms k]
-                                              (assoc syms k true))
-                                            (get @clj-data :syms {})
-                                            (-> v rest second))))
-             bindings (xform-clj clj? nssym (-> v rest second) eid clj-data)
-             bindpairs (cons 'list
-                             (apply concat
-                                    (map (fn[s] `('~s ~s)) bindings)))
-             ;;_ (println :BINDPAIRS bindpairs)
-             addstate `(~'vswap! ~'$state$
-                                (~'fn[~'s] (~'apply ~'assoc ~'s ~bindpairs)))
-             body (xform-clj clj? nssym (drop 3 v) eid clj-data)]
-         `(~'defn ~name ~bindings ~addstate ~@body))
-
-
-       (and (list? v) (= (first v) 'def) (not (@clj-data :in-clj)))
-       (let [name (second v)
-             body (xform-clj clj? nssym (drop 2 v) eid clj-data)
-             ;;_ (js/console.log "BODY" body)
-             body (if (and (coll? body) (coll? (first body))
-                           (= 1 (count body)) @clj?)
-                    (first body)
-                    body)]
-         (if @clj?
-           (hc/xform
-            body {:aerial.hanami.common/use-defaults? false
-                  :aerial.hanami.common/spec {}
-                  :tail `(do (~'def ~name ~'res) '~name)})
-           `(~'def ~name ~@body)))
-
-       #_(and (list? v) (#{'and 'or} (first v)) (not (@clj-data :in-clj)))
-       #_(if (some #(and (list? %) (= (first %) 'clj)) (rest v))
-         (let [op (first v)
-               sym-exprs (mapv #(vector (gensym "boo-") %) (rest v))]
-           ))
-
-
-       (coll? v)
-       (let [fm1 (first v)
-             fm2 (second v)
-             fm3 (-> v rest second)]
-         (cond
-           ;; *** NYI *** DOES NOT WORK. SEEMS CRAZY ANYWAY
-           ;; vectors of intermixed clj and client forms
-           (and (list? fm1) (-> fm1 first (= 'clj)))
-           (let [cljfm (first (xform-clj clj? nssym (take 1 v) eid clj-data))
-                 tailfms (xform-clj clj? nssym (rest v) eid clj-data)
-                 fms (mapv #(vector (gensym "c-") %) (cons cljfm tailfms))]
-             (reduce
-              (fn[FM [k fm]] (printchan FM fm)
-                (hc/xform
-                 (hc/xform fm 'res k)
-                 {:aerial.hanami.common/use-defaults? false
-                  :aerial.hanami.common/spec {}
-                  :tail FM :next k}))
-              (let [[k fm] (first fms)]
-                [k (hc/xform
-                    fm {:aerial.hanami.common/use-defaults? false
-                        :aerial.hanami.common/spec {}
-                        'res k
-                        :tail [k :next]})])
-              (rest fms)))
-
-           ;; Things like `(rest (clj ...))`
-           (and (list? fm2) (-> fm2 first (= 'clj)))
-           (let [cljfm (xform-clj clj? nssym (rest v) eid clj-data)]
-             (hc/xform
-              (first cljfm)
-              {:aerial.hanami.common/use-defaults? false
-               :aerial.hanami.common/spec {}
-               :tail `(~fm1 ~'res)}))
-
-           ;; Things like `(take 10 (clj ...))`
-           (and (list? fm3) (-> fm3 first (= 'clj)))
-           (let [cljfm (xform-clj clj? nssym (drop 2 v) eid clj-data)]
-             (hc/xform
-              (first cljfm)
-              {:aerial.hanami.common/use-defaults? false
-               :aerial.hanami.common/spec {}
-               :tail `(~fm1 ~fm2 ~'res)}))
-           :else
-           (xform-clj clj? nssym v eid clj-data)))
-
-
-       (and (symbol? v) (get @clj-data :in-clj))
-       (cond
-         (get-in @clj-data [:jvm-syms v]) v
-
-         (get-in @clj-data [:syms v])
-         (do
-           (swap! clj-data
-                  (fn[m] (assoc m :%s (conj (m :%s) `((deref ~'$state$) '~v)))))
-           '%s)
-
-         :else v)
-
-       :else v))
-   code))
 
 
 
@@ -492,16 +301,6 @@
     :ok))
 
 
-(defn cminsert
-  "Modified version of pe/insert which does not understand multiline text."
-  ([cm text] (cminsert cm text 0))
-  ([cm text offset] (cminsert cm text offset (pe/cursor cm)))
-  ([cm text offset cur]
-   (let [i (pe/index cm cur)]
-     (.replaceRange cm text cur)
-     (.setCursor cm (pe/cursor cm (+ i (count text) offset)))
-     (pe/cursor cm))))
-
 (defn next-cmid []
   (let [tid (hmi/get-cur-tab :id)
         cmid (inc (or (get-ddb [:tabs :extns tid :cmfids :cm]) 0))]
@@ -586,7 +385,7 @@
    {:frame {:fid (if fid fid (keyword (gensym "ERR")))
             :top [[p {:style {:font-size "20px" :color "red"}} msg]]}}})
 
-(defn insert-handle-return [cm res]
+(defn insert-handle-return [cm res] (printchan :RES res)
   (let [tid (hmi/get-cur-tab :id)
         nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler)
         {:keys [fid locid tabfid]} (current-cm-frame-info cm)
@@ -693,6 +492,7 @@
 
 
 
+
 ;;; Server side execution
 ;;;
 (defn eval-inner-on-jvm [nssym code tid eid]
@@ -732,6 +532,8 @@
              (resolve (data :value))))))))
 
 
+
+
 (defn get-mixed-cc [cm]
   (let [cb cm.CB
         src (get-outer-sexpr-src cm)
@@ -739,12 +541,12 @@
         nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler)
         eid (get-ddb [:tabs :extns tid :eid])
         clj? (volatile! false)
-        clj-data (atom {})
+        clj-data (atom {:nssym nssym})
         srccd (read-string src)
         srccd (if (and (list? srccd) (= (first srccd)))
                 (list 'do srccd)
                 srccd)
-        code (xform-clj clj? nssym srccd eid clj-data)
+        code (xform-clj clj? srccd clj-data)
         submap {:aerial.hanami.common/use-defaults? false
                 :aerial.hanami.common/spec {}
                 :body code
@@ -782,27 +584,6 @@
 
 
 
-
-(defn eval-on-jvm [src cb]
-  (let [ch (async/chan)
-        chankey (keyword (gensym "chan-"))
-        res (volatile! nil)
-        tid (hmi/get-cur-tab :id)
-        nssym (get (get-ddb [:tabs :extns tid]) :ns 'aerial.saite.compiler)
-        eid (get-ddb [:tabs :extns tid :eid])
-        throbber (get-ddb [:editors tid eid :opts :throbber])]
-    (update-ddb [:main :chans chankey] ch)
-    (hmi/send-msg {:op :eval-clj
-                   :data {:uid (hmi/get-adb [:main :uid])
-                          :eval true
-                          :chankey chankey
-                          :nssym nssym
-                          :code src}})
-    (reset! throbber true)
-    (go (vreset! res (async/<! ch))
-        (reset! throbber false)
-        (update-ddb [:main :chans chankey] :rm)
-        (cb @res))))
 
 (defn evaljvm-xe [cm]
   (let [cb cm.CB
@@ -1133,6 +914,10 @@
            :md-icon-name "zmdi-circle-o"
            :tooltip "Clear"
            :on-click #(do (reset! output ""))]
+          [md-circle-icon-button
+           :md-icon-name "zmdi-refresh" ;"zmdi-replay"
+           :tooltip "Rerun"
+           :on-click #(do (eval-all))]
           (when (deref (opts :throbber))
             [spinner])]])
       [layout :gap "5px"
