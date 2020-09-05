@@ -236,7 +236,7 @@
          [_ & data] info
          {:keys [session file]} loc
          config (hmi/get-adb [:saite :cfg])
-         saveloc (get-in config [:locs :save] (config :saveloc))
+         saveloc (get-in config [:locs :docs] (config :saveloc))
          dir (fs/join (fs/fullpath saveloc) session)
          filespec (fs/join dir file)]
      (hmi/printchan :Saving filespec)
@@ -282,7 +282,7 @@
 (defmethod hmi/user-msg :load-doc [msg]
   (try+ msg
    (let [config (hmi/get-adb [:saite :cfg])
-         saveloc (get-in config [:locs :save] (config :saveloc))
+         saveloc (get-in config [:locs :docs] (config :saveloc))
          {:keys [uid location]} (msg :data)
          {:keys [session file url]} location
          dir (fs/join (fs/fullpath saveloc) session)
@@ -293,11 +293,44 @@
      (hmi/send-msg (uid :name) msg))))
 
 
-#_{:op :read-data
-   :data {:uid uid
 
-          :from <:url or :file
-          :path the-full-path}}
+
+(defmethod hmi/user-msg :get-code [msg]
+  (try+ msg
+   (let [config (hmi/get-adb [:saite :cfg])
+         saveloc (get-in config [:locs :code] (config :saveloc))
+         {:keys [uid location]} (msg :data)
+         {:keys [session file url]} location
+         dir (fs/join (fs/fullpath saveloc) session)
+         file (fs/join dir file)
+         code (->> (if url url file) slurp #_read-string)
+         msg {:op :get-code :data code}]
+     (hmi/printchan :GetCode (if url url file) #_:Code #_code)
+     (hmi/send-msg (uid :name) msg))))
+
+
+(defmethod hmi/user-msg :save-code [msg]
+  (try+ msg
+   (let [{:keys [code location]} (msg :data)
+         {:keys [session file]} location
+         config (hmi/get-adb [:saite :cfg])
+         saveloc (get-in config [:locs :code] (config :saveloc))
+         dir (fs/join (fs/fullpath saveloc) session)
+         file (fs/join dir file)]
+     (hmi/printchan :SaveCode file #_:Code #_code)
+     (fs/mkdirs dir)
+     (binding [*print-length* nil]
+       (io/with-out-writer file
+         (print code))))))
+
+
+
+
+;;;{:op :read-data
+;;; :data {:uid uid
+;;;        :chankey <channel key of channel awaiting reply>
+;;;        :from <:url or :file
+;;;        :path the-full-path}}
 (defmethod hmi/user-msg :read-data [msg]
   (try+ msg
    (let [{:keys [uid chankey from path]} (msg :data)
@@ -325,7 +358,7 @@
     :size {:edout {:height 900
                    :width  730
                    :out-height 900
-                   :out-width 1000 }
+                   :out-width 1300 }
            :eddoc {:height 790
                    :width  730
                    :out-height 100
@@ -382,8 +415,9 @@
           :max-width "2000px"}}
 
    :locs
-   {:save  (fs/join home-path "Docs")
+   {:docs  (fs/join home-path "Docs")
     :chart (fs/join home-path "Charts")
+    :code  (fs/join home-path "Code")
     :data  (fs/join home-path "Data")
     :downloads {:linux (fs/join home-path "Downloads")
                 :mac (fs/join home-path "Downloads")
@@ -415,23 +449,33 @@
    :TOPTS {:order :row, :eltsper 2 :size "auto"}))
 
 
+
+(defn file-loc-info [loc ftype?]
+  (let [ftypefn (fn [f]
+                  (if ftype? f
+                      (fs/replace-type f "")))]
+    (mapv  #(vector (fs/basename %)
+                    (->> (fs/directory-files % "")
+                         sort
+                         (mapv (fn[f](-> f fs/basename ftypefn)))))
+           loc)))
+
 (defn config-info [data-map]
   (let [config (hmi/get-adb [:saite :cfg])
-        saveloc (get-in config [:locs :save] (config :saveloc))
-        sessions (-> saveloc fs/fullpath (fs/directory-files ""))
+        docloc (get-in config [:locs :docs] (config :saveloc))
+        codeloc (get-in config [:locs :code] (config :saveloc))
+        sessions (-> docloc fs/fullpath (fs/directory-files ""))
+        codedirs (-> codeloc fs/fullpath (fs/directory-files ""))
         port (config :port)
         quick-doc (slurp (format "http://localhost:%s/doc/quick.md" port))]
     (assoc
      data-map
-     :save-info (mapv #(vector (fs/basename %)
-                               (->> (fs/directory-files % "")
-                                    sort
-                                    (mapv (fn[f] (-> f fs/basename
-                                                    (fs/replace-type ""))))))
-                      sessions)
+     :save-info {:docs (file-loc-info sessions false)
+                 :code (file-loc-info codedirs true)}
      :editor (config :editor)
      :interactive-tab (config :interactive-tab)
      :locs (config :locs)
+     :evalcode (config :evalcode)
      :doc {:quick quick-doc}) ))
 
 
