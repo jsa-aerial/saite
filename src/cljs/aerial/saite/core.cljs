@@ -111,7 +111,8 @@
        file-name (rgt/atom "")
        url (rgt/atom "")
        charts (rgt/atom false)
-       choices (rgt/atom nil)
+       docchoices (rgt/atom nil)
+       codechoices (rgt/atom nil)
        mode (rgt/atom nil)
        donefn (fn[event]
                 (go (async/>!
@@ -122,6 +123,7 @@
        cancelfn (fn[event]
                   (go (async/>! (hmi/get-adb [:main :chans :com]) :cancel))
                   (reset! show? false))]
+    (update-ddb [:main :throbber] (rgt/atom false))
     (fn []
       [h-box :justify :between
        :children
@@ -133,7 +135,11 @@
           [title
            :level :level3
            :label [:span.bold @session-name]]
-          [gap :size "30px"]
+
+          (if (deref (get-ddb [:main :throbber]))
+            [cm/spinner]
+            [gap :size "30px"])
+
           [border :padding "2px" :radius "2px"
            :l-border "1px solid lightgrey"
            :r-border "1px solid lightgrey"
@@ -147,11 +153,11 @@
               :on-click
               #(go (let [ch (hmi/get-adb [:main :chans :com])]
                      (js/console.log "upload clicked")
-                     (reset! session-name (get-ddb [:main :files :dir]))
-                     (reset! file-name (get-ddb [:main :files :load]))
+                     (reset! session-name (get-ddb [:main :docs :dir]))
+                     (reset! file-name (get-ddb [:main :docs :load]))
                      (reset! url nil)
                      (reset! mode :load)
-                     (reset! show? true)
+                     (reset! show? :doc)
                      (let [location (async/<! ch)]
                        (when (not= :cancel location)
                          (let [fname (location :file)
@@ -159,9 +165,9 @@
                                location (assoc
                                          location
                                          :file (str fname ".clj"))]
-                           (update-ddb [:main :files :load] fname
-                                       [:main :files :save] fname
-                                       [:main :files :dir] dname)
+                           (update-ddb [:main :docs :load] fname
+                                       [:main :docs :save] fname
+                                       [:main :docs :dir] dname)
                            (when (not= @session-name
                                        (hmi/get-adb [:main :uid :name]))
                              (hmi/set-session-name @session-name))
@@ -176,11 +182,11 @@
               :on-click
               #(go (let [ch (hmi/get-adb [:main :chans :com])]
                      (js/console.log "download clicked")
-                     (reset! session-name (get-ddb [:main :files :dir]))
-                     (reset! file-name (get-ddb [:main :files :save]))
+                     (reset! session-name (get-ddb [:main :docs :dir]))
+                     (reset! file-name (get-ddb [:main :docs :save]))
                      (reset! charts false)
                      (reset! mode :save)
-                     (reset! show? true)
+                     (reset! show? :doc)
                      (let [location (async/<! ch)]
                        (when (not= :cancel location)
                          (if (location :charts)
@@ -190,8 +196,8 @@
                                  location (assoc
                                            location
                                            :file (str fname ".clj"))]
-                             (update-ddb [:main :files :save] fname
-                                         [:main :files :dir] dname)
+                             (update-ddb [:main :docs :save] fname
+                                         [:main :docs :dir] dname)
                              (let [spec-info (xform-tab-data
                                               (get-tab-data))]
                                (hmi/send-msg
@@ -199,11 +205,61 @@
                                  :data {:loc location
                                         :info spec-info}}))))))))]
 
+             [md-circle-icon-button
+              :md-icon-name "zmdi-format-valign-top" :size :smaller
+              :tooltip "Load Code File"
+              :on-click
+              #(go (let [ch (hmi/get-adb [:main :chans :com])]
+                     (js/console.log "Insert code clicked")
+                     (reset! session-name (get-ddb [:main :files :dir]))
+                     (reset! file-name (get-ddb [:main :files :save]))
+                     (reset! url nil)
+                     (reset! mode :getcode)
+                     (reset! show? :code)
+                     (let [location (async/<! ch)]
+                       (when (not= :cancel location)
+                         (let [fname (location :file)
+                               dname (location :session)]
+                           (update-ddb [:main :files :save] fname
+                                       [:main :files :dir] dname)
+                           #_(printchan location)
+                           (hmi/send-msg
+                            {:op :get-code
+                             :data {:uid (hmi/get-adb [:main :uid])
+                                    :location location}}))))))]
+
+             [md-circle-icon-button
+              :md-icon-name "zmdi-format-valign-bottom" :size :smaller
+              :tooltip "Save Code File"
+              :on-click
+              #(go (let [ch (hmi/get-adb [:main :chans :com])]
+                     (js/console.log "Save code clicked")
+                     (reset! session-name (get-ddb [:main :files :dir]))
+                     (reset! file-name (get-ddb [:main :files :save]))
+                     (reset! mode :savecode)
+                     (reset! show? :code)
+                     (let [location (async/<! ch)]
+                       (when (not= :cancel location)
+                         (let [fname (location :file)
+                               dname (location :session)]
+                           (update-ddb [:main :files :save] fname
+                                       [:main :files :dir] dname)
+                           #_(printchan location)
+                           (hmi/send-msg
+                            {:op :save-code
+                             :data {:location location
+                                    :code (cm/get-cur-src)}}))))))]
+
              (when @show?
-               (when (nil? @choices)
-                 (reset! choices ((get-ddb [:main :files]) :choices)))
-               [file-modal choices session-name file-name mode url charts
-                donefn cancelfn])] ]]
+               (when (nil? @docchoices)
+                 (reset! docchoices ((get-ddb [:main :docs]) :choices)))
+               (when (nil? @codechoices)
+                 (reset! codechoices ((get-ddb [:main :files]) :choices)))
+               (if (= @show? :doc)
+                 [file-modal docchoices session-name file-name mode url charts
+                  donefn cancelfn]
+                 [file-modal codechoices session-name file-name mode url charts
+                  donefn cancelfn]))] ]]
 
           [gap :size "20px"]
           [editor-box]
@@ -244,7 +300,13 @@
 (defmethod user-msg :load-doc [msg]
   (let [data (msg :data)]
     (reset! newdoc-data data)
-    (load-doc data extns-xref)))
+    (load-doc data extns-xref)
+    (when (get-ddb [:main :evalcode :on-load])
+      (cm/eval-code-after-load))))
+
+(defmethod user-msg :get-code [msg]
+  (let [code (msg :data)]
+    (cm/insert-src-cur code)))
 
 
 (defmethod user-msg :evalres [msg]
@@ -273,10 +335,13 @@
        (into {})))
 
 (defmethod user-msg :app-init [msg]
-  (let [{:keys [save-info editor interactive-tab locs doc]} (msg :data)
-        {:keys [save chart data downloads]} locs
-        choices (into {} save-info)
-        dirs (-> choices keys sort)
+  (let [{:keys [save-info editor interactive-tab
+                locs evalcode doc]} (msg :data)
+        {:keys [docs chart code data downloads]} locs
+        docchoices (into {} (save-info :docs))
+        docdirs (-> docchoices keys sort)
+        codechoices (into {} (save-info :code))
+        codedirs (-> codechoices keys sort)
         interactive-tab (xform-tab-defaults interactive-tab)
         {:keys [name mode theme size key-bindings]} editor
         theme (if theme theme "zenburn")
@@ -285,22 +350,31 @@
         key-bindings (cm/xform-kb-syms key-bindings)
         editor (assoc editor
                       :theme theme :size size :key-bindings key-bindings)]
-    (printchan :APP-INIT save-info editor)
-    (printchan :CHOICES choices :DIRS dirs)
+    #_(printchan :APP-INIT save-info editor)
+    #_(printchan :DOCCHOICES docchoices :DIRS docdirs)
 
     (update-adb [:main :chans :convert] (async/chan)
                 [:main :chans :com] (async/chan)
                 [:main :chans :data] (async/chan))
 
-    (update-ddb [:main :files :choices] choices
-                [:main :files :dirs] dirs
-                [:main :files :dir]  (first dirs)
-                [:main :files :save] (-> dirs first choices sort first)
-                [:main :files :load] (-> dirs first choices sort first)
+    (update-ddb [:main :files :choices] codechoices
+                [:main :files :dirs] codedirs
+                [:main :files :dir]  (first codedirs)
+                [:main :files :save] (-> codedirs first codechoices sort first)
+                [:main :files :load] (-> codedirs first codechoices sort first)
+
+                [:main :docs :choices] docchoices
+                [:main :docs :dirs] docdirs
+                [:main :docs :dir]  (first docdirs)
+                [:main :docs :save] (-> docdirs first docchoices sort first)
+                [:main :docs :load] (-> docdirs first docchoices sort first)
+
 
                 [:main :locs] locs
+                [:main :evalcode] evalcode
                 [:main :editor] editor
                 [:main :interactive-tab] interactive-tab
+                [:main :throbber] (rgt/atom false)
                 [:main :doc] doc
 
                 [:editors] {}
@@ -392,6 +466,22 @@
 
 (defn get-cm-cb []
   (let [cm (get-cur-cm)] cm.CB))
+
+
+(defn run-prom-chain [prom bodyfn]
+  (if (instance? js/Promise prom)
+    (.then prom (fn[res] (run-prom-chain res bodyfn)))
+    (bodyfn prom)))
+
+
+(defn get-cur-date []
+  (let [date (js.Date.)
+        y (.getFullYear date)
+        m (inc (.getMonth date))
+        d (.getDate date)]
+    (cljstr/join "-" [y m d])))
+
+
 
 
 ;;; Call Backs ============================================================ ;;;
@@ -555,7 +645,7 @@
  (aerial.saite.analyzer/analyzer-state 'aerial.saite.core))
 
 
-(when-let [elem (js/document.querySelector "#app")]
+#_(when-let [elem (js/document.querySelector "#app")]
   (hc/update-defaults
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
               :frame {:top :TOP, :bottom :BOTTOM,
