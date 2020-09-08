@@ -40,6 +40,8 @@
 
 ### Code execution
 
+  * `Ctrl-X X`      : Show transformed (compiled) code for mixed code
+
   * `Ctrl-X Ctrl-E` : Evaluate last sexpression
 
   * `Ctrl-X Ctrl-C` : Evaluate outer sexpression at cursor (including any 'clj' subcode on JVM)
@@ -47,6 +49,8 @@
   * `Ctrl-X J`      : Evaluate last sexpression _on the JVM_
 
   * `Ctrl-X Ctrl-J` : Evaluate outer sexpession _on the JVM_
+
+  * `Ctrl-X Ctrl-M` : Evaluate mixed code (synonym for `ctrl-x ctrl-c`)
 
 
 ### Frame Editing and visualization
