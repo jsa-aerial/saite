@@ -585,6 +585,17 @@
 
 
 
+(defn xform-code []
+  (let [tid (hmi/get-cur-tab :id)
+        eid (get-ddb [:tabs :extns tid :eid])
+        cm (get-ddb [:tabs :cms tid eid :$ed])
+        cb cm.CB
+        [nssym clj-data cljscode] (get-mixed-cc cm)]
+    (cb {:value cljscode})))
+
+
+
+
 (defn evaljvm-xe [cm]
   (let [cb cm.CB
         src (get-cm-sexpr cm)]
@@ -668,7 +679,7 @@
            pe/reindent-defun
            enhanced-cut enhanced-yank
            insert-frame delete-frame re-visualize
-           evalxe evalcc eval-mixed-cc
+           xform-code evalxe evalcc eval-mixed-cc
            evaljvm-xe evaljvm-cc
            clear-output show-doc show-source recenter-top-bottom
            insert-cm-md insert-md insert-txt-frame insert-vis-frame]
@@ -682,7 +693,7 @@
           pe/reindent-defun
           enhanced-cut enhanced-yank
           insert-frame delete-frame re-visualize
-          evalxe evalcc eval-mixed-cc
+          xform-code evalxe evalcc eval-mixed-cc
           evaljvm-xe evaljvm-cc
           clear-output show-doc show-source recenter-top-bottom
           insert-cm-md insert-md insert-txt-frame insert-vis-frame])
@@ -723,6 +734,7 @@
              "Delete"         delete-frame
              "Ctrl-X Ctrl-V"  re-visualize
 
+             "Ctrl-X X"       xform-code
              "Ctrl-X Ctrl-E"  evalxe
              "Ctrl-X Ctrl-C"  eval-mixed-cc ;evalcc
              "Ctrl-X J"       evaljvm-xe
