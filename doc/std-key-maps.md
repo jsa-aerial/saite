@@ -26,6 +26,7 @@ Anything listed here will override the defaults from Base Emacs, otherwise you g
 
 * "Ctrl-Alt-T"         `insert-txt-frame`
 * "Ctrl-Alt-C"         `insert-cm-md`
+* "Ctrl-Alt-M"         `insert-md`
 * "Ctrl-Alt-V"         `insert-vis-frame`
 * "Ctrl-Alt-W"         `enhanced-cut`
 * "Ctrl-Alt-Y"         `enhanced-yank`
@@ -35,6 +36,7 @@ Anything listed here will override the defaults from Base Emacs, otherwise you g
 * "Delete"             `delete-frame`
 * "Ctrl-X Ctrl-V"      `re-visualize`
 
+* "Ctrl-X X"           `xform-code`
 * "Ctrl-X Ctrl-E"      `evalxe`
 * "Ctrl-X Ctrl-C"      `eval-mixed-cc` ; `evalcc`
 * "Ctrl-X J"           `evaljvm-xe`
