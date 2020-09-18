@@ -23,6 +23,14 @@
   )
 
 
+(def LIST-NODES
+  (sp/recursive-path
+   [] p
+   (sp/if-path
+    #(or (list? %) (= (type %) cljs.core/LazySeq))
+    (sp/continue-then-stay sp/ALL p))))
+
+
 #_(let [cm @dbg-cm] (read-string (str \( (.getValue cm) "\n" \))))
 (defn get-all-cm-as-code [cm]
   (try
@@ -254,19 +262,26 @@
              cljfn? (get-in @clj-data [:defn :clj])
              _ (swap! clj-data (fn[m] (dissoc m :defn)))
              body (if (and (coll? body) (coll? (first body))
-                           (= 1 (count body)) @clj?)
+                           (= 1 (count body)) (or @clj? cljfn?))
                     (first body)
                     body)]
-         (cond @clj?
-               (hc/xform body
-                         {:aerial.hanami.common/use-defaults? false
-                          :aerial.hanami.common/spec {}
-                          :tail `(do (~'def ~name ~'res) '~name)})
-               cljfn?
-               `(do (~'def ~name ~@body)
-                    (~'def ~name (~'with-meta ~name {:clj true})))
-               :else
-               `(~'def ~name ~@body)))
+         (cond
+           (and (or @clj? cljfn?)
+                (seq (sp/select [LIST-NODES  #(= (last %) :tail)] body)))
+           (hc/xform body
+                     {:aerial.hanami.common/use-defaults? false
+                      :aerial.hanami.common/spec {}
+                      :tail `(do :a (~'def ~name ~'res) '~name)})
+
+           (or cljfn? @clj?)
+           `(do :b (~'def ~name ~body)
+                (sc/run-prom-chain
+                 ~name
+                 (~'fn[~'res]
+                  (~'def ~name ~'res)))
+                '~name)
+           :else
+           `(~'def ~name ~@body)))
 
        #_(and (list? v) (#{'and 'or} (first v)) (not (@clj-data :in-clj)))
        #_(if (some #(and (list? %) (= (first %) 'clj)) (rest v))
