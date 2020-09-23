@@ -271,14 +271,19 @@
            (hc/xform body
                      {:aerial.hanami.common/use-defaults? false
                       :aerial.hanami.common/spec {}
-                      :tail `(do :a (~'def ~name ~'res) '~name)})
+                      :tail `(do (~'def ~name ~'res)
+                                 (~'when (~'fn? ~name)
+                                  (~'def ~name (~'with-meta ~name {:clj true})))
+                                 '~name)})
 
            (or cljfn? @clj?)
-           `(do :b (~'def ~name ~body)
+           `(do (~'def ~name ~body)
                 (sc/run-prom-chain
                  ~name
                  (~'fn[~'res]
-                  (~'def ~name ~'res)))
+                  (~'def ~name ~'res)
+                  (~'when (~'fn? ~name)
+                   (~'def ~name (~'with-meta ~name {:clj true})))))
                 '~name)
            :else
            `(~'def ~name ~@body)))
