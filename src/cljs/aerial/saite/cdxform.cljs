@@ -17,7 +17,7 @@
     :refer [RMV]]
 
    [aerial.saite.savrest
-    :refer [update-ddb get-ddb]]
+    :refer [update-ddb get-ddb tab-data]]
    [aerial.saite.compiler
     :refer [format evaluate]])
   )
@@ -471,13 +471,15 @@
 
 
 (defn on-load-eval []
-  (let [tabs-chunks (-> (get-ddb [:tabs :extns]) (dissoc :$split)
-                        (->> (mapv (fn[[tid v]]
-                                     [tid (v :ns)
-                                      (rest (read-string
-                                             (str "(list " (v :src) ")")))]))
-                             (mapv (fn[[tid ns forms]]
-                                     [tid ns (get-chunks forms)]))))
+  (let [m (-> (get-ddb [:tabs :extns]) (dissoc :$split))
+        tabs-chunks (->> (tab-data) rest ; Get tab order to get maps in order
+                         (mapv #(vector (% :id) (-> % :id m))) 
+                         (mapv (fn[[tid v]]
+                                 [tid (v :ns)
+                                  (rest (read-string
+                                         (str "(list " (v :src) ")")))]))
+                         (mapv (fn[[tid ns forms]]
+                                 [tid ns (get-chunks forms)])))
         spinr (or (get-ddb [:main :throbber]) (atom false))
         cb #(printchan %)
         dnchan (chan)]
