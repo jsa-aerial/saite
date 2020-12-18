@@ -1,4 +1,4 @@
-(defproject aerial.saite "0.25.7"
+(defproject aerial.saite "0.25.9"
   :description "Interactive document and visualization system - exploration, presentation, publication"
   :url "https://github.com/jsa-aerial/saite"
   :license {:name "MIT"
@@ -19,7 +19,7 @@
                  [clj-commons/fs "1.5.2"]             ; zip/tar
                  [com.rpl/specter "1.1.3"]
 
-                 [aerial.hanami "0.12.4"]
+                 [aerial.hanami "0.12.5"]
                  [cljsjs/codemirror "5.40.2-1"]
                  [cljsjs/highlight "9.12.0-2"]
                  [cljsjs/mathjax "2.7.5-0"]
