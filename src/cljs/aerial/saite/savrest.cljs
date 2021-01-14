@@ -237,6 +237,19 @@
                                  " not registered")))]
                  (when-not (fn? symfn) (add-symxlate updtfnsym xfn))))
 
+             (when ((set v) :on-click)
+               (let [[i _] (sp/select-one
+                            [sp/INDEXED-VALS #(-> % second (= :on-click))]
+                            v)
+                     updtfnsym (sp/select-one [(sp/nthpath (inc i))] v)
+                     symfn (get-symxlate updtfnsym)
+                     xfn (fn[& a]
+                           (js/alert
+                            (str ":on-click value "
+                                 updtfnsym
+                                 " not registered")))]
+                 (when-not (fn? symfn) (add-symxlate updtfnsym xfn))))
+
              (if ((set v) :model)
                (let [_ (printchan "MODEL" v)
                      [i _] (sp/select-one
