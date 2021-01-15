@@ -151,6 +151,10 @@
 #_(ambient.main.core/analyzer-state 'aerial.hanami.core)
 (defn load-analysis-cache! []
   (cljs.js/load-analysis-cache!
+   state 'aerial.hanasu.common
+   (analyzer-state 'aerial.hanasu.common))
+
+  (cljs.js/load-analysis-cache!
    state 'aerial.saite.compiler
    (analyzer-state 'aerial.saite.compiler))
 
