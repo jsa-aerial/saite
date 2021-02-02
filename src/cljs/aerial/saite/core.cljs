@@ -412,25 +412,15 @@
     (go (async/>! ch data))))
 
 
-;;; "~/Clojure/Projects/saite/Nano/rRNA-dist.clj"
-(defn read-data-orig [path]
-  (let [ch (async/chan)
-        chankey (keyword (gensym "chan-"))
-        data (volatile! nil)
-        tid (hmi/get-cur-tab :id)
-        eid (get-ddb [:tabs :extns tid :eid])
-        throbber (get-ddb [:editors tid eid :opts :throbber])]
-    (update-ddb [:main :chans chankey] ch)
-    (hmi/send-msg {:op :read-data
-                   :data {:uid (hmi/get-adb [:main :uid])
-                          :chankey chankey
-                          :path path
-                          :from :file}})
-    (reset! throbber true)
-    (go (vreset! data (async/<! ch))
-        (reset! throbber false)
-        (update-ddb [:main :chans chankey] :rm))
-    data))
+
+
+;;; Cross namespace helpers =============================================== ;;;
+
+;;; These are functions that support end user interaction with certain
+;;; user level coding requirements from capabilities in other
+;;; aerial.saite.* namespaces.  This is simpler and more robust than
+;;; trying to require all these into user level namespaces
+
 
 (defn read-data [path]
   (js/Promise.
@@ -453,11 +443,13 @@
            (update-ddb [:main :chans chankey] :rm)
            (resolve @data))))))
 
+
 (defn selfhost-jvm-eval [code]
   (let [tid (hmi/get-cur-tab :id)
         nssym (get-ddb [:tabs :extns tid :ns])
         eid (get-ddb [:tabs :extns tid :eid])]
     (cm/selfhost-eval-on-jvm nssym code tid eid)))
+
 
 (defn get-cur-cm []
   (let [tid (hmi/get-cur-tab :id)
@@ -466,6 +458,28 @@
 
 (defn get-cm-cb []
   (let [cm (get-cur-cm)] cm.CB))
+
+
+(defn get-current-cm-frame-info []
+  (let [cm (get-cur-cm)]
+    (cm/current-cm-frame-info cm)))
+
+(defn add-update-frame [picframe fid locid]
+  (let [cm (get-cur-cm)
+        cb cm.CB
+        tid (hmi/get-cur-tab :id)
+        tabfid (some #(= fid %) (cm/get-tab-frame-ids tid))
+        pos (if (= locid :beg) :same :after)]
+    (if (not tabfid)
+      (aerial.saite.tabops/add-frame picframe locid pos)
+      (aerial.saite.tabops/update-frame :frame picframe))))
+
+(defn delete-frame [fid]
+  (let [tid (hmi/get-cur-tab :id)
+        tabfid (some #(= fid %) (cm/get-tab-frame-ids tid))]
+    (when tabfid
+      (aerial.saite.tabops/remove-frame fid))))
+
 
 
 (defn run-prom-chain [prom bodyfn]
