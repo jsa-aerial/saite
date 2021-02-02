@@ -186,6 +186,47 @@
           nssym requires-stg)))))))
 
 
+(defn techml-obj? [x]
+  (->> x class parents str
+       (re-find #"tech\.")))
+
+(defn uncomplicate-obj? [x]
+  (->> x class parents str
+       (re-find #"uncomplicate\.")))
+
+(def SEQ-PATH
+  (sp/recursive-path
+   [] p
+   (sp/if-path
+    #(or (list? %) (vector? %))
+    (sp/continue-then-stay sp/ALL p))))
+
+(defn print-str-res? [x]
+  (not= sp/NONE
+        (sp/select-any
+         [SEQ-PATH
+          #(let [either? (some (fn[x] (or (techml-obj? x)
+                                         (uncomplicate-obj? x)))
+                               %)]
+             either?)]
+         x)))
+
+(defn chk-and-xform-res [res]
+  (cond (instance? clojure.lang.Var res) (str res)
+        (instance? java.lang.Class res)  (str res)
+        (fn? res) (str res)
+        (isa? res java.lang.Class) (str res)
+        (techml-obj? res) (print-str res)
+        (uncomplicate-obj? res) (print-str res)
+
+        (map? res)
+        (if (-> res vals vec print-str-res?) (print-str res) res)
+
+        (coll? res)
+        (if (-> res vec print-str-res?) (print-str res) res)
+
+        :else res))
+
 (defmethod hmi/user-msg :eval-clj [msg]
   (try+ msg
    (let [codeinfo (msg :data)
@@ -195,15 +236,7 @@
          res (binding [*ns* (find-ns nssym)]
                (eval code))
          _ (vswap! tryres (fn[_] res)) ;_ (hmi/printchan :CODE code :RES res)
-         res (cond (instance? clojure.lang.Var res) (str res)
-                   (instance? java.lang.Class res)  (str res)
-                   (fn? res) (str res)
-                   (isa? res java.lang.Class) (str res)
-                   (->> res class parents str
-                        (re-find #"tech\.")) (str res)
-                   (->> res class parents str
-                        (re-find #"uncomplicate\.")) (print-str res)
-                   :else res)
+         res (chk-and-xform-res res)
          msg {:op :evalres :data {:chankey chankey :value res}}]
      (hmi/send-msg (uid :name) msg))))
 
