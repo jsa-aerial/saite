@@ -158,7 +158,9 @@
   (sp/recursive-path
    [] p
    (sp/if-path
-    list? (sp/continue-then-stay sp/ALL p))))
+    ;;list?
+    #(or (list? %) (vector? %))
+    (sp/continue-then-stay sp/ALL p))))
 
 
 
