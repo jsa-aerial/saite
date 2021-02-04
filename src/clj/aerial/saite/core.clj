@@ -187,8 +187,8 @@
 
 
 (defn techml-obj? [x]
-  (->> x class parents str
-       (re-find #"tech\.")))
+  (-> x class parents (conj (class x)) str
+      (->> (re-find #"tech\..+\.(Dataset|Column)"))))
 
 (defn uncomplicate-obj? [x]
   (->> x class parents str
