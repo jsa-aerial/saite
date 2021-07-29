@@ -118,8 +118,8 @@
                            dir zipfolder)))))))
 
 (defn gen-chart-zip []
-  (let [dir (get-ddb [:main :files :dir])
-        file (get-ddb [:main :files :load])
+  (let [dir (get-ddb [:main :docs :dir])
+        file (get-ddb [:main :docs :load])
         archive-name (cljstr/join "-" [dir file "Charts.zip"])
         zipfolder (str dir "/" file)
         tab-vgviews (hmi/get-vgviews)
