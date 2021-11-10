@@ -36,6 +36,7 @@
    [com.rpl.specter :as sp]
 
    [reagent.core :as rgt]
+   [reagent.dom :as rgtd]
 
    [re-com.core
     :as rcm
@@ -313,6 +314,7 @@
   (let [res (msg :data)
         chankey (res :chankey)
         ch (get-ddb [:main :chans chankey])]
+    #_(printchan msg chankey)
     (go (async/>! ch res))))
 
 
@@ -659,7 +661,7 @@
  (aerial.saite.analyzer/analyzer-state 'aerial.saite.core))
 
 
-(when-let [elem (js/document.querySelector "#app")]
+#_(when-let [elem (js/document.querySelector "#app")]
   (hc/update-defaults
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
               :frame {:top :TOP, :bottom :BOTTOM,
@@ -744,7 +746,7 @@
 
   (let [children `[h-box [md "### title"] [p "some text"]]
         div (js/document.createElement "div")]
-    (rgt/render children div)
+    (rgtd/render children div)
     (js/console.log (aget div.childNodes 0)))
 
 

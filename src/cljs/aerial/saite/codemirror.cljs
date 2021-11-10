@@ -28,6 +28,7 @@
    [com.rpl.specter :as sp]
 
    [reagent.core :as rgt]
+   [reagent.dom :as rgtd]
 
    [cljsjs.codemirror]
    [cljsjs.codemirror.mode.clojure]
@@ -775,7 +776,7 @@
       :component-did-mount
       (fn [comp]
         (printchan "CM did-mount called")
-        #_(js/console.log comp, (rgt/dom-node comp))
+        #_(js/console.log comp, (rgtd/dom-node comp))
         (let [opts (clj->js (merge
                              {:lineNumbers true
                               :lineWrapping true,
@@ -789,7 +790,7 @@
                               :mode mode}
                              js-cm-opts))
               ;;pos (get-ddb [:editors tid eid :opts :curpos])
-              inst (.fromTextArea js/CodeMirror (rgt/dom-node comp) opts)]
+              inst (.fromTextArea js/CodeMirror (rgtd/dom-node comp) opts)]
 
           (.setValue inst @input)
           (set! (.-CB inst) cb)

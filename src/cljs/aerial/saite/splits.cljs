@@ -64,7 +64,7 @@
   [& {:keys [size width height split-perc on-split-change initial-split splitter-size margin]
       :or   {size "auto" initial-split 50 splitter-size "8px" margin "8px"}
       :as   args}] (js/console.log "H-SPLIT", split-perc)
-  {:pre [(validate-args-macro hv-split-args-desc args "h-split")]}
+  {:pre [(validate-args-macro hv-split-args-desc args)]}
   (let [container-id         (gensym "h-split-")
         split-perc           (if split-perc                              ;; splitter position as a percentage of height
                                split-perc
@@ -150,7 +150,7 @@
   [& {:keys [size width height split-perc on-split-change initial-split splitter-size margin]
       :or   {size "auto" initial-split 50 splitter-size "8px" margin "8px"}
       :as   args}]
-  {:pre [(validate-args-macro hv-split-args-desc args "v-split")]}
+  {:pre [(validate-args-macro hv-split-args-desc args)]}
   (let [container-id         (gensym "v-split-")
         split-perc           (if split-perc                              ;; splitter position as a percentage of height
                                split-perc
