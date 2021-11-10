@@ -1,14 +1,14 @@
-(defproject aerial.saite "0.25.21"
+(defproject aerial.saite "0.25.23"
   :description "Interactive document and visualization system - exploration, presentation, publication"
   :url "https://github.com/jsa-aerial/saite"
   :license {:name "MIT"
             :url "http://opensource.org/licenses/MIT"}
-  :dependencies [[org.clojure/clojure "1.10.1"]
+  :dependencies [[org.clojure/clojure "1.10.3"]
                  [org.clojure/clojurescript "1.10.439"]
                  [org.ow2.asm/asm  "7.1"] ; tech.v3 req???
-                 [org.clojure/core.async "0.4.474"
+                 [org.clojure/core.async "1.4.627"
                   :exclusions [org.ow2.asm/asm-all]] ; tech.v3 req??
-                 [org.clojure/data.csv "0.1.3"]
+                 [org.clojure/data.csv "1.0.0"]
 
                  ;;; These are needed due to ensure correct versions
                  ;;; w/o actually requiring full lib stacks in uberjar
@@ -19,7 +19,7 @@
                  [clj-commons/fs "1.5.2"]             ; zip/tar
                  [com.rpl/specter "1.1.3"]
 
-                 [aerial.hanami "0.12.11"]
+                 [aerial.hanami "0.15.0"]
                  [cljsjs/codemirror "5.40.2-1"]
                  [cljsjs/highlight "9.12.0-2"]
                  [cljsjs/mathjax "2.7.5-0"]
