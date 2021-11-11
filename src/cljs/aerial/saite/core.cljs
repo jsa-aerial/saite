@@ -25,7 +25,8 @@
     :as cm
     :refer [code-mirror cm]]
    [aerial.saite.tabs
-    :refer [editor-repl-tab interactive-doc-tab extns-xref
+    :refer [editor-repl-tab interactive-doc-tab add-interactive-tab
+            extns-xref
             alert-panel file-modal editor-box tab-box help-box tab<->]]
    [aerial.saite.savrest
     :as sr
@@ -331,6 +332,22 @@
     (go (async/>! ch result))))
 
 
+
+(defn default-start-tab []
+  (let [px #(str % "px")
+        defaults (get-ddb [:main :interactive-tab])
+        ed-defaults (get-ddb [:main :editor])
+        edsize (get-in ed-defaults [:size :edout])
+        info {:edtype :editor :ns (symbol (defaults :nssym "doc.code"))
+              :id :scratch :label "Scratch"
+              :width (px (edsize :width "730"))
+              :height (px (edsize :height "850"))
+              :out-width  (px (edsize :out-width "730"))
+              :out-height (px (edsize :out-height "850"))
+              :layout :left-right :ed-out-order :first-last}]
+    (add-interactive-tab info)))
+
+
 (defn xform-tab-defaults [defaults]
   (->> defaults
        (mapv (fn[[k v]] [k (if (number? v) (str v) v)]))
@@ -388,7 +405,8 @@
                  :out-width "0px" :out-height "0px"})
     (add-tab {:id :xvgl
               :label "<->"
-              :opts {:extfn (tab<-> :NA)}})))
+              :opts {:extfn (tab<-> :NA)}})
+    (default-start-tab)))
 
 
 (defn update-data
