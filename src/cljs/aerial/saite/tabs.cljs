@@ -1223,7 +1223,7 @@
                         (try
                           (with-out-str
                             (-> (js/JSON.parse @input)
-                                js/vl.compile .-spec
+                                js/vegaLite.compile .-spec
                                 (js->clj :keywordize-keys true)
                                 cljs.pprint/pprint))
                           (catch js/Error e (str e)))))]
