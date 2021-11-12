@@ -1225,6 +1225,7 @@
                             (-> (js/JSON.parse @input)
                                 js/vegaLite.compile .-spec
                                 (js->clj :keywordize-keys true)
+                                (assoc :usermeta {:opts {:mode "vega"}})
                                 cljs.pprint/pprint))
                           (catch js/Error e (str e)))))]
             [md-circle-icon-button
@@ -1237,8 +1238,10 @@
                         (try
                           (with-out-str
                             (cljs.pprint/pprint
-                             (js->clj (js/JSON.parse @input)
-                                      :keywordize-keys true)))
+                             (assoc
+                              (js->clj (js/JSON.parse @input)
+                                       :keywordize-keys true)
+                              :usermeta {:opts {:mode "vega-lite"}})))
                           (catch js/Error e (str e)))))]]]
           [h-box :gap "10px" :justify :end
            :children
@@ -1281,6 +1284,7 @@
         [line]
         [h-split
          :panel-1 [box :size "auto"
+                   :width "730px"
                    :child [code-mirror
                            input {:name "javascript", :json true}
                            :tid :xvgl]]
@@ -1288,4 +1292,4 @@
                    :child [code-mirror
                            output "clojure"
                            :tid :xvgl]]
-         :size    "auto", :width "1050px", :height "600px"]]])))
+         :size    "auto", :width "2100px", :height "800px"]]])))
