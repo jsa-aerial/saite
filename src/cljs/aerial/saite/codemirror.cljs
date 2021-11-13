@@ -39,6 +39,7 @@
    [cljsjs.codemirror.addon.comment.comment]
    [cljsjs.codemirror.addon.dialog.dialog]
    [cljsjs.codemirror.addon.display.panel]
+   [cljsjs.codemirror.addon.scroll.simplescrollbars]
 
    [cljsjs.codemirror.addon.search.search]
    [cljsjs.codemirror.addon.search.searchcursor]
@@ -786,6 +787,7 @@
                               :extraKeys (xtra-keys-emacs)
                               :matchBrackets true
                               :autoCloseBrackets true
+                              :scrollbarStyle "overlay"
                               :value @input
                               :mode mode}
                              js-cm-opts))
@@ -912,7 +914,9 @@
 (defn cm-hiccup [opts input output]
   (let [id (opts :id)
         kwid (-> id name keyword)
-        layout (if (= (opts :layout) :up-down) v-box h-box)
+        layout (opts :layout)
+        layout-box (if (= layout :up-down) v-box h-box)
+        layout-split (if (= layout :up-down) v-split h-split)
         ed-pos (if (= (opts :ed-out-order) :first-last) :first :last)
         ch (opts :height "400px")
         oh (opts :out-height (cond (opts :readonly) "0px"
@@ -935,19 +939,29 @@
            :on-click #(do (eval-all))]
           (when (deref (opts :throbber))
             [spinner])]])
-      [layout :gap "5px"
-       :width (opts :width "500px")
-       :height (+ ch oh 50)
-       :children
-       (cond
-         (#{0 "0" "0px"} oh)
-         [[editor-hiccup opts input output]]
-         (= ed-pos :first)
-         [[editor-hiccup opts input output]
-          [output-hiccup opts oh output]]
-         :else
-         [[output-hiccup opts oh output]
-          [editor-hiccup opts input output]])]
+      (cond
+        (#{0 "0" "0px"} oh) ; not editable MD pane
+        [layout-box :gap "5px"
+         :width (opts :width "500px")
+         :height (+ ch oh 50)
+         :children
+         [[editor-hiccup opts input output]]]
+
+        (= ed-pos :first)
+        [layout-split
+         :panel-1 [editor-hiccup opts input output]
+         :panel-2 [output-hiccup opts oh output]
+         :width "auto"
+         :initial-split (+ (opts (if (= layout :up-down) :height :width)) 10)
+         :split-is-px? true]
+
+        :else
+        [layout-split
+         :panel-1 [output-hiccup opts oh output]
+         :panel-2 [editor-hiccup opts input output]
+         :width "auto"
+         :initial-split (+ (opts (if (= layout :up-down) :height :width)) 10)
+         :split-is-px? true])
       [gap :size "10px"]]]))
 
 
