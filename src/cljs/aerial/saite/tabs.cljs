@@ -108,7 +108,7 @@
                                 :layout layout
                                 :ed-out-order ed-out-order
                                 :src src]
-                        :width "2048px"])}})))
+                        :width "2100px" :height "900px"])}})))
 
 
 (defn ^:export interactive-doc-tab
@@ -153,7 +153,7 @@
                 [:tabs :extns (hmi/get-cur-tab :id) :$split]
                 (let [sp (/ (.round js/Math (* 100 %)) 100)]
                   (if (<= sp 3.0) 0.0 sp)))
-              :width "2048px")]
+              :width "2100px" :height "900px")]
     (set-namespace ns)
     (update-ddb [:tabs :extns tid] uinfo)
     (when md-defaults (update-ddb [:tabs :md-defaults tid] md-defaults))
