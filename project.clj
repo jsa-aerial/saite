@@ -1,4 +1,4 @@
-(defproject aerial.saite "0.25.27"
+(defproject aerial.saite "1.0.0"
   :description "Interactive document and visualization system - exploration, presentation, publication"
   :url "https://github.com/jsa-aerial/saite"
   :license {:name "MIT"
@@ -14,13 +14,12 @@
                  ;;; w/o actually requiring full lib stacks in uberjar
                  [techascent/tech.jna "3.23"]
 
-                 ;;[com.cemerick/pomegranate "0.3.1"] ; dynamic loader
-                 [clj-commons/pomegranate "1.2.0"]
+                 [clj-commons/pomegranate "1.2.1"]    ; dynamic loader
                  [clj-commons/fs "1.5.2"]             ; zip/tar
                  [com.rpl/specter "1.1.3"]
 
                  [aerial.hanami "0.15.1"]
-                 [cljsjs/codemirror "5.40.2-1"]
+                 [cljsjs/codemirror "5.44.0-1"]
                  [cljsjs/highlight "9.12.0-2"]
                  [cljsjs/mathjax "2.7.5-0"]
                  [cljsjs/filesaverjs "1.3.3-0"]
