@@ -59,6 +59,7 @@ An attempt at an outline for the documentation
   - Update
   - Running
   - Videos
+  - Tutorials
 
   - Capabilities
     - Dynamic data exploration
