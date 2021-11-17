@@ -11,7 +11,7 @@ Data exploration and interactive documents; with editor support (emacs, vim, sub
 Table of Contents
 =================
 
-   * [saite](#saite)
+   * [Introduction](#introduction)
       * [Installation](#installation)
          * [Uberjar](#uberjar)
          * [Library](#library)
@@ -19,7 +19,7 @@ Table of Contents
       * [Overview](#overview)
 
 [toc](https://github.com/ekalinin/github-markdown-toc)
-# saite
+# Introduction
 
 
 **Saite** is a Clojure(Script) client/server application for dynamic interactive data exploration, mixed server/client dashboard creation, and the creation of live shareable documents.  Documents and dashboards fully support creation of interactive visualizations, coupled with editors, [Re-com components](https://re-com.day8.com.au/#/introduction), markdown and LaTex.  These documents and dashboards are saved as simple text and thus may be shared via any number of ways. End user creation of documents is highly declarative in form and nature, while dashboards are a mix of declarative forms and reactive functions.
@@ -58,6 +58,7 @@ An attempt at an outline for the documentation
   - Install
   - Update
   - Running
+  - Videos
 
   - Capabilities
     - Dynamic data exploration
