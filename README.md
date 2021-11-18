@@ -12,11 +12,11 @@ Table of Contents
 =================
 
    * [Introduction](#introduction)
-      * [Installation](#installation)
-         * [Uberjar](#uberjar)
-         * [Library](#library)
-      * [Outline](#outline)
-      * [Overview](#overview)
+   * [Installation](#installation)
+      * [Uberjar](#uberjar)
+      * [Library](#library)
+   * [Outline](#outline)
+   * [Overview](#overview)
 
 [toc](https://github.com/ekalinin/github-markdown-toc)
 # Introduction
@@ -35,20 +35,20 @@ Saite also functions as an example application built with [Hanami](https://githu
 Saite also uses the [tab system](https://github.com/jsa-aerial/hanami#tabs) provided by Hanami for automatic tab construction and updates, plus the application specific tab capabilities of that system. Further, Saite makes use of Hanami's visualization [messaging system](https://github.com/jsa-aerial/hanami#messages), in particular, the `user-msg` multimethod with implementations for application initialization, namespace creation, server side code execution, saving and reading of documents and code files, saving all visualizations, et.al.
 
 
-## Installation
+# Installation
 
-### Uberjar
+## Uberjar
 
 There is a self installing/updating uberjar that makes a plug and play application of Saite. This is the quickest and easiest way to simply *use* Saite as a kind of "super notebook" or Clojure(Script) analog of RStudio.  See [aerosaite](https://github.com/jsa-aerial/aerosaite) for more on this.
 
 
-### Library
+## Library
 
 To install, add the following to your project `:dependencies`:
 
     [aerial.saite "1.0.0"]
 
-## Outline
+# Outline
 
 [total new documentation being written]
 
@@ -141,6 +141,6 @@ An attempt at an outline for the documentation
   - Methods
 
 
-## Overview
+# Overview
 
 
