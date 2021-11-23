@@ -108,7 +108,7 @@
                                 :layout layout
                                 :ed-out-order ed-out-order
                                 :src src]
-                        :width "2100px" :height "900px"])}})))
+                        :width "2100px" :height out-height])}})))
 
 
 (defn ^:export interactive-doc-tab
@@ -153,7 +153,7 @@
                 [:tabs :extns (hmi/get-cur-tab :id) :$split]
                 (let [sp (/ (.round js/Math (* 100 %)) 100)]
                   (if (<= sp 3.0) 0.0 sp)))
-              :width "2100px" :height "900px")]
+              :width "2100px" :height maxh)]
     (set-namespace ns)
     (update-ddb [:tabs :extns tid] uinfo)
     (when md-defaults (update-ddb [:tabs :md-defaults tid] md-defaults))
@@ -358,7 +358,7 @@
         eid (get-ddb [:tabs :extns tid :eid])]
     (push-undo x)
     (update-ddb [:tabs :extns tid] :rm
-                [:tabs :cms tid]
+                [:tabs :cms tid]   :rm
                 [:editors tid eid] :rm)
     (hmi/del-vgviews tid)
     (hmi/del-tab tid)))
@@ -605,10 +605,13 @@
 
 
 (defn next-tid-label [edtype]
-  (let [i (inc (count (get-ddb [:tabs :extns])))
+  (let [nondefault-etabs (dissoc (get-ddb [:tabs :extns])
+                                 :$split :scratch :xvgl)
+        i (inc (count nondefault-etabs))
         [tx lx] (if (= edtype :editor)
                   ["ed" "Editor "]
                   ["chap" "Chapter "])
+        [tx lx] ["tab" "Tab"]
         tid (str tx i)
         label (str lx i)]
     [tid label]))
