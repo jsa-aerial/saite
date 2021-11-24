@@ -128,7 +128,7 @@
                          size "auto"}}]
   (let [cmfn (cm)
         eid (str "ed-" (name tid))
-        maxh (or (get-ddb [:main :interactive-tab :doc :max-height]) "850px")
+        maxh (or (get-ddb [:main :interactive-tab :doc :max-height]) "900px")
         maxw (or (get-ddb [:main :interactive-tab :doc :max-width]) "2000px")
         sratom (rgt/atom $split)
         uinfo {:fn ''interactive-doc-tab
