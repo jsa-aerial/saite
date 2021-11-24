@@ -46,7 +46,7 @@ There is a self installing/updating uberjar that makes a plug and play applicati
 
 To install, add the following to your project `:dependencies`:
 
-    [aerial.saite "1.0.0"]
+    [aerial.saite "1.1.0"]
 
 # Outline
 
