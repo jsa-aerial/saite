@@ -176,6 +176,34 @@
            :else v))
    specs))
 
+(def CM-NODES
+  (sp/recursive-path
+   [] p
+   (sp/cond-path
+    map? [sp/ALL p]
+    list? [sp/ALL p]
+    #(and (vector? %)
+          (= (-> (nth % 0) str) "cm")) (sp/continue-then-stay sp/ALL p)
+    vector? [sp/ALL p])))
+
+(defn xform-cm-src [tid specs]
+  (let [editors (get-ddb [:editors tid])]
+    (if (not (seq specs))
+      specs
+      (sp/transform
+       CM-NODES
+       (fn[v]
+         (let [m (->> v rest (partition-all 2)
+                      (mapv vec) (into {}))
+               newsrc (-> (m :id) editors :in)
+               newsrc (if newsrc (deref newsrc) (m :src))]
+           (-> (->> (assoc m :src newsrc)
+                    (map identity)
+                    flatten)
+               (conj (first v))
+               vec)))
+       specs))))
+
 (defn get-tab-data []
   (let [recom-syms (-> hmi/re-com-xref keys set)]
     (->> (tab-data)
@@ -192,7 +220,8 @@
 
                                               (= k :specs)
                                               (vec (out-xform-recom-specs
-                                                    v recom-syms))
+                                                    (xform-cm-src tid v)
+                                                    recom-syms))
 
                                               :else v)]
                                       (vector k v))))
