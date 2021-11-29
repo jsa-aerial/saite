@@ -15,8 +15,11 @@ Table of Contents
    * [Installation](#installation)
       * [Uberjar](#uberjar)
       * [Library](#library)
+      * [Running](#running)
    * [Outline](#outline)
    * [Overview](#overview)
+      * [Videos](#videos)
+      * [Tutorials](#tutorials)
 
 [toc](https://github.com/ekalinin/github-markdown-toc)
 # Introduction
@@ -48,6 +51,28 @@ To install, add the following to your project `:dependencies`:
 
     [aerial.saite "1.1.0"]
 
+
+## Running
+
+To get a full running system, you will first need to activate the server:
+
+```Clojure
+(ns aerial.saite.examples
+
+  (:require
+           ...
+           [aerial.saite.core :as saite]
+           ...))
+
+(saite/start 3000) ; start the server on port 3000
+;;;
+;;; To stop the server:
+;;; (saite/stop)
+```
+
+Once the server is running, in your browser, navigate to the port you used when starting it.  The client will initialize and show the starting page.  The default starting page is determined on the *client* via the [header function](https://github.com/jsa-aerial/hanami#client-start) `aerial.saite.core/saite-header`.  The 'on page load' initialization code block is the final piece of code in `aerial.saite.core.cljs`.
+
+
 # Outline
 
 [total new documentation being written]
@@ -55,9 +80,6 @@ To install, add the following to your project `:dependencies`:
 An attempt at an outline for the documentation
 
 * Overview
-  - Install
-  - Update
-  - Running
   - Videos
   - Tutorials
 
@@ -131,7 +153,7 @@ An attempt at an outline for the documentation
 
 * Dashboard construction
   - Reactive components
-  - Callback symbols and maps
+  - Callback symbols and registry
   - Mixed client/server code
 
 * Auto run on document load
@@ -143,4 +165,9 @@ An attempt at an outline for the documentation
 
 # Overview
 
+
+## Videos
+
+
+## Tutorials
 
