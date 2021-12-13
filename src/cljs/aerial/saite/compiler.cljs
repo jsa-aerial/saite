@@ -57,6 +57,16 @@
 
 
 
+(defn get-cljs-def-info [ns]
+  (into {}
+        (keep (fn[[sym m]]
+                (when-let [mdata (m :meta)]
+                  (let [doc (or (mdata :doc) "")
+                        args (mdata :arglists)]
+                    [sym {:name (m :name) :args args :doc doc}])))
+              (get-in @state [:cljs.analyzer/namespaces ns :defs]))))
+
+
 #_(defn get-source-n-cache [{:keys [name macros path]}]
   "Experimental - was for Andare core.async self hosted use.  But
   Andare does not work in the browser.  So, this is no longer used"
@@ -168,6 +178,10 @@
   (cljs.js/load-analysis-cache!
    state 'aerial.saite.core
    (analyzer-state 'aerial.saite.core))
+
+  (cljs.js/load-analysis-cache!
+   state 'aerial.saite.savrest
+   (analyzer-state 'aerial.saite.savrest))
 
   (cljs.js/load-analysis-cache!
    state 'aerial.hanami.core
