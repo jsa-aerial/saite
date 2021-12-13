@@ -19,7 +19,7 @@
    [aerial.saite.savrest
     :refer [update-ddb get-ddb]]
    [aerial.saite.compiler
-    :refer [format evaluate load-analysis-cache!]]
+    :refer [format evaluate load-analysis-cache! get-cljs-def-info]]
    [aerial.saite.cdxform
     :refer [get-all-cm-as-code xform-clj
             eval-on-jvm eval-all on-load-eval]]
@@ -645,26 +645,43 @@
       (js/alert (str "Cannot read symbol\n\n" e)))))
 
 (defn show-doc [cm]
-  (let [[sym sym?] (get-sym-at-cursor cm)
+  (let [cur (.getCursor cm)
+        token (.getTokenAt cm cur)
+        sym token.string
         cb cm.CB]
-    (if sym?
-      (eval-on-jvm (format "(with-out-str (cr/doc %s))" sym) cb)
-      "Cursor not on symbol")))
+    (eval-on-jvm (format "(with-out-str (cr/doc %s))" sym) cb)))
 
 (defn show-source [cm]
-  (let [[sym sym?] (get-sym-at-cursor cm)
+  (let [cur (.getCursor cm)
+        token (.getTokenAt cm cur)
+        sym token.string
         cb cm.CB]
-    (if sym?
-      (eval-on-jvm (format "(with-out-str (cr/source %s))" sym) cb)
-      "Cursor not on symbol")))
+    (eval-on-jvm (format "(with-out-str (cr/source %s))" sym) cb)))
 
 (defn show-js-doc [cm]
-  (let [[symstg sym?] (get-sym-at-cursor cm)]
-    :NYI #_(cr/doc (symbol symstg))))
+  (let [cb cm.CB
+        tid (hmi/get-cur-tab :id)
+        curns (get-ddb [:tabs :extns tid :ns])
+        cur (.getCursor cm)
+        token (.getTokenAt cm cur)
+        s (-> token.string symbol name symbol)
+        nsvec '(aerial.saite.core
+                aerial.hanami.core
+                aerial.hanami.templates
+                aerial.hanami.common
+                cljs.core)
+        res (filter identity
+                    (for [ns (conj nsvec curns)]
+                      (let [{:keys [name args doc]}
+                            (-> (get-cljs-def-info ns) (s))]
+                        (when name
+                          (format "-------------------------\n%s\n%s\n  %s\n"
+                                  name (second args) doc)))))]
+    (cb {:value (first res)})))
 
 (defn show-js-source [cm]
   (let [[symstg sym?] (get-sym-at-cursor cm)]
-    :NYI #_(cr/source (read-string symstg))))
+    :NYI))
 
 
 (def excluded-trigger-keys
@@ -710,14 +727,24 @@
         (set! CodeMirror.hintWords.clojure (.-list result))
         (.showHint cm (clj->js {:completeSingle false})))))
 
+
+(defn js-ns-publics
+  ([]
+   (let [tid (hmi/get-cur-tab :id)
+         ns (get-ddb [:tabs :extns tid :ns])]
+     (js-ns-publics ns)))
+  ([ns]
+   (->> (get-cljs-def-info ns) keys (mapv name) sort)))
+
 (defn show-js-completions [cm cb]
   (let [cb (if cb cb cm.CB)
         cur (.getCursor cm)
         token (.getTokenAt cm cur)
         from (js/CodeMirror.Pos cur.line token.start)
         sym token.string
-        to cur]
-    (cb (->> js-hint-names
+        to cur
+        curns-hints (js-ns-publics)]
+    (cb (->> (concat js-hint-names curns-hints) sort
              (assoc {:from from :to to} :list) clj->js))))
 
 (defn js-hint [cm]
@@ -803,7 +830,7 @@
            clear-output show-doc show-source recenter-top-bottom
            insert-cm-md insert-md insert-mjlt
            insert-txt-frame insert-vis-frame
-           js-hint jvm-hint]
+           js-hint jvm-hint show-js-doc]
          [pe/forward-sexp pe/backward-sexp
           pe/splice-sexp
           pe/splice-sexp-killing-backward pe/splice-sexp-killing-forward
@@ -819,7 +846,7 @@
           clear-output show-doc show-source recenter-top-bottom
           insert-cm-md insert-md insert-mjlt
           insert-txt-frame insert-vis-frame
-          js-hint jvm-hint])
+          js-hint jvm-hint show-js-doc])
    (into {})))
 
 (defn xform-kb-syms [kb-map]
