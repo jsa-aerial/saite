@@ -116,15 +116,18 @@
    [aerial.saite.core :as sc :refer [read-data]]
 
    [reagent.core :as rgt]
-   [re-com.core
+   [re-com.core :as rcc
     :refer [h-box v-box box gap line h-split v-split scroller
             button row-button md-icon-button md-circle-icon-button info-button
             input-text input-password input-textarea
-            label title p
-            single-dropdown
+            label title alert-box alert-list hyperlink hyperlink-href p
+            single-dropdown selection-list multi-select tag-dropdown typeahead
+            simple-v-table v-table
             checkbox radio-button slider progress-bar throbber
-            horizontal-bar-tabs vertical-bar-tabs
-            modal-panel popover-content-wrapper popover-anchor-wrapper]]
+            horizontal-tabs horizontal-bar-tabs horizontal-pill-tabs
+            vertical-bar-tabs vertical-pill-tabs
+            modal-panel popover-content-wrapper popover-anchor-wrapper
+            datepicker datepicker-dropdown progress-bar input-time]]
   ")
 
 (defn add-requires [base requires]
