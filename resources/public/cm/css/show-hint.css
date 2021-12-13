@@ -13,7 +13,7 @@
   border-radius: 3px;
   border: 1px solid silver;
 
-  background: white;
+  background: #e6e6e6;
   font-size: 90%;
   font-family: monospace;
 
@@ -31,6 +31,6 @@
 }
 
 li.CodeMirror-hint-active {
-  background: #08f;
+  background: #404040;
   color: white;
 }
