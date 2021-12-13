@@ -17,7 +17,11 @@
 
   * `Ctrl-X D`  : Show doc string
 
-  * `Ctrl-X S   : Show source
+  * `Ctrl-X S`  : Show source
+
+  * `F9`        : Show hint completions for JVM engine
+
+  * `Ctrl-F9`   : Show hint completions for JS engine
 
   * `Ctrl-F` : Move forward sexpression
 
@@ -44,7 +48,7 @@
 
   * `Ctrl-X Ctrl-E` : Evaluate last sexpression
 
-  * `Ctrl-X Ctrl-C` : Evaluate outer sexpression at cursor (including any 'clj' subcode on JVM)
+  * `Ctrl-X Ctrl-C` : Evaluate outer sexpression at cursor (including 'clj' JVM subcode)
 
   * `Ctrl-X J`      : Evaluate last sexpression _on the JVM_
 
@@ -55,9 +59,11 @@
 
 ### Frame Editing and visualization
 
-  * `Ctrl-Alt-T` : Insert skeleton of a text only (empty) frame
-  * `Ctrl-Alt-C` : Insert skeleton of a CodeMirror markdown element
-  * `Ctrl-Alt-V` : Insert skeleton of a visualization frame
+  * `Ctrl-Alt-T` : Insert shortcut of text only (empty) frame
+  * `Ctrl-Alt-V` : Insert shortcut of visualization frame
+  * `Ctrl-Alt-C` : Insert shortcut of CodeMirror markdown element
+  * `Ctrl-Alt-M` : Insert shortcut of markdown element
+  * `Ctrl-Alt-\` : Insert shortcut of LaTex element
 
   * `Ctrl-X Ctrl-I` : Insert frame defined by outer sexpression at cursor
   * `Insert` : synonym for `ctrl-x ctrl-i`
