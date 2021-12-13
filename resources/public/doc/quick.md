@@ -15,7 +15,9 @@
 
   * `Ctrl-L`    : Center current position
 
-  * `Ctrl-X D`  : Show doc string
+  * `Ctrl-X D`  : Show JVM side doc string
+
+  * `Ctrl-Alt-D : Show JS side doc string
 
   * `Ctrl-X S`  : Show source
 
