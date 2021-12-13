@@ -165,6 +165,7 @@
                        [clojure.data.csv :as csv]
                        [clojure.data.json :as json]
                        [clojure.repl :as cr]
+                       [incomplete.core :as ic]
 
                        [cemerick.pomegranate :as pom]
                        [com.rpl.specter :as sp]
