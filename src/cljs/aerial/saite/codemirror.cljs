@@ -4,6 +4,7 @@
     :as async
     :refer (<! >! put! chan)
     :refer-macros [go go-loop]]
+   [cljs.repl :as cr]
    [clojure.string :as cljstr]
 
    [cljs.tools.reader :refer [read-string]]
@@ -14,6 +15,7 @@
     :refer [RMV]]
    [aerial.hanami.templates :as ht]
 
+   [aerial.saite.miscdata :refer [js-hint-names]]
    [aerial.saite.savrest
     :refer [update-ddb get-ddb]]
    [aerial.saite.compiler
@@ -34,8 +36,8 @@
    [cljsjs.codemirror.mode.clojure]
    [cljsjs.codemirror.mode.python]
    [cljsjs.codemirror.mode.javascript]
-   [cljsjs.codemirror.addon.hint.show-hint]
 
+   [cljsjs.codemirror.addon.hint.show-hint]
    [cljsjs.codemirror.addon.comment.comment]
    [cljsjs.codemirror.addon.dialog.dialog]
    [cljsjs.codemirror.addon.display.panel]
@@ -336,6 +338,12 @@
 \"]"
                      font-size width)]
     (cminsert cm mdfm -3)))
+
+(defn insert-mjlt
+  "Insert a 'MathJax'-ifier snippet into a markdown text"
+  [cm]
+  (cminsert cm "@( @)" -3)
+  )
 
 
 (defn insert-txt-frame [cm]
@@ -650,6 +658,113 @@
       (eval-on-jvm (format "(with-out-str (cr/source %s))" sym) cb)
       "Cursor not on symbol")))
 
+(defn show-js-doc [cm]
+  (let [[symstg sym?] (get-sym-at-cursor cm)]
+    :NYI #_(cr/doc (symbol symstg))))
+
+(defn show-js-source [cm]
+  (let [[symstg sym?] (get-sym-at-cursor cm)]
+    :NYI #_(cr/source (read-string symstg))))
+
+
+(def excluded-trigger-keys
+  {8 "backspace", 9 "tab", 13 "enter", 16 "shift", 17 "ctrl", 18 "alt"
+   19 "pause", 20 "capslock", 27 "escape", 32 "space",
+   33 "pageup", 34 "pagedown", 35 "end", 36 "home"
+   37 "left", 38 "up", 39 "right", 40 "down"
+   45 "insert", 46 "delete", 48 "0/)", 50 "2/@", 51 "3/#, "57 "9/("
+   "4" 52, "5" 53, "6" 54, "7" 55, "8" 56, "1" 49
+   91 "left window key", 92 "right window key"
+   93 "select", 107 "add", 109 "subtract", 110 "decimal point", 111 "divide"
+   112 "f1", 113 "f2", 114 "f3", 115 "f4", 116 "f5", 117 "f6", 118 "f7"
+   119 "f8", 120 "f9", 121 "f10", 122 "f11", 123 "f12", 144 "numlock"
+   145 "scrolllock", ";" 186, "," 188
+   192 "graveaccent", 219 "BracketLeft", "\\" 220, 221 "BracketRight"
+   222 "quote"})
+
+(def comp-dbg (atom nil))
+(defn completion-cb [m from to cb]
+  (let [oval (or (m :value) (m :error))]
+    (if (instance? js/Promise oval)
+      (.then oval
+             (fn[res]
+               (let [cs res]
+                 (swap! comp-dbg (fn[_] cs)))))
+      (swap! comp-dbg (fn[_] oval)))
+    (cb (->> comp-dbg deref (mapv :candidate) sort vec
+             (assoc {:from from :to to} :list) clj->js))))
+
+(defn show-completions [cm cb]
+  (let [cb (if cb cb cm.CB)
+        cur (.getCursor cm)
+        token (.getTokenAt cm cur)
+        from (js/CodeMirror.Pos cur.line token.start)
+        sym token.string
+        to cur
+        ccb (fn[m] (completion-cb m from to cb))]
+    (eval-on-jvm (format "(ic/completions \"%s\")" sym) ccb)))
+
+(defn jvm-hint [cm]
+  (show-completions
+   cm (fn[result]
+        (set! CodeMirror.hintWords.clojure (.-list result))
+        (.showHint cm (clj->js {:completeSingle false})))))
+
+(defn show-js-completions [cm cb]
+  (let [cb (if cb cb cm.CB)
+        cur (.getCursor cm)
+        token (.getTokenAt cm cur)
+        from (js/CodeMirror.Pos cur.line token.start)
+        sym token.string
+        to cur]
+    (cb (->> js-hint-names
+             (assoc {:from from :to to} :list) clj->js))))
+
+(defn js-hint [cm]
+  (show-js-completions
+   cm (fn[result]
+        (set! CodeMirror.hintWords.clojure (.-list result))
+        (.showHint cm (clj->js {:completeSingle false})))))
+
+
+(comment
+  (let [cm (get-ddb [:tabs :cms :scratch "ed-scratch" :$ed])]
+    (.on cm "keyup"
+         (fn[cm event]
+           #_(js/console.log event)
+           (when (and (not cm.state.completionActive)
+                      (not (pe/in-string? cm))
+                      (not (or event.altKey event.ctrlKey event.metaKey))
+                      (not (excluded-trigger-keys event.which))
+                      (not (excluded-trigger-keys event.key)))
+             (show-completions
+              cm (fn[result]
+                   #_(js/console.log result)
+                   (set! CodeMirror.hintWords.clojure (.-list result))
+                   (.showHint cm (clj->js {:completeSingle false}))))))))
+
+  (let [cm (get-ddb [:tabs :cms :tab1 "ed-tab1" :$ed])]
+    (.on cm "keyup"
+         (fn[cm event]
+           (when (and (not cm.state.completionActive)
+                      (not (pe/in-string? cm))
+                      (not (or event.altKey event.ctrlKey event.metaKey))
+                      (not (excluded-trigger-keys event.which))
+                      (not (excluded-trigger-keys event.key)))
+             (show-completions
+              cm (fn[result]
+                   (set! CodeMirror.hintWords.clojure (.-list result))
+                   (.showHint cm (clj->js {:completeSingle false}))))))))
+
+  (let [cm (get-ddb [:tabs :cms :scratch "ed-scratch" :$ed])
+        hintfn (fn[cm cb options]
+                 (js/console.log :CB cb)
+                 (show-completions cm cb))
+        hintfnjs (clj->js hintfn)]
+    (set! (.-async hintfnjs) true)
+    (js/CodeMirror.registerHelper "hint" "clojure" hintfnjs))
+  )
+
 
 (defn center-pos [cm]
   (let [pos (.getCursor cm)
@@ -686,7 +801,9 @@
            xform-code evalxe evalcc eval-mixed-cc
            evaljvm-xe evaljvm-cc
            clear-output show-doc show-source recenter-top-bottom
-           insert-cm-md insert-md insert-txt-frame insert-vis-frame]
+           insert-cm-md insert-md insert-mjlt
+           insert-txt-frame insert-vis-frame
+           js-hint jvm-hint]
          [pe/forward-sexp pe/backward-sexp
           pe/splice-sexp
           pe/splice-sexp-killing-backward pe/splice-sexp-killing-forward
@@ -700,7 +817,9 @@
           xform-code evalxe evalcc eval-mixed-cc
           evaljvm-xe evaljvm-cc
           clear-output show-doc show-source recenter-top-bottom
-          insert-cm-md insert-md insert-txt-frame insert-vis-frame])
+          insert-cm-md insert-md insert-mjlt
+          insert-txt-frame insert-vis-frame
+          js-hint jvm-hint])
    (into {})))
 
 (defn xform-kb-syms [kb-map]
@@ -766,7 +885,7 @@
   :js-cm-opts
     options passed into the CodeMirror constructor"
   [input mode
-   & {:keys [js-cm-opts cb tid eid ed? tbody]
+   & {:keys [js-cm-opts cb tid eid ed? tbody hint-on-keyup]
       :or {cb #(printchan %)}}]
   (printchan "CODE-MIRROR called")
   (let [cm (atom nil)
@@ -817,6 +936,21 @@
           (.on inst "cursorActivity"
                (fn [_]
                  (when curpos (reset! curpos (.getCursor @cm)))))
+          (when hint-on-keyup
+            (.on inst "keyup"
+                 (fn[cm event]
+                   (when (and (not cm.state.completionActive)
+                              (not (pe/in-string? cm))
+                              (not (or event.altKey
+                                       event.ctrlKey
+                                       event.metaKey))
+                              (not (excluded-trigger-keys event.which))
+                              (not (excluded-trigger-keys event.key)))
+                     (show-completions
+                      cm (fn[result]
+                           (set! CodeMirror.hintWords.clojure (.-list result))
+                           (.showHint
+                            cm (clj->js {:completeSingle false}))))))))
           ))
 
       :component-did-update
@@ -870,6 +1004,7 @@
              :js-cm-opts (when (opts :readonly)
                            {:readOnly (opts :readonly)
                             :lineNumbers false})
+             :hint-on-keyup (opts :hint-on-keyup)
              :eid (opts :id)
              :tid (opts :tid)
              :ed? true
@@ -970,7 +1105,9 @@
         output (rgt/atom "")
         pos (atom (new js/CodeMirror.Pos 0 0 "after"))]
     (fn [& opts]
-      (let [opts (->> opts (partition-all 2) (mapv vec) (into {}))
+      (let [hint-on-keyup (get-ddb [:main :editor :hint-on-keyup])
+            opts (->> opts (partition-all 2) (mapv vec) (into {}))
+            opts (assoc opts :hint-on-keyup hint-on-keyup)
             kwid (name (opts :id (gensym "cm-")))
             tid (opts :tid)
             path [:editors tid kwid]
