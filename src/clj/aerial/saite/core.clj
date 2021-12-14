@@ -248,7 +248,7 @@
   (hmi/printchan :CLJS-REQUIRE msg)
   (try+ msg
    (let [{:keys [uid chankey path]} (msg :data)
-         port (hmi/get-adb [:saite :cfg :port])
+         port (hmi/get-adb [:saite :port])
          jspath "/"
          prefix (str "http://localhost:" port jspath path)
          async? (re-find #"async$" path)
@@ -458,14 +458,16 @@
                 :win (fs/join home-path "Downloads")}}
    })
 
-
-(defn init [port]
+(defn load-config []
   (let [cfgfile (-> home-path fs/fullpath (fs/join "config.edn"))
         cfg (if (fs/exists? cfgfile)
               (-> cfgfile slurp read-string)
               default-cfg)]
-    (hmi/update-adb [:saite :cfg] (assoc cfg :port port)))
+    (hmi/update-adb [:saite :cfg] cfg)
+    cfg))
 
+(defn init [port]
+  (hmi/update-adb [:saite :port] port)
   (hc/add-defaults
    :HEIGHT 400 :WIDTH 450
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
@@ -495,12 +497,12 @@
            loc)))
 
 (defn config-info [data-map]
-  (let [config (hmi/get-adb [:saite :cfg])
+  (let [config (load-config)
         docloc (get-in config [:locs :docs] (config :saveloc))
         codeloc (get-in config [:locs :code] (config :saveloc))
         sessions (-> docloc fs/fullpath (fs/directory-files ""))
         codedirs (-> codeloc fs/fullpath (fs/directory-files ""))
-        port (config :port)
+        port (hmi/get-adb [:saite :port])
         quick-doc (slurp (format "http://localhost:%s/doc/quick.md" port))]
     (assoc
      data-map
