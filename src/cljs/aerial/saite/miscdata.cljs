@@ -553,6 +553,7 @@
    "keyword?"
    "last"
    "let"
+   "letfn"
    "list"
    "list*"
    "list?"
