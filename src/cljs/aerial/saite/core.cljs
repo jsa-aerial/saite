@@ -285,7 +285,8 @@
         errinfo (msg :data)
         eval?   (errinfo :eval)
         errname (-> errinfo :error (cljstr/split #"\.") last)
-        errtxt  (str "ERROR : " errname  ", " (errinfo :msg))]
+        errmsg (if (errinfo :cause) (errinfo :cause) (errinfo :msg))
+        errtxt  (str "ERROR : " errname  ", " errmsg)]
 
     (when eval?
       (let [chankey (errinfo :chankey)
@@ -679,7 +680,7 @@
  (aerial.saite.analyzer/analyzer-state 'aerial.saite.core))
 
 
-(when-let [elem (js/document.querySelector "#app")]
+#_(when-let [elem (js/document.querySelector "#app")]
   (hc/update-defaults
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
               :frame {:top :TOP, :bottom :BOTTOM,
