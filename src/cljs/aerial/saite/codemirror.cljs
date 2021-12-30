@@ -856,41 +856,7 @@
                       (em/emacs-kb-xref (-> sym name symbol)))]))
        (into {})))
 
-(defn xtra-keys-emacs-old []
-  (CodeMirror.normalizeKeyMap
-   (js->clj {"Ctrl-F"         pe/forward-sexp
-             "Ctrl-B"         pe/backward-sexp
-             "Ctrl-Left"      pe/forward-barf-sexp
-             "Ctrl-Right"     pe/forward-slurp-sexp
-             "Ctrl-Alt-Left"  pe/backward-barf-sexp
-             "Ctrl-Alt-Right" pe/backward-slurp-sexp
 
-             "Ctrl-Home"      em/go-doc-start
-             "Ctrl-End"       em/go-doc-end
-             "Ctrl-X D"       show-doc
-             "Ctrl-X S"       show-source
-
-             "Alt-W"          enhanced-cut
-             "Ctrl-Y"         enhanced-yank
-             "Alt-K"          em/kill-sexp
-             "Ctrl-X R"       em/query-replace
-             "Ctrl-X Ctrl-B"  clear-output
-
-             "Ctrl-Alt-W"     enhanced-cut
-             "Ctrl-Alt-Y"     enhanced-yank
-             "Ctrl-X Ctrl-I"  insert-frame
-             "Insert"         insert-frame
-             "Ctrl-X Ctrl-D"  delete-frame
-             "Delete"         delete-frame
-             "Ctrl-X Ctrl-V"  re-visualize
-
-             "Ctrl-X X"       xform-code
-             "Ctrl-X Ctrl-E"  evalxe
-             "Ctrl-X Ctrl-C"  eval-mixed-cc ;evalcc
-             "Ctrl-X J"       evaljvm-xe
-             "Ctrl-X Ctrl-J"  evaljvm-cc
-             "Ctrl-X Ctrl-M"  eval-mixed-cc
-             })))
 
 (defn xtra-keys-emacs []
   (CodeMirror.normalizeKeyMap
