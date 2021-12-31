@@ -17,7 +17,7 @@
 
   * `Ctrl-X D`  : Show JVM engine doc string
 
-  * `Ctrl-Alt-D : Show JS engine doc string
+  * `Ctrl-X H`  : Show JS engine help string
 
   * `Ctrl-X S`  : Show source
 
@@ -66,6 +66,7 @@
   * `Ctrl-Alt-C` : Insert shortcut of CodeMirror markdown element
   * `Ctrl-Alt-M` : Insert shortcut of markdown element
   * `Ctrl-Alt-\` : Insert shortcut of LaTex element
+  * `Ctrl-Alt-D` : Insert shortcut of tab MD defaults
 
   * `Ctrl-X Ctrl-I` : Insert frame defined by outer sexpression at cursor
   * `Insert` : synonym for `ctrl-x ctrl-i`
