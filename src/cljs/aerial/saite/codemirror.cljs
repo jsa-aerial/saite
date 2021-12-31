@@ -326,6 +326,25 @@
     (keyword (str "v" vid))))
 
 
+(defn insert-tab-mddefs
+  "Insert a `set-md-defaults` form with current defaults. Eases changing them"
+  [cm]
+  (let [fm
+"(sc/set-md-defaults
+ {:md {:vmargin \"50px\"
+       :margin \"200px\"
+       :width \"800px\"
+       :font-size \"16px\"}
+  :cm {:width \"500px\"
+       :height \"30px\"
+       :out-width \"500px\"
+       :out-height \"0px\"
+       :readonly true
+       :layout :left-right
+       :ed-out-order :first-last}})"]
+    (cminsert cm fm 0)))
+
+
 (defn insert-cm-md [cm]
   (let [cmmd (format "[cm :id \"cm%s\" :fid :FID :src \" \"]" (next-cmid))]
     (cminsert cm cmmd -2)))
@@ -828,7 +847,7 @@
            xform-code evalxe evalcc eval-mixed-cc
            evaljvm-xe evaljvm-cc
            clear-output show-doc show-source recenter-top-bottom
-           insert-cm-md insert-md insert-mjlt
+           insert-tab-mddefs insert-cm-md insert-md insert-mjlt
            insert-txt-frame insert-vis-frame
            js-hint jvm-hint show-js-doc]
          [pe/forward-sexp pe/backward-sexp
@@ -844,7 +863,7 @@
           xform-code evalxe evalcc eval-mixed-cc
           evaljvm-xe evaljvm-cc
           clear-output show-doc show-source recenter-top-bottom
-          insert-cm-md insert-md insert-mjlt
+          insert-tab-mddefs insert-cm-md insert-md insert-mjlt
           insert-txt-frame insert-vis-frame
           js-hint jvm-hint show-js-doc])
    (into {})))
