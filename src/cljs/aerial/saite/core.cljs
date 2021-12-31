@@ -554,7 +554,42 @@
 
 
 
-(defn set-md-defaults [optsmap]
+(defn set-md-defaults
+  "Set the tab defaults for various markdown and codemirror document
+  parameters.`optsmap` is a nested map with two top level keys: `:md`
+  and `:cm` for general markdown parameters and parameters specific to
+  the layout and behavior of codemirror elements respectively.
+
+  `:md` a map of the following keys and associated values:
+  `:vmargin` <a string giving CSS size - typically 'xxxpx'>
+  The vertical spacing of a markdown element from others
+  `:margin` <a string giving a CSS size - typically 'xxxpx'>
+  The horizontal spacing of a markdown element from others
+  `:width` <a string giving a CSS size - typically 'xxxpx'>
+  The width of the textual field for a markdown element
+  `:font-size` <a string giving a CSS size - typically 'xxxpx'>
+  Size of the font for the markdown element text (including LaTex)
+
+  `:cm` a map of the following keys and associated values:
+  `:width` <a string giving a size in pixels 'xxxpx'>
+  The width of the editor pane
+  `:height` <a string giving a size in pixels 'xxxpx'>
+  The height of the editor pane
+  `:out-width` <a string giving a size in pixels 'xxxpx'>
+  The width of the associated output pane if editor is live
+  `:out-height` <a string giving a size in pixels 'xxxpx'>
+  The height of the associated output pane if editor is live
+  `:readonly` <boolean true or false>
+  Whether the editor is live (editable) or a static pane
+  If `:readonly` is true editor is a static pane w/o an output pane
+  `:layout` <:left-right or :up-down>
+  Orientation (relative placement) of the editor and its output pane.
+  `:ed-out-order` <:first-last or :last-first>
+  The order of the editor and its output wrt the layout. If :first-last
+  the editor matches 'left' or 'up' and output pane matches 'right' or
+  'down'.  Vice-versa for :last-first.
+  "
+  [optsmap]
   (cm/set-md-defaults optsmap))
 
 
@@ -605,15 +640,49 @@
 
 
 
-(defn add-ratom [id val]
+(defn add-ratom
+  "Add a ratom for a dashboard model. `id` is the key for the ratom in
+  the dashboard model db and is typically a keyword, but must be a
+  print readably object. `val` is the initial value for the
+  model. Dashboard ratoms are used in conjunction with 'symbol
+  translated' callback functions (see `add-symxlate`) to hold the
+  state of reactive components in dashboards."
+  [id val]
   (sr/add-ratom id val))
 
-(defn get-ratom [id]
+(defn get-ratom
+  "Return the ratom associated with `id` in the dashboard model db.  See
+  `add-ratom` for more details."
+  [id]
   (sr/get-ratom id))
 
 
 
-(defn add-symxlate [sym val]
+(defn add-symxlate
+  "Add a symbol to function mapping to the symbol to function
+  translation db. 'sym' must be a symbol.  Typically it will be a
+  symbol in the namespace of the tab issuing the call.  'val' must be
+  a function. The symbol may then be used in place of the function in
+  any associated hiccup and/or re-com components which require a
+  function at the given location.  The primary purpose is to enable
+  saving and restoring reactive function parameters across document
+  loads and server restarts.
+
+  Example:
+
+  ;;; Set up the symbol translation for a slider component
+  (let [sval (sc/add-ratom :m4 \"1.0\")
+        chgfn #(density-fn % :rhist sval)]
+    (sc/add-symxlate 'density-fn chgfn))
+
+  ...
+
+  [slider
+    :model (sc/get-ratom :m4 (str begden))
+    :min 0.2, :max 2.0, :step 0.2
+    :width \"200px\"
+    :on-change 'density-fn]"
+  [sym val]
   (sr/add-symxlate sym val))
 
 (defn get-symxlate [sym]
