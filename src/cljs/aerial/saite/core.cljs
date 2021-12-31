@@ -749,7 +749,7 @@
  (aerial.saite.analyzer/analyzer-state 'aerial.saite.core))
 
 
-#_(when-let [elem (js/document.querySelector "#app")]
+(when-let [elem (js/document.querySelector "#app")]
   (hc/update-defaults
    :USERDATA {:tab {:id :TID, :label :TLBL, :opts :TOPTS}
               :frame {:top :TOP, :bottom :BOTTOM,
