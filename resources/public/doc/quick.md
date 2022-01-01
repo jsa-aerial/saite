@@ -43,6 +43,8 @@
 
   * `Ctrl-/` : Undo last change. Repeat for more.
 
+  * `Ctrl-X Ctrl-B` : Clears the output area
+
 
 ### Code execution
 
