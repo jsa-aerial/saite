@@ -485,7 +485,16 @@
   (let [cm (get-cur-cm)]
     (cm/current-cm-frame-info cm)))
 
-(defn add-update-frame [picframe fid locid]
+(defn add-update-frame
+  "Programmatically add, or update if exists, the picture frame with
+  frame id `fid` with the new content given by the legal fully
+  transformed template `picframe` defining the frame and any
+  visualization.  `locid` is the relative placement location, one of
+  `:beg` for beginning of doc body
+  `:end` for end of doc body
+  `:before` for before the current frame
+  `:after` for after the current frame"
+  [picframe fid locid]
   (let [cm (get-cur-cm)
         cb cm.CB
         tid (hmi/get-cur-tab :id)
@@ -495,7 +504,10 @@
       (aerial.saite.tabops/add-frame picframe locid pos)
       (aerial.saite.tabops/update-frame :frame picframe))))
 
-(defn delete-frame [fid]
+(defn delete-frame
+  "Programmatically delete the frame with frame id `fid` from the
+  current tab's document body."
+  [fid]
   (let [tid (hmi/get-cur-tab :id)
         tabfid (some #(= fid %) (cm/get-tab-frame-ids tid))]
     (when tabfid
@@ -503,16 +515,29 @@
 
 
 
-(defn run-prom-chain [prom bodyfn]
+(defn run-prom-chain
+  "Run the promise chain implicit in promise `prom` - if `prom` results
+  in another promise, recurse on this result until the result is no
+  longer a promise.  At this end of the chain, run the function
+  `bodyfn` in the context of the chain's results"
+  [prom bodyfn]
   (if (instance? js/Promise prom)
     (.then prom (fn[res] (run-prom-chain res bodyfn)))
     (bodyfn prom)))
 
 
-(defn get-cur-date []
-  (let [date (js.Date.)
+(defn get-cur-date
+  "Get the current date as a string 'y-m-d'.  The month m is either
+  1-12 or, if `:month-name` is given and true, the 3 letter
+  abbreviation for month, eg, 'Jan', 'Mar', 'Jul'."
+  [& {:keys [month-name]}]
+  (let [int-mnth2name-mnth {1 "Jan", 2 "Feb", 3 "Mar", 4 "Apr"
+                            5 "May", 6 "Jun", 7 "Jul", 8 "Aug"
+                            9 "Sep", 10 "Oct", 11 "Nov", 12 "Dec"}
+        date (js.Date.)
         y (.getFullYear date)
         m (inc (.getMonth date))
+        m (if month-name (int-mnth2name-mnth m) m)
         d (.getDate date)]
     (cljstr/join "-" [y m d])))
 
@@ -685,7 +710,10 @@
   [sym val]
   (sr/add-symxlate sym val))
 
-(defn get-symxlate [sym]
+(defn get-symxlate
+  "Return the function associated with the symbol `sym` in the symbol to
+  function translation db.  See `add-symxlate` for more details."
+  [sym]
   (sr/get-symxlate sym))
 
 (defn symxlate-callback [sym]
