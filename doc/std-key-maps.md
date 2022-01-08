@@ -16,7 +16,10 @@ Anything listed here will override the defaults from Base Emacs, otherwise you g
 * "Ctrl-End"           `em/go-doc-end`
 * "Ctrl-L"             `recenter-top-bottom`
 * "Ctrl-X D"           `show-doc`
+* "Ctrl-X H"           `show-js-doc`
 * "Ctrl-X S"           `show-source`
+* "F9"                 `jvm-hint`
+* "Ctrl-F9"            `js-hint`
 
 * "Alt-W"              `enhanced-cut`
 * "Ctrl-Y"             `enhanced-yank`
@@ -25,9 +28,12 @@ Anything listed here will override the defaults from Base Emacs, otherwise you g
 * "Ctrl-X Ctrl-B"      `clear-output`
 
 * "Ctrl-Alt-T"         `insert-txt-frame`
+* "Ctrl-Alt-V"         `insert-vis-frame`
 * "Ctrl-Alt-C"         `insert-cm-md`
 * "Ctrl-Alt-M"         `insert-md`
-* "Ctrl-Alt-V"         `insert-vis-frame`
+* Ctrl-Alt-\"          `insert-mjlt`
+* "Ctrl-Alt-D"         `insert-tab-mddefs`
+
 * "Ctrl-Alt-W"         `enhanced-cut`
 * "Ctrl-Alt-Y"         `enhanced-yank`
 * "Ctrl-X Ctrl-I"      `insert-frame`
