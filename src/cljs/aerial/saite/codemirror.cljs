@@ -616,11 +616,8 @@
 
 
 
-(defn xform-code []
-  (let [tid (hmi/get-cur-tab :id)
-        eid (get-ddb [:tabs :extns tid :eid])
-        cm (get-ddb [:tabs :cms tid eid :$ed])
-        cb cm.CB
+(defn xform-code [cm]
+  (let [cb cm.CB
         [nssym clj-data cljscode] (get-mixed-cc cm)]
     (cb {:value cljscode})))
 
