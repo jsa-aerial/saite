@@ -1,7 +1,7 @@
 [![Clojars Project](https://img.shields.io/clojars/v/aerial.saite.svg)](https://clojars.org/aerial.saite)
 
 # saite
-Data exploration and interactive documents; with editor support (emacs, vim, sublime, and paredit), graphics and visualization; markdown; and LaTex. 咲いて (in bloom). Built on top of [Hanami](https://github.com/jsa-aerial/hanami) Vega/Vega-Lite library, [CodeMiror](https://codemirror.net), [MathJax](https://www.mathjax.org), amd [Specter](https://www.mathjax.org).
+Data exploration and interactive documents; with editor support (emacs, vim, sublime, and paredit), graphics and visualization; markdown; and LaTex. 咲いて (in bloom). Built on top of [Hanami](https://github.com/jsa-aerial/hanami) Vega/Vega-Lite library, [CodeMiror](https://codemirror.net), [MathJax](https://www.mathjax.org), and [Specter](https://github.com/redplanetlabs/specter).
 
 <a href="https://jsa-aerial.github.io/aerial.saite/index.html"><img src="https://github.com/jsa-aerial/saite/blob/master/resources/public/images/in-bloom.png" align="left" hspace="10" vspace="6" alt="saite logo" width="150px"></a>
 
