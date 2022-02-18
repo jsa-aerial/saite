@@ -188,7 +188,7 @@
 
 (defn xform-cm-src [tid specs]
   (let [editors (get-ddb [:editors tid])]
-    (if (not (seq specs))
+    (if (or (not (seq specs)) (empty? editors))
       specs
       (sp/transform
        CM-NODES
@@ -204,10 +204,15 @@
                vec)))
        specs))))
 
+(defn clip-xvgl [tdata]
+  (if (-> tdata first :id (= :xvgl))
+    (rest tdata)
+    tdata))
+
 (defn get-tab-data []
   (let [recom-syms (-> hmi/re-com-xref keys set)]
     (->> (tab-data)
-         rest
+         clip-xvgl
          (map (fn[m]
                 (let [tid (m :id)]
                   {tid (->> [:label :opts :specs]
@@ -220,7 +225,7 @@
 
                                               (= k :specs)
                                               (vec (out-xform-recom-specs
-                                                    (xform-cm-src tid v)
+                                                    (xform-cm-src tid (vec v))
                                                     recom-syms))
 
                                               :else v)]
