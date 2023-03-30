@@ -34,6 +34,7 @@
 
    [cljsjs.codemirror]
    [cljsjs.codemirror.mode.clojure]
+   [cljsjs.codemirror.mode.r]
    [cljsjs.codemirror.mode.python]
    [cljsjs.codemirror.mode.javascript]
 
@@ -49,6 +50,11 @@
 
    [cljsjs.codemirror.addon.edit.closebrackets]
    [cljsjs.codemirror.addon.edit.matchbrackets]
+
+   [cljsjs.codemirror.addon.fold.foldcode]
+   [cljsjs.codemirror.addon.fold.foldgutter]
+   [cljsjs.codemirror.addon.fold.brace-fold]
+   [cljsjs.codemirror.addon.fold.markdown-fold]
 
    [cljsjs.codemirror.keymap.emacs]
    [cljsjs.codemirror.keymap.sublime]
@@ -98,11 +104,18 @@
      (.setCursor cm (pe/cursor cm (+ i (count text) offset)))
      (pe/cursor cm))))
 
-(defn get-cur-src []
-  (let [tid (hmi/get-cur-tab :id)
-        eid (get-ddb [:tabs :extns tid :eid])
+(defn editor-active? [tid]
+  (let [eid (get-ddb [:tabs :extns tid :eid])]
+    (get-ddb [:tabs :cms tid eid :$ed])))
+
+(defn get-ed-src [tid]
+  (let [eid (get-ddb [:tabs :extns tid :eid])
         cm (get-ddb [:tabs :cms tid eid :$ed])]
     (.getValue cm)))
+
+(defn get-cur-src []
+  (let [tid (hmi/get-cur-tab :id)]
+    (get-ed-src tid)))
 
 (defn insert-src-cur [srctxt]
   (let [tid (hmi/get-cur-tab :id)
