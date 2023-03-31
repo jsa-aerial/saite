@@ -190,12 +190,14 @@
                      (reset! charts false)
                      (reset! mode :save)
                      (reset! show? :doc)
+                     (update-ddb [:main :docs :new-file?] false)
                      (let [location (async/<! ch)]
                        (when (not= :cancel location)
                          (cond (location :charts)
                                (sr/gen-chart-zip)
 
-                               (not (get-ddb [:main :docs :doc-loaded?]))
+                               (and (not (get-ddb [:main :docs :doc-loaded?]))
+                                    (not (get-ddb [:main :docs :new-file?])))
                                (do (update-ddb [:alert :txt]
                                                "*** NO DOCUMENT LOADED")
                                    (reset! (get-ddb [:alert :show?]) true))

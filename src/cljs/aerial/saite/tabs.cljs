@@ -561,6 +561,7 @@
                                              @session-name (vec names)))
                       (reset! sessions (->> choices deref keys sort
                                             (mapv (fn[k] {:id k :label k}))))
+                      (update-ddb [:main :docs :new-file?] true)
                       (printchan @doc-files @choices)
                       (reset! new? false)))]
     (fn [choices session-name file-name mode url charts all donefn cancelfn]
