@@ -112,15 +112,15 @@
        session-name (rgt/atom "")
        file-name (rgt/atom "")
        url (rgt/atom "")
+       all (rgt/atom {:all? false :files []})
        charts (rgt/atom false)
        docchoices (rgt/atom nil)
        codechoices (rgt/atom nil)
        mode (rgt/atom nil)
        donefn (fn[event]
-                (go (async/>!
-                     (hmi/get-adb [:main :chans :com])
-                     {:session @session-name :file @file-name
-                      :url @url :charts @charts}))
+                (go (async/>! (hmi/get-adb [:main :chans :com])
+                              {:session @session-name :file @file-name
+                               :url @url :charts @charts :all @all}))
                 (reset! show? false))
        cancelfn (fn[event]
                   (go (async/>! (hmi/get-adb [:main :chans :com]) :cancel))
@@ -169,7 +169,8 @@
                                          :file (str fname ".clj"))]
                            (update-ddb [:main :docs :load] fname
                                        [:main :docs :save] fname
-                                       [:main :docs :dir] dname)
+                                       [:main :docs :dir] dname
+                                       [:main :docs :doc-loaded?] true)
                            (when (not= @session-name
                                        (hmi/get-adb [:main :uid :name]))
                              (hmi/set-session-name @session-name))
@@ -191,30 +192,41 @@
                      (reset! show? :doc)
                      (let [location (async/<! ch)]
                        (when (not= :cancel location)
-                         (if (location :charts)
-                           (sr/gen-chart-zip)
-                           (let [fname (location :file)
-                                 dname (location :session)
-                                 location (assoc
-                                           location
-                                           :file (str fname ".clj"))]
-                             (update-ddb [:main :docs :save] fname
-                                         [:main :docs :dir] dname)
-                             (let [spec-info (xform-tab-data
-                                              (get-tab-data))]
-                               (hmi/send-msg
-                                {:op :save-doc
-                                 :data {:loc location
-                                        :info spec-info}}))))))))]
+                         (cond (location :charts)
+                               (sr/gen-chart-zip)
+
+                               (not (get-ddb [:main :docs :doc-loaded?]))
+                               (do (update-ddb [:alert :txt]
+                                               "*** NO DOCUMENT LOADED")
+                                   (reset! (get-ddb [:alert :show?]) true))
+
+                               :else
+                               (let [fname (location :file)
+                                     dname (location :session)
+                                     location (assoc
+                                               location
+                                               :file (str fname ".clj"))]
+                                 (update-ddb [:main :docs :save] fname
+                                             [:main :docs :dir] dname)
+                                 (let [spec-info (xform-tab-data
+                                                  (get-tab-data))]
+                                   (hmi/send-msg
+                                    {:op :save-doc
+                                     :data {:loc location
+                                            :info spec-info}}))))))))]
 
              [md-circle-icon-button
               :md-icon-name "zmdi-format-valign-top" :size :smaller
-              :tooltip "Load Code File"
+              :tooltip "Load Code"
               :on-click
-              #(go (let [ch (hmi/get-adb [:main :chans :com])]
+              #(go (let [ch (hmi/get-adb [:main :chans :com])
+                         curtabid (hmi/get-cur-tab :id)
+                         [tdir tfile] (get-ddb [:tabs :extns curtabid :file])]
                      (js/console.log "Insert code clicked")
-                     (reset! session-name (get-ddb [:main :files :dir]))
-                     (reset! file-name (get-ddb [:main :files :save]))
+                     (reset! session-name (or tdir
+                                              (get-ddb [:main :files :dir])))
+                     (reset! file-name (or tfile
+                                           (get-ddb [:main :files :save])))
                      (reset! url nil)
                      (reset! mode :getcode)
                      (reset! show? :code)
@@ -232,25 +244,42 @@
 
              [md-circle-icon-button
               :md-icon-name "zmdi-format-valign-bottom" :size :smaller
-              :tooltip "Save Code File"
+              :tooltip "Save Code"
               :on-click
-              #(go (let [ch (hmi/get-adb [:main :chans :com])]
+              #(go (let [ch (hmi/get-adb [:main :chans :com])
+                         curtabid (hmi/get-cur-tab :id)
+                         [tdir tfile] (get-ddb [:tabs :extns curtabid :file])]
                      (js/console.log "Save code clicked")
-                     (reset! session-name (get-ddb [:main :files :dir]))
-                     (reset! file-name (get-ddb [:main :files :save]))
+                     (reset! session-name (or tdir
+                                              (get-ddb [:main :files :dir])))
+                     (reset! file-name (or tfile
+                                           (get-ddb [:main :files :save])))
+                     (reset! all {:all? false :files []})
                      (reset! mode :savecode)
                      (reset! show? :code)
                      (let [location (async/<! ch)]
                        (when (not= :cancel location)
-                         (let [fname (location :file)
-                               dname (location :session)]
-                           (update-ddb [:main :files :save] fname
-                                       [:main :files :dir] dname)
-                           #_(printchan location)
-                           (hmi/send-msg
-                            {:op :save-code
-                             :data {:location location
-                                    :code (cm/get-cur-src)}}))))))]
+                         (if (get-in location [:all :all?])
+                           (when (seq (get-in location [:all :files]))
+                             (let [all-files (get-in location [:all :files])]
+                               (doseq [[tid [d f]] all-files]
+                                 (when (cm/editor-active? tid)
+                                   (let [file-map {:session d :file f}]
+                                     (hmi/send-msg
+                                      {:op :save-code
+                                       :data {:location file-map
+                                              :code (cm/get-ed-src tid)}}))))))
+                           (let [fname (location :file)
+                                 dname (location :session)]
+                             (update-ddb [:main :files :save] fname
+                                         [:main :files :dir] dname
+                                         [:tabs :extns curtabid :file] [dname
+                                                                        fname])
+                             #_(printchan location)
+                             (hmi/send-msg
+                              {:op :save-code
+                               :data {:location location
+                                      :code (cm/get-cur-src)}})))))))]
 
              (when @show?
                (when (nil? @docchoices)
@@ -258,9 +287,11 @@
                (when (nil? @codechoices)
                  (reset! codechoices ((get-ddb [:main :files]) :choices)))
                (if (= @show? :doc)
-                 [file-modal docchoices session-name file-name mode url charts
+                 [file-modal docchoices session-name file-name mode
+                  url charts all
                   donefn cancelfn]
-                 [file-modal codechoices session-name file-name mode url charts
+                 [file-modal codechoices session-name file-name mode
+                  url charts all
                   donefn cancelfn]))] ]]
 
           [gap :size "20px"]
@@ -388,7 +419,7 @@
                 [:main :docs :dir]  (first docdirs)
                 [:main :docs :save] (-> docdirs first docchoices sort first)
                 [:main :docs :load] (-> docdirs first docchoices sort first)
-
+                [:main :docs :doc-loaded?] false
 
                 [:main :locs] locs
                 [:main :evalcode] evalcode
