@@ -70,14 +70,15 @@
 
 (defn ^:export editor-repl-tab
   [tid label src & {:keys [width height out-width out-height
-                           layout ed-out-order ns]
+                           layout ed-out-order ns file]
                     :or {width "730px"
                          height "700px"
                          out-width "730px"
                          out-height "700px"
                          layout :left-right
                          ed-out-order :first-last
-                         ns 'aerial.saite.usercode}}]
+                         ns 'aerial.saite.usercode
+                         file nil}}]
   (let [cmfn (cm)
         eid (str "ed-" (name tid))
         uinfo {:fn ''editor-repl-tab
@@ -90,6 +91,7 @@
                :layout layout
                :ed-out-order ed-out-order
                :ns ns
+               :file file
                :src src}]
     (set-namespace ns)
     (update-ddb [:tabs :extns tid] uinfo)
@@ -114,7 +116,7 @@
 (defn ^:export interactive-doc-tab
   [tid label src & {:keys [width height out-width out-height
                            ed-out-order $split md-defaults
-                           ns cmfids specs order eltsper rgap cgap size]
+                           ns file cmfids specs order eltsper rgap cgap size]
                     :or {width "730px"
                          height "700px"
                          out-width "730px"
@@ -122,6 +124,7 @@
                          ed-out-order :last-first
                          $split (get-ddb [:tabs :extns :$split])
                          ns 'aerial.saite.usercode
+                         file nil
                          cmfids {:cm 0 :fm 0}
                          specs []
                          order :row eltsper 1 :rgap "20px" :cgap "20px"
@@ -142,6 +145,7 @@
                :$split $split
                :$sratom sratom
                :ns ns
+               :file file
                :cmfids cmfids
                :src src}
         hsfn (ass/h-split
@@ -160,6 +164,7 @@
     (add-tab
      {:id tid
       :label label
+      :file file
       :specs specs
       :opts {:order order, :eltsper eltsper,
              :rgap rgap :cgap cgap :size size
@@ -485,6 +490,14 @@
                :label "Save all visualizations as PNGs?"]
               [ok-cancel donefn cancelfn]]])
 
+(defn save-all-tab-files [donefn cancelfn]
+  [v-box
+   :gap "10px"
+   :children [[label
+               :style {:font-size "18px"}
+               :label "Save all main editors of tabs with associated files?"]
+              [ok-cancel donefn cancelfn]]])
+
 (defn urldoc [url donefn cancelfn]
   [v-box
    :gap "10px"
@@ -497,8 +510,18 @@
                :on-change #(reset! url %)]
               [ok-cancel donefn cancelfn]]])
 
+(defn get-all-tab-files []
+  {:all? true
+   :files
+   (->> (keys (get-ddb [:tabs :extns]))
+        (keep (fn [tid]
+                (let [tab (get-ddb [:tabs :extns tid])
+                      file (get-ddb [:tabs :extns tid :file])]
+                  (when file
+                    [tid file])))))})
+
 (defn file-modal
-  [choices session-name file-name mode url charts donefn cancelfn]
+  [choices session-name file-name mode url charts all donefn cancelfn]
   (let [sessions (rgt/atom (->> choices deref keys sort
                                 (mapv (fn[k] {:id k :label k}))))
         doc-files  (rgt/atom (->> session-name deref (#(@choices %))
@@ -513,7 +536,14 @@
         charts? (rgt/atom false)
         chartdonefn (fn [event]
                       (reset! charts true)
-                      (reset! charts? false) (donefn event))
+                      (reset! charts? false)
+                      (donefn event))
+
+        all? (rgt/atom false)
+        alldonefn (fn [event]
+                    (reset! all (get-all-tab-files))
+                    (reset! all? false)
+                    (donefn event))
 
         new? (rgt/atom false)
         newdonefn (fn[event]
@@ -533,7 +563,7 @@
                                             (mapv (fn[k] {:id k :label k}))))
                       (printchan @doc-files @choices)
                       (reset! new? false)))]
-    (fn [choices session-name file-name mode url charts donefn cancelfn]
+    (fn [choices session-name file-name mode url charts all donefn cancelfn]
       [modal-panel
        :backdrop-color   "grey"
        :backdrop-opacity 0.4
@@ -542,7 +572,7 @@
                :children
                [(when (savemodes @mode)
                   [h-box :gap "10px"
-                   :children [(when (not @charts?)
+                   :children [(when (and (not @charts?) (not @all?))
                                 [checkbox
                                  :model new?
                                  :label "New location"
@@ -551,7 +581,12 @@
                                 [checkbox
                                  :model charts?
                                  :label "Visualizations"
-                                 :on-change #(reset! charts? %)])]])
+                                 :on-change #(reset! charts? %)])
+                              (when (codemodes @mode)
+                                [checkbox
+                                 :model all?
+                                 :label "All tab files"
+                                 :on-change #(reset! all? %)])]])
                 (when (not (savemodes @mode))
                   [checkbox
                    :model url?
@@ -564,6 +599,8 @@
                   @url? [urldoc url urldonefn cancelfn]
 
                   @charts? [save-charts chartdonefn cancelfn]
+
+                  @all? [save-all-tab-files alldonefn cancelfn]
 
                   :else
                   [v-box
