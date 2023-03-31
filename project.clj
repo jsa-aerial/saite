@@ -18,7 +18,7 @@
                  [clj-commons/fs "1.5.2"]             ; zip/tar
                  [com.rpl/specter "1.1.3"]
 
-                 [aerial.hanami "0.17.0"]
+                 [aerial.hanami "0.18.0"]
                  [cljsjs/codemirror "5.44.0-1"]
                  [cljsjs/highlight "9.12.0-2"]
                  [cljsjs/mathjax "2.7.5-0"]
