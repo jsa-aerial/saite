@@ -1,4 +1,6 @@
 
+#### Version 1.5.0
+
 ## Editor Keys
 
 * The following are 'control' sequences for editor operations
