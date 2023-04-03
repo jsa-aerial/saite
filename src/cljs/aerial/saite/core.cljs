@@ -210,6 +210,11 @@
                                                :file (str fname ".clj"))]
                                  (update-ddb [:main :docs :save] fname
                                              [:main :docs :dir] dname)
+                                 (when (get-ddb [:main :docs :new-file?])
+                                   ;; Saving new doc => it is loaded
+                                   ;; Could be unconditionally set in above
+                                   ;; form, but this is "clearer"
+                                   (update-ddb [:main :docs :doc-loaded?] true))
                                  (let [spec-info (xform-tab-data
                                                   (get-tab-data))]
                                    (hmi/send-msg
