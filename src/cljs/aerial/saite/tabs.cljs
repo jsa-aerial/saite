@@ -229,6 +229,14 @@
      :tooltip "Cancel"
      :on-click cancelfn]]])
 
+(defn cancel [cancelfn]
+  [h-box :gap "5px" :justify :end
+   :children
+   [[md-circle-icon-button
+     :md-icon-name "zmdi-close"
+     :tooltip "Cancel"
+     :on-click cancelfn]]])
+
 
 
 
@@ -328,10 +336,101 @@
                 [ok-cancel donefn cancelfn]]]])))
 
 
+(defn shutdown-modal [menu? shutdown? shutdown-code]
+  (let [user-code (rgt/atom "")
+        input? (rgt/atom true)
+        error-msg? (rgt/atom false)
+        shutdown-msg? (rgt/atom false)
+        cancelfn #(do (reset! user-code "")
+                      (reset! error-msg? false)
+                      (reset! input? true)
+                      (reset! shutdown? false)
+                      (reset! menu? false))
+        donefn #(if (= @user-code @shutdown-code)
+                  (do (reset! shutdown-msg? true)
+                      (reset! input? false)
+                      (hmi/send-msg {:op :shutdown :data {}}))
+                  (do (reset! input? false)
+                      (reset! error-msg? true)))]
+    (fn [menu? shutdown? shutdown-code]
+      [modal-panel
+       :backdrop-color   "grey"
+       :backdrop-opacity 0.4
+       :child [v-box :gap "10px"
+               :children
+               [(when @input?
+                  [label :style {:font-size "18px"} :label "Shutdown Code?"])
+                (when @input?
+                  [input-text
+                   :model user-code
+                   :width "300px" :height "26px"
+                   :on-change #(reset! user-code %)])
+                (when @error-msg?
+                  [re-com.core/alert-box
+                   :id 1 :alert-type :danger
+                   :heading "Incorrect code - no shutdown"
+                   :closeable? true
+                   :on-close cancelfn])
+                (when @shutdown-msg?
+                  [re-com.core/alert-box
+                   :id 1 :alert-type :none
+                   :heading "Server shutdown request sent"
+                   :closeable? true
+                   :on-close cancelfn])
+                [ok-cancel donefn cancelfn]]]])))
+
+(defn menu-popover [menu?]
+  (let [choices [{:id :quit :label "Quit"}]
+        cancelfn (fn[event] (reset! menu? false))
+        pick (rgt/atom :none)
+        donefn (fn [event]
+                 (case @pick
+                   :quit :what-here?)
+                 (reset! pick :none)
+                 (reset! menu? false))
+        shutdown? (rgt/atom false)
+        shutdown-code (rgt/atom nil)]
+    (fn [menu?]
+      [v-box :gap "10px"
+       :children
+       [(when @shutdown? [shutdown-modal menu? shutdown? shutdown-code])
+        [popover-anchor-wrapper
+         :showing? menu?
+         :position :below-left
+         :anchor [md-circle-icon-button
+                  :md-icon-name "zmdi-menu" :size :smaller
+                  :tooltip "Open Menu"
+                  :on-click #(swap! menu? not)]
+         :popover
+         [popover-content-wrapper
+          :width  "80px"
+          :showing-injected? nil
+          :position-injected :below-left
+          ;;:no-clip?
+          ;;:on-cancel (reset! menu? false)
+          :close-button? false
+          :body [v-box :gap "10px"
+                 :children
+                 [[button :label "Help"
+                   :on-click #(reset! menu? false)]
+                  [button :label "Quit"
+                   :on-click
+                   #(go (let [ch (async/chan)
+                              chankey (keyword (gensym "chan-"))]
+                          (update-ddb [:main :chans chankey] ch)
+                          (hmi/send-msg
+                           {:op :shutdown-code?
+                            :data {:uid (hmi/get-adb [:main :uid])
+                                   :chankey chankey}})
+                          (reset! shutdown-code (async/<! ch))
+                          (reset! shutdown? true)))]]]]]]])))
+
+
 (defn help-box []
   (let [quick? (rgt/atom false)
         theme? (rgt/atom false)
-        theme (rgt/atom nil)]
+        theme (rgt/atom nil)
+        menu? (rgt/atom false)]
     (fn []
       [h-box :gap "5px" :justify :end
        :children
@@ -343,10 +442,16 @@
          :md-icon-name "zmdi-help" :size :smaller
          :tooltip "Quick Help"
          :on-click #(reset! quick? true)]
-        [md-circle-icon-button
+        #_[md-circle-icon-button
          :md-icon-name "zmdi-info" :size :smaller
          :tooltip "Doc Help"
          :on-click #()]
+        (if @menu?
+          [menu-popover menu?]
+          [md-circle-icon-button
+           :md-icon-name "zmdi-menu" :size :smaller
+           :tooltip "Open Menu"
+           :on-click #(reset! menu? (not @menu?))])
         (when @quick? [help-modal quick?])
         (when @theme?
           (reset! theme (keyword (get-ddb [:main :editor :theme])))
