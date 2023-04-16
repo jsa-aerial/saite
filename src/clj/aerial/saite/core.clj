@@ -21,6 +21,22 @@
             [aerial.hanami.data :as hd]))
 
 
+
+(def home-path (fs/join "~" ".saite"))
+
+
+(def shutdown-code (atom ""))
+
+(defn set-shutdown-code! [code]
+  (if (string? code)
+    (reset! shutdown-code code)
+    (throw
+     (ex-info
+      "Shutdown codes must be strings!"
+      {:causes  #{:shutdown-code {:value code :type (type code)}}}))))
+
+
+
 (defmacro try+ [msg & body]
   `(let [name#  (get-in ~msg [:data :uid :name])
          eval?# (get-in ~msg [:data :eval])
@@ -382,7 +398,22 @@
 
 
 
-(def home-path (fs/join "~" ".saite"))
+
+(defmethod hmi/user-msg :shutdown-code? [msg]
+  (let [{:keys [uid chankey]} (msg :data)
+        code @shutdown-code
+        msg {:op :shutdown-code
+             :data {:shutdown-code code :chankey chankey}}]
+    (hmi/printchan "SHUTDOWN-CODE request received!" :CHANKEY chankey)
+    (hmi/send-msg (uid :name) msg)))
+
+(declare shutdown)
+(defmethod hmi/user-msg :shutdown [msg]
+  (hmi/printchan "SHUTDOWN request received!")
+  (shutdown))
+
+
+
 
 (defonce default-cfg
   {:editor
@@ -524,5 +555,6 @@
                     :logo "images/small-in-bloom.png"
                     :img "images/in-bloom.png"))
 
-(defn stop []
-  (hmi/stop-server))
+(defn shutdown []
+  (hmi/stop-server)
+  (System/exit 0))
