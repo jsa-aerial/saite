@@ -448,6 +448,15 @@
     (default-start-tab)))
 
 
+(defmethod user-msg :shutdown-code [msg]
+  (let [{:keys [shutdown-code chankey]} (msg :data)
+        ch (get-ddb [:main :chans chankey])]
+    (printchan :SHUTDOWN-CODE :SC shutdown-code :CK chankey :CH ch)
+    (go (async/>! ch shutdown-code))))
+
+
+
+
 (defn update-data
   "Originally meant as general updater of vis plot/chart data
   values. But to _render_ these, requires knowledge of the application
