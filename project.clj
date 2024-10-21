@@ -1,9 +1,9 @@
-(defproject aerial.saite "1.6.3"
+(defproject aerial.saite "1.6.4"
   :description "Interactive document and visualization system - exploration, presentation, publication"
   :url "https://github.com/jsa-aerial/saite"
   :license {:name "MIT"
             :url "http://opensource.org/licenses/MIT"}
-  :dependencies [[org.clojure/clojure "1.10.3"]
+  :dependencies [[org.clojure/clojure "1.11.3"]
                  [org.clojure/clojurescript "1.10.439"]
                  [org.ow2.asm/asm  "7.1"] ; tech.v3 req???
                  [org.clojure/core.async "1.4.627"
@@ -18,7 +18,7 @@
                  [clj-commons/fs "1.5.2"]             ; zip/tar
                  [com.rpl/specter "1.1.3"]
 
-                 [aerial.hanami "0.19.0"]
+                 [aerial.hanami "0.20.1"]
                  [cljsjs/codemirror "5.44.0-1"]
                  [cljsjs/highlight "9.12.0-2"]
                  [cljsjs/mathjax "2.7.5-0"]
